@@ -1,0 +1,28 @@
+# --- Data (lives in S3, never in git) ---
+*.pcap
+*.pcapng
+*.zip
+*.log
+*.parquet
+zeekwork/
+data/**/raw/
+
+# --- Secrets / credentials (NEVER commit) ---
+*.pem
+*.key
+cookies*.txt
+.env
+.aws/
+credentials
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+*.swp

@@ -28,25 +28,64 @@ Strong models are used in continual learning loops - where models are fed live p
 ## Motivation & Goals
 ### The Detection Ladder (the three heads)
 <!-- known/known · known/unknown-env · unknown/unknown -->
-After a previous attempt on creating an IDS, I realised that the model of an IDS needs to have the ability to detect attacks across domains. It is trivial fitting xgboost to a single dataset, but then applying that model in the real world will lead to collapse. 
+After a previous attempt on creating an IDS, I realised that the model of an IDS needs to have the ability to detect attacks across domains. It is trivial fitting xgboost to a single dataset, but then applying that same model in the real world will lead to collapse. 
 
-For this reason, a model has to have a diverse and rich source of data to train on - which has lead me to gather as 
+In the scope of this project, a good ids would perform well in 3 main areas: 1. Detecting familiar attacks in familiar enviroments. 2. Detecting familiar attacks in novel enviroments. 3. Detecting anomlic/novel attacks in familiar enviroments. 4. Detecting anomlic behaviour in novel enviroments (layer 2 NN)
+
+For this reason we have to make the model resitant to domain shift - which is where the data sources play a key component. If we train the model across multiple domains, there is a higher chance of it being able to somewhat perform well with new domains (ips-xgboost repo). Though this can help the model adapt to new domains - there is no guarantee that for any new enviroment the model will be able to adapt effectively. 
+
+One effective method to reduce domain shift is to train the model on captured network traffic from the enviroment it is about to be deloyed in. This would then increase the chances of the model performing well, as it has some famililarity with the domain - coupled with the fact that the model should already (best-case) be resistant to domain shift. 
+
 
 ## Architecture
 <!-- link to docs/architecture.md + the high-level diagram -->
 ### Data Layer
+
+
 ### Schema — the Contract
+- tdb
+
 ### ML Pipeline
+**IN-PROGRESS**
+
 ### Continual Learning
+**POST-PIPELINE**
+
 ### Evaluation
+**Methods** 
+- Cross evaluation...
 
 ## Repository Structure
-<!-- the directory tree + one line per component -->
+.
+├── data
+│   ├── adapters
+│   ├── emulation
+│   │   └── requirements.txt
+│   └── honeypot
+├── docs
+├── eval
+├── extraction
+├── infra
+├── model
+├── README.md
+├── schema
+│   └── requirements.txt
+└── training
+    └── requirements.txt
+
+12 directories, 4 files
+
 
 ## Data Sources
 ### Public Datasets
+- CIC-IDS 2017 + 2018
+- CIC-DDoS 2019 
+...
 ### netemV2 Emulator
+**INCOMPLETE**
 ### Honeypot
+**INCOMPLETE**
+
 
 ## Schema
 <!-- pointer to schema/, canonical feature contract, versioning -->
@@ -69,7 +108,13 @@ For this reason, a model has to have a diverse and rich source of data to train 
 <!-- cross-dataset transfer results, the realism-canary outcomes -->
 
 ## Roadmap & Status
-<!-- current phase; deferred: live engine, prevention -->
+### Status
+- Setting up
+
+
+
+
+
 
 ## References
 <!-- datasets, Zeek, prior work -->
