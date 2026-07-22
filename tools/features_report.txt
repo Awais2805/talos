@@ -1,0 +1,1379 @@
+========================================================================
+FEATURES PER DATASET
+========================================================================
+
+## cic-ddos-2019 -- 20 tables
+
+cic-ddos-2019/analyzer (12 columns)
+    ts                       DOUBLE
+    analyzer_kind            VARCHAR
+    analyzer_name            VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    failure_reason           VARCHAR
+    failure_data             VARCHAR
+    fuid                     VARCHAR
+
+cic-ddos-2019/conn (21 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    duration                 DOUBLE
+    orig_bytes               BIGINT
+    resp_bytes               BIGINT
+    conn_state               VARCHAR
+    local_orig               BOOLEAN
+    local_resp               BOOLEAN
+    missed_bytes             BIGINT
+    history                  VARCHAR
+    orig_pkts                BIGINT
+    orig_ip_bytes            BIGINT
+    resp_pkts                BIGINT
+    resp_ip_bytes            BIGINT
+    ip_proto                 BIGINT
+    service                  VARCHAR
+
+cic-ddos-2019/dhcp (12 columns)
+    ts                       DOUBLE
+    uids                     VARCHAR[]
+    mac                      VARCHAR
+    host_name                VARCHAR
+    requested_addr           VARCHAR
+    msg_types                VARCHAR[]
+    duration                 DOUBLE
+    client_addr              VARCHAR
+    server_addr              VARCHAR
+    assigned_addr            VARCHAR
+    lease_time               DOUBLE
+    client_fqdn              VARCHAR
+
+cic-ddos-2019/dns (26 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    trans_id                 BIGINT
+    rtt                      DOUBLE
+    query                    VARCHAR
+    qclass                   BIGINT
+    qclass_name              VARCHAR
+    qtype                    BIGINT
+    qtype_name               VARCHAR
+    rcode                    BIGINT
+    rcode_name               VARCHAR
+    AA                       BOOLEAN
+    TC                       BOOLEAN
+    RD                       BOOLEAN
+    RA                       BOOLEAN
+    Z                        BIGINT
+    answers                  VARCHAR[]
+    TTLs                     DOUBLE[]
+    rejected                 BOOLEAN
+    opcode                   BIGINT
+    opcode_name              VARCHAR
+
+cic-ddos-2019/files (20 columns)
+    ts                       DOUBLE
+    fuid                     VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    source                   VARCHAR
+    depth                    BIGINT
+    analyzers                VARCHAR[]
+    mime_type                VARCHAR
+    duration                 DOUBLE
+    local_orig               BOOLEAN
+    is_orig                  BOOLEAN
+    seen_bytes               BIGINT
+    missing_bytes            BIGINT
+    overflow_bytes           BIGINT
+    timedout                 BOOLEAN
+    total_bytes              BIGINT
+    filename                 VARCHAR
+
+cic-ddos-2019/http (25 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    trans_depth              BIGINT
+    method                   VARCHAR
+    host                     VARCHAR
+    uri                      VARCHAR
+    version                  VARCHAR
+    user_agent               VARCHAR
+    request_body_len         BIGINT
+    response_body_len        BIGINT
+    status_code              BIGINT
+    status_msg               VARCHAR
+    tags                     JSON[]
+    resp_fuids               VARCHAR[]
+    resp_mime_types          VARCHAR[]
+    referrer                 VARCHAR
+    orig_fuids               VARCHAR[]
+    orig_mime_types          VARCHAR[]
+    resp_filenames           VARCHAR[]
+    proxied                  VARCHAR[]
+    origin                   VARCHAR
+
+cic-ddos-2019/ldap_search (12 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    message_id               BIGINT
+    scope                    VARCHAR
+    deref_aliases            VARCHAR
+    result_count             BIGINT
+    filter                   VARCHAR
+    result                   VARCHAR
+
+cic-ddos-2019/ntp (19 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    mode                     BIGINT
+    stratum                  BIGINT
+    poll                     DOUBLE
+    precision                DOUBLE
+    root_delay               DOUBLE
+    root_disp                DOUBLE
+    ref_id                   VARCHAR
+    ref_time                 DOUBLE
+    org_time                 DOUBLE
+    rec_time                 DOUBLE
+    xmt_time                 DOUBLE
+    num_exts                 BIGINT
+
+cic-ddos-2019/ocsp (9 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    hashAlgorithm            VARCHAR
+    issuerNameHash           VARCHAR
+    issuerKeyHash            VARCHAR
+    serialNumber             VARCHAR
+    certStatus               VARCHAR
+    thisUpdate               DOUBLE
+    nextUpdate               DOUBLE
+
+cic-ddos-2019/packet_filter (5 columns)
+    ts                       DOUBLE
+    node                     VARCHAR
+    filter                   VARCHAR
+    init                     BOOLEAN
+    success                  BOOLEAN
+
+cic-ddos-2019/pe (17 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    machine                  VARCHAR
+    compile_ts               DOUBLE
+    os                       VARCHAR
+    subsystem                VARCHAR
+    is_exe                   BOOLEAN
+    is_64bit                 BOOLEAN
+    uses_aslr                BOOLEAN
+    uses_dep                 BOOLEAN
+    uses_code_integrity      BOOLEAN
+    uses_seh                 BOOLEAN
+    has_import_table         BOOLEAN
+    has_export_table         BOOLEAN
+    has_cert_table           BOOLEAN
+    has_debug_data           BOOLEAN
+    section_names            VARCHAR[]
+
+cic-ddos-2019/quic (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  VARCHAR
+    client_initial_dcid      VARCHAR
+    client_scid              VARCHAR
+    history                  VARCHAR
+
+cic-ddos-2019/radius (7 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    result                   VARCHAR
+
+cic-ddos-2019/sip (17 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    trans_depth              BIGINT
+    method                   VARCHAR
+    uri                      VARCHAR
+    request_from             VARCHAR
+    request_to               VARCHAR
+    call_id                  VARCHAR
+    seq                      VARCHAR
+    request_path             VARCHAR[]
+    response_path            JSON[]
+    user_agent               VARCHAR
+    request_body_len         BIGINT
+
+cic-ddos-2019/snmp (15 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    duration                 DOUBLE
+    version                  VARCHAR
+    community                VARCHAR
+    get_requests             BIGINT
+    get_bulk_requests        BIGINT
+    get_responses            BIGINT
+    set_requests             BIGINT
+    display_string           VARCHAR
+    up_since                 DOUBLE
+
+cic-ddos-2019/ssh (17 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    auth_attempts            BIGINT
+    client                   VARCHAR
+    server                   VARCHAR
+    cipher_alg               VARCHAR
+    mac_alg                  VARCHAR
+    compression_alg          VARCHAR
+    kex_alg                  VARCHAR
+    host_key_alg             VARCHAR
+    host_key_fingerprint     VARCHAR
+    auth_success             BOOLEAN
+
+cic-ddos-2019/ssl (17 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  VARCHAR
+    cipher                   VARCHAR
+    curve                    VARCHAR
+    server_name              VARCHAR
+    resumed                  BOOLEAN
+    next_protocol            VARCHAR
+    established              BOOLEAN
+    ssl_history              VARCHAR
+    cert_chain_fps           VARCHAR[]
+    client_cert_chain_fps    JSON[]
+    sni_matches_cert         BOOLEAN
+
+cic-ddos-2019/syslog (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    facility                 VARCHAR
+    severity                 VARCHAR
+    message                  VARCHAR
+
+cic-ddos-2019/weird (11 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    name                     VARCHAR
+    notice                   BOOLEAN
+    peer                     VARCHAR
+    source                   VARCHAR
+    addl                     VARCHAR
+
+cic-ddos-2019/x509 (20 columns)
+    ts                       DOUBLE
+    fingerprint              VARCHAR
+    certificate.version      BIGINT
+    certificate.serial       VARCHAR
+    certificate.subject      VARCHAR
+    certificate.issuer       VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg      VARCHAR
+    certificate.sig_alg      VARCHAR
+    certificate.key_type     VARCHAR
+    certificate.key_length   BIGINT
+    certificate.exponent     VARCHAR
+    san.dns                  VARCHAR[]
+    basic_constraints.ca     BOOLEAN
+    host_cert                BOOLEAN
+    client_cert              BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve        VARCHAR
+    san.email                VARCHAR[]
+
+## cic-ids-2017 -- 23 tables
+
+cic-ids-2017/analyzer (11 columns)
+    ts                       DOUBLE
+    analyzer_kind            VARCHAR
+    analyzer_name            VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    failure_reason           VARCHAR
+    failure_data             VARCHAR
+
+cic-ids-2017/conn (21 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    service                  VARCHAR
+    duration                 DOUBLE
+    orig_bytes               BIGINT
+    resp_bytes               BIGINT
+    conn_state               VARCHAR
+    local_orig               BOOLEAN
+    local_resp               BOOLEAN
+    missed_bytes             BIGINT
+    history                  VARCHAR
+    orig_pkts                BIGINT
+    orig_ip_bytes            BIGINT
+    resp_pkts                BIGINT
+    resp_ip_bytes            BIGINT
+    ip_proto                 BIGINT
+
+cic-ids-2017/dce_rpc (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    rtt                      DOUBLE
+    named_pipe               VARCHAR
+    endpoint                 VARCHAR
+    operation                VARCHAR
+
+cic-ids-2017/dns (26 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    trans_id                 BIGINT
+    query                    VARCHAR
+    qclass                   BIGINT
+    qclass_name              VARCHAR
+    qtype                    BIGINT
+    qtype_name               VARCHAR
+    rcode                    BIGINT
+    rcode_name               VARCHAR
+    AA                       BOOLEAN
+    TC                       BOOLEAN
+    RD                       BOOLEAN
+    RA                       BOOLEAN
+    Z                        BIGINT
+    rejected                 BOOLEAN
+    opcode                   BIGINT
+    opcode_name              VARCHAR
+    rtt                      DOUBLE
+    answers                  VARCHAR[]
+    TTLs                     DOUBLE[]
+
+cic-ids-2017/files (20 columns)
+    ts                       DOUBLE
+    fuid                     VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    source                   VARCHAR
+    depth                    BIGINT
+    analyzers                VARCHAR[]
+    mime_type                VARCHAR
+    duration                 DOUBLE
+    local_orig               BOOLEAN
+    is_orig                  BOOLEAN
+    seen_bytes               BIGINT
+    total_bytes              BIGINT
+    missing_bytes            BIGINT
+    overflow_bytes           BIGINT
+    timedout                 BOOLEAN
+    filename                 VARCHAR
+
+cic-ids-2017/ftp (18 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    user                     VARCHAR
+    password                 VARCHAR
+    command                  VARCHAR
+    reply_code               BIGINT
+    reply_msg                VARCHAR
+    data_channel.passive     BOOLEAN
+    data_channel.orig_h      VARCHAR
+    data_channel.resp_h      VARCHAR
+    data_channel.resp_p      BIGINT
+    arg                      VARCHAR
+    mime_type                VARCHAR
+    fuid                     VARCHAR
+
+cic-ids-2017/http (27 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    trans_depth              BIGINT
+    method                   VARCHAR
+    host                     VARCHAR
+    uri                      VARCHAR
+    version                  VARCHAR
+    user_agent               VARCHAR
+    request_body_len         BIGINT
+    response_body_len        BIGINT
+    status_code              BIGINT
+    status_msg               VARCHAR
+    tags                     JSON[]
+    resp_fuids               VARCHAR[]
+    resp_mime_types          VARCHAR[]
+    orig_fuids               VARCHAR[]
+    orig_mime_types          VARCHAR[]
+    resp_filenames           VARCHAR[]
+    referrer                 VARCHAR
+    origin                   VARCHAR
+    orig_filenames           VARCHAR[]
+    info_code                BIGINT
+    info_msg                 VARCHAR
+
+cic-ids-2017/kerberos (16 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    request_type             VARCHAR
+    client                   VARCHAR
+    service                  VARCHAR
+    success                  BOOLEAN
+    error_msg                VARCHAR
+    till                     DOUBLE
+    forwardable              BOOLEAN
+    renewable                BOOLEAN
+    cipher                   VARCHAR
+    from                     DOUBLE
+
+cic-ids-2017/ldap (11 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    message_id               BIGINT
+    version                  BIGINT
+    opcode                   VARCHAR
+    result                   VARCHAR
+    argument                 VARCHAR
+
+cic-ids-2017/ldap_search (13 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    message_id               BIGINT
+    scope                    VARCHAR
+    deref_aliases            VARCHAR
+    result_count             BIGINT
+    result                   VARCHAR
+    filter                   VARCHAR
+    base_object              VARCHAR
+
+cic-ids-2017/mqtt_connect (7 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    connect_status           VARCHAR
+
+cic-ids-2017/ntlm (13 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    hostname                 VARCHAR
+    server_nb_computer_name  VARCHAR
+    server_dns_computer_name VARCHAR
+    server_tree_name         VARCHAR
+    success                  BOOLEAN
+    domainname               VARCHAR
+    username                 VARCHAR
+
+cic-ids-2017/ntp (19 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    mode                     BIGINT
+    stratum                  BIGINT
+    poll                     DOUBLE
+    precision                DOUBLE
+    root_delay               DOUBLE
+    root_disp                DOUBLE
+    ref_id                   VARCHAR
+    ref_time                 DOUBLE
+    org_time                 DOUBLE
+    rec_time                 DOUBLE
+    xmt_time                 DOUBLE
+    num_exts                 BIGINT
+
+cic-ids-2017/ocsp (9 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    hashAlgorithm            VARCHAR
+    issuerNameHash           VARCHAR
+    issuerKeyHash            VARCHAR
+    serialNumber             VARCHAR
+    certStatus               VARCHAR
+    thisUpdate               DOUBLE
+    nextUpdate               DOUBLE
+
+cic-ids-2017/packet_filter (5 columns)
+    ts                       DOUBLE
+    node                     VARCHAR
+    filter                   VARCHAR
+    init                     BOOLEAN
+    success                  BOOLEAN
+
+cic-ids-2017/pe (17 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    machine                  VARCHAR
+    compile_ts               DOUBLE
+    os                       VARCHAR
+    subsystem                VARCHAR
+    is_exe                   BOOLEAN
+    is_64bit                 BOOLEAN
+    uses_aslr                BOOLEAN
+    uses_dep                 BOOLEAN
+    uses_code_integrity      BOOLEAN
+    uses_seh                 BOOLEAN
+    has_import_table         BOOLEAN
+    has_export_table         BOOLEAN
+    has_cert_table           BOOLEAN
+    has_debug_data           BOOLEAN
+    section_names            VARCHAR[]
+
+cic-ids-2017/smb_files (14 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    action                   VARCHAR
+    path                     VARCHAR
+    name                     VARCHAR
+    size                     BIGINT
+    times.modified           DOUBLE
+    times.accessed           DOUBLE
+    times.created            DOUBLE
+    times.changed            DOUBLE
+
+cic-ids-2017/smb_mapping (9 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    path                     VARCHAR
+    share_type               VARCHAR
+    service                  VARCHAR
+
+cic-ids-2017/ssh (17 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    auth_success             BOOLEAN
+    auth_attempts            BIGINT
+    client                   VARCHAR
+    server                   VARCHAR
+    cipher_alg               VARCHAR
+    mac_alg                  VARCHAR
+    compression_alg          VARCHAR
+    kex_alg                  VARCHAR
+    host_key_alg             VARCHAR
+    host_key_fingerprint     VARCHAR
+
+cic-ids-2017/ssl (18 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  VARCHAR
+    cipher                   VARCHAR
+    curve                    VARCHAR
+    server_name              VARCHAR
+    resumed                  BOOLEAN
+    established              BOOLEAN
+    ssl_history              VARCHAR
+    cert_chain_fps           VARCHAR[]
+    client_cert_chain_fps    JSON[]
+    sni_matches_cert         BOOLEAN
+    next_protocol            VARCHAR
+    last_alert               VARCHAR
+
+cic-ids-2017/websocket (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    host                     VARCHAR
+    uri                      VARCHAR
+    user_agent               VARCHAR
+    client_extensions        VARCHAR[]
+
+cic-ids-2017/weird (11 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    name                     VARCHAR
+    addl                     VARCHAR
+    notice                   BOOLEAN
+    peer                     VARCHAR
+    source                   VARCHAR
+
+cic-ids-2017/x509 (21 columns)
+    ts                       DOUBLE
+    fingerprint              VARCHAR
+    certificate.version      BIGINT
+    certificate.serial       VARCHAR
+    certificate.subject      VARCHAR
+    certificate.issuer       VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg      VARCHAR
+    certificate.sig_alg      VARCHAR
+    certificate.key_type     VARCHAR
+    certificate.key_length   BIGINT
+    certificate.exponent     VARCHAR
+    san.dns                  VARCHAR[]
+    basic_constraints.ca     BOOLEAN
+    host_cert                BOOLEAN
+    client_cert              BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve        VARCHAR
+    san.email                VARCHAR[]
+    san.uri                  VARCHAR[]
+
+## cic-ids-2018 -- 26 tables
+
+cic-ids-2018/analyzer (11 columns)
+    ts                       DOUBLE
+    analyzer_kind            VARCHAR
+    analyzer_name            VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    failure_reason           VARCHAR
+    failure_data             VARCHAR
+
+cic-ids-2018/conn (22 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    duration                 DOUBLE
+    orig_bytes               BIGINT
+    resp_bytes               BIGINT
+    conn_state               VARCHAR
+    local_orig               BOOLEAN
+    local_resp               BOOLEAN
+    missed_bytes             BIGINT
+    history                  VARCHAR
+    orig_pkts                BIGINT
+    orig_ip_bytes            BIGINT
+    resp_pkts                BIGINT
+    resp_ip_bytes            BIGINT
+    ip_proto                 BIGINT
+    service                  VARCHAR
+    tunnel_parents           VARCHAR[]
+
+cic-ids-2018/dce_rpc (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    rtt                      DOUBLE
+    named_pipe               VARCHAR
+    endpoint                 VARCHAR
+    operation                VARCHAR
+
+cic-ids-2018/dhcp (13 columns)
+    ts                       DOUBLE
+    uids                     VARCHAR[]
+    client_addr              VARCHAR
+    server_addr              VARCHAR
+    mac                      VARCHAR
+    host_name                VARCHAR
+    domain                   VARCHAR
+    assigned_addr            VARCHAR
+    lease_time               DOUBLE
+    msg_types                VARCHAR[]
+    duration                 DOUBLE
+    client_fqdn              VARCHAR
+    requested_addr           VARCHAR
+
+cic-ids-2018/dns (26 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    proto                    VARCHAR
+    trans_id                 BIGINT
+    query                    VARCHAR
+    qclass                   BIGINT
+    qclass_name              VARCHAR
+    qtype                    BIGINT
+    qtype_name               VARCHAR
+    AA                       BOOLEAN
+    TC                       BOOLEAN
+    RD                       BOOLEAN
+    RA                       BOOLEAN
+    Z                        BIGINT
+    rejected                 BOOLEAN
+    opcode                   BIGINT
+    opcode_name              VARCHAR
+    rcode                    BIGINT
+    rcode_name               VARCHAR
+    rtt                      DOUBLE
+    answers                  VARCHAR[]
+    TTLs                     DOUBLE[]
+
+cic-ids-2018/files (20 columns)
+    ts                       DOUBLE
+    fuid                     VARCHAR
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    source                   VARCHAR
+    depth                    BIGINT
+    analyzers                VARCHAR[]
+    mime_type                VARCHAR
+    duration                 DOUBLE
+    local_orig               BOOLEAN
+    is_orig                  BOOLEAN
+    seen_bytes               BIGINT
+    total_bytes              BIGINT
+    missing_bytes            BIGINT
+    overflow_bytes           BIGINT
+    timedout                 BOOLEAN
+    filename                 VARCHAR
+
+cic-ids-2018/http (28 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    trans_depth              BIGINT
+    method                   VARCHAR
+    host                     VARCHAR
+    uri                      VARCHAR
+    version                  VARCHAR
+    user_agent               VARCHAR
+    request_body_len         BIGINT
+    response_body_len        BIGINT
+    status_code              BIGINT
+    status_msg               VARCHAR
+    tags                     JSON[]
+    resp_fuids               VARCHAR[]
+    resp_mime_types          VARCHAR[]
+    orig_fuids               VARCHAR[]
+    orig_mime_types          VARCHAR[]
+    referrer                 VARCHAR
+    resp_filenames           VARCHAR[]
+    origin                   VARCHAR
+    orig_filenames           VARCHAR[]
+    info_code                BIGINT
+    info_msg                 VARCHAR
+    proxied                  VARCHAR[]
+
+cic-ids-2018/kerberos (12 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    request_type             VARCHAR
+    client                   VARCHAR
+    service                  VARCHAR
+    till                     DOUBLE
+    forwardable              BOOLEAN
+    renewable                BOOLEAN
+
+cic-ids-2018/ldap_search (11 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    message_id               BIGINT
+    scope                    VARCHAR
+    deref_aliases            VARCHAR
+    result_count             BIGINT
+    filter                   VARCHAR
+
+cic-ids-2018/ntlm (12 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    username                 VARCHAR
+    hostname                 VARCHAR
+    server_nb_computer_name  VARCHAR
+    server_dns_computer_name VARCHAR
+    success                  BOOLEAN
+    domainname               VARCHAR
+
+cic-ids-2018/ntp (19 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    mode                     BIGINT
+    stratum                  BIGINT
+    poll                     DOUBLE
+    precision                DOUBLE
+    root_delay               DOUBLE
+    root_disp                DOUBLE
+    ref_id                   VARCHAR
+    ref_time                 DOUBLE
+    org_time                 DOUBLE
+    rec_time                 DOUBLE
+    xmt_time                 DOUBLE
+    num_exts                 BIGINT
+
+cic-ids-2018/ocsp (11 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    hashAlgorithm            VARCHAR
+    issuerNameHash           VARCHAR
+    issuerKeyHash            VARCHAR
+    serialNumber             VARCHAR
+    certStatus               VARCHAR
+    thisUpdate               DOUBLE
+    nextUpdate               DOUBLE
+    revoketime               DOUBLE
+    revokereason             VARCHAR
+
+cic-ids-2018/packet_filter (5 columns)
+    ts                       DOUBLE
+    node                     VARCHAR
+    filter                   VARCHAR
+    init                     BOOLEAN
+    success                  BOOLEAN
+
+cic-ids-2018/pe (17 columns)
+    ts                       DOUBLE
+    id                       VARCHAR
+    machine                  VARCHAR
+    compile_ts               DOUBLE
+    os                       VARCHAR
+    subsystem                VARCHAR
+    is_exe                   BOOLEAN
+    is_64bit                 BOOLEAN
+    uses_aslr                BOOLEAN
+    uses_dep                 BOOLEAN
+    uses_code_integrity      BOOLEAN
+    uses_seh                 BOOLEAN
+    has_import_table         BOOLEAN
+    has_export_table         BOOLEAN
+    has_cert_table           BOOLEAN
+    has_debug_data           BOOLEAN
+    section_names            VARCHAR[]
+
+cic-ids-2018/rdp (22 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    cookie                   VARCHAR
+    result                   VARCHAR
+    security_protocol        VARCHAR
+    cert_count               BIGINT
+    keyboard_layout          VARCHAR
+    client_build             VARCHAR
+    client_name              VARCHAR
+    client_dig_product_id    VARCHAR
+    desktop_width            BIGINT
+    desktop_height           BIGINT
+    requested_color_depth    VARCHAR
+    cert_type                VARCHAR
+    cert_permanent           BOOLEAN
+    encryption_level         VARCHAR
+    encryption_method        VARCHAR
+    client_channels          VARCHAR[]
+
+cic-ids-2018/redis (8 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    success                  BOOLEAN
+    reply.value              VARCHAR
+
+cic-ids-2018/sip (17 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    trans_depth              BIGINT
+    method                   VARCHAR
+    uri                      VARCHAR
+    request_from             VARCHAR
+    request_to               VARCHAR
+    call_id                  VARCHAR
+    seq                      VARCHAR
+    request_path             VARCHAR[]
+    response_path            JSON[]
+    user_agent               VARCHAR
+    request_body_len         BIGINT
+
+cic-ids-2018/smb_mapping (9 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    path                     VARCHAR
+    service                  VARCHAR
+    share_type               VARCHAR
+
+cic-ids-2018/snmp (13 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    duration                 DOUBLE
+    version                  VARCHAR
+    community                VARCHAR
+    get_requests             BIGINT
+    get_bulk_requests        BIGINT
+    get_responses            BIGINT
+    set_requests             BIGINT
+
+cic-ids-2018/socks (12 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    status                   VARCHAR
+    request.name             VARCHAR
+    request_p                BIGINT
+    bound.host               VARCHAR
+    bound_p                  BIGINT
+
+cic-ids-2018/ssh (18 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    version                  BIGINT
+    auth_attempts            BIGINT
+    direction                VARCHAR
+    client                   VARCHAR
+    server                   VARCHAR
+    cipher_alg               VARCHAR
+    mac_alg                  VARCHAR
+    compression_alg          VARCHAR
+    kex_alg                  VARCHAR
+    host_key_alg             VARCHAR
+    host_key_fingerprint     VARCHAR
+    auth_success             BOOLEAN
+
+cic-ids-2018/ssl (18 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    server_name              VARCHAR
+    resumed                  BOOLEAN
+    established              BOOLEAN
+    ssl_history              VARCHAR
+    version                  VARCHAR
+    cipher                   VARCHAR
+    curve                    VARCHAR
+    cert_chain_fps           VARCHAR[]
+    client_cert_chain_fps    VARCHAR[]
+    next_protocol            VARCHAR
+    sni_matches_cert         BOOLEAN
+    last_alert               VARCHAR
+
+cic-ids-2018/tunnel (8 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    tunnel_type              VARCHAR
+    action                   VARCHAR
+
+cic-ids-2018/websocket (10 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    host                     VARCHAR
+    uri                      VARCHAR
+    user_agent               VARCHAR
+    client_extensions        VARCHAR[]
+
+cic-ids-2018/weird (11 columns)
+    ts                       DOUBLE
+    uid                      VARCHAR
+    id.orig_h                VARCHAR
+    id.orig_p                BIGINT
+    id.resp_h                VARCHAR
+    id.resp_p                BIGINT
+    name                     VARCHAR
+    notice                   BOOLEAN
+    peer                     VARCHAR
+    source                   VARCHAR
+    addl                     VARCHAR
+
+cic-ids-2018/x509 (21 columns)
+    ts                       DOUBLE
+    fingerprint              VARCHAR
+    certificate.version      BIGINT
+    certificate.serial       VARCHAR
+    certificate.subject      VARCHAR
+    certificate.issuer       VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg      VARCHAR
+    certificate.sig_alg      VARCHAR
+    certificate.key_type     VARCHAR
+    certificate.key_length   BIGINT
+    certificate.exponent     VARCHAR
+    host_cert                BOOLEAN
+    client_cert              BOOLEAN
+    san.dns                  VARCHAR[]
+    basic_constraints.ca     BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve        VARCHAR
+    san.email                VARCHAR[]
+    san.uri                  VARCHAR[]
+
+========================================================================
+DATASET SIZE ANALYSIS
+========================================================================
+
+## cic-ddos-2019 -- 20 tables, 72,925,722 rows, 302 columns across tables, 2,516.4 MB
+table                         rows  cols  rowgroups   size MB  dimensions
+conn                    72,533,839    21        589   2,429.8  72,533,839 x 21
+syslog                     197,351    10          3      79.9  197,351 x 10
+dns                        104,738    26          2       3.2  104,738 x 26
+weird                       40,208    11          1       1.2  40,208 x 11
+files                       11,698    20          1       0.5  11,698 x 20
+ssl                         11,250    17          1       0.4  11,250 x 17
+http                         9,249    25          1       0.5  9,249 x 25
+ocsp                         3,905     9          1       0.1  3,905 x 9
+analyzer                     3,800    12          1       0.2  3,800 x 12
+x509                         2,680    20          1       0.3  2,680 x 20
+ssh                          2,577    17          1       0.1  2,577 x 17
+dhcp                         1,242    12          1       0.0  1,242 x 12
+ntp                          1,209    19          1       0.0  1,209 x 19
+packet_filter                  965     5          1       0.0  965 x 5
+snmp                           600    15          1       0.0  600 x 15
+quic                           245    10          1       0.0  245 x 10
+ldap_search                    127    12          1       0.0  127 x 12
+sip                             33    17          1       0.0  33 x 17
+radius                           5     7          1       0.0  5 x 7
+pe                               1    17          1       0.0  1 x 17
+TOTAL                   72,925,722   302              2,516.4
+
+## cic-ids-2017 -- 23 tables, 5,861,465 rows, 343 columns across tables, 248.6 MB
+table                         rows  cols  rowgroups   size MB  dimensions
+conn                     2,119,182    21         19      90.6  2,119,182 x 21
+dns                      1,973,379    26         18      68.0  1,973,379 x 26
+files                      570,753    20          7      25.7  570,753 x 20
+http                       534,153    27          6      38.5  534,153 x 27
+ssl                        333,050    18          5      12.9  333,050 x 18
+weird                      104,611    11          2       2.9  104,611 x 11
+ocsp                        99,869     9          2       3.3  99,869 x 9
+ntp                         73,174    19          1       3.0  73,174 x 19
+x509                        12,032    21          1       2.5  12,032 x 21
+ssh                          8,254    17          1       0.2  8,254 x 17
+ldap_search                  7,630    13          1       0.2  7,630 x 13
+ldap                         7,418    11          1       0.1  7,418 x 11
+ftp                          5,294    18          1       0.3  5,294 x 18
+kerberos                     5,023    16          1       0.2  5,023 x 16
+dce_rpc                      3,049    10          1       0.1  3,049 x 10
+smb_mapping                  1,892     9          1       0.1  1,892 x 9
+smb_files                    1,740    14          1       0.0  1,740 x 14
+mqtt_connect                   572     7          1       0.0  572 x 7
+ntlm                           317    13          1       0.0  317 x 13
+analyzer                        41    11          1       0.0  41 x 11
+pe                              21    17          1       0.0  21 x 17
+websocket                        6    10          1       0.0  6 x 10
+packet_filter                    5     5          1       0.0  5 x 5
+TOTAL                    5,861,465   343                248.6
+
+## cic-ids-2018 -- 26 tables, 138,537,357 rows, 384 columns across tables, 5,558.0 MB
+table                         rows  cols  rowgroups   size MB  dimensions
+conn                    56,245,493    22        457   2,418.4  56,245,493 x 22
+dns                     27,252,013    26        223   1,022.1  27,252,013 x 26
+ssl                     17,442,596    18        144     575.4  17,442,596 x 18
+files                   11,954,308    20         99     510.9  11,954,308 x 20
+rdp                     11,277,609    22         93     339.2  11,277,609 x 22
+http                     8,366,386    28         70     476.9  8,366,386 x 28
+ocsp                     3,773,569    11         33     115.0  3,773,569 x 11
+x509                       962,466    21         11      56.2  962,466 x 21
+smb_mapping                436,659     9          6      16.6  436,659 x 9
+ntp                        192,339    19          3       9.1  192,339 x 19
+weird                      175,777    11          3       3.0  175,777 x 11
+ntlm                       110,509    12          2       3.2  110,509 x 12
+sip                        109,627    17          2       5.8  109,627 x 17
+ssh                        101,913    18          2       2.7  101,913 x 18
+dhcp                        69,547    13          2       1.9  69,547 x 13
+dce_rpc                     41,289    10          1       0.8  41,289 x 10
+snmp                         6,741    13          1       0.2  6,741 x 13
+analyzer                     5,619    11          1       0.2  5,619 x 11
+ldap_search                  5,474    11          1       0.2  5,474 x 11
+packet_filter                4,005     5          1       0.0  4,005 x 5
+pe                           2,052    17          1       0.1  2,052 x 17
+socks                          990    12          1       0.0  990 x 12
+kerberos                       184    12          1       0.0  184 x 12
+tunnel                         147     8          1       0.0  147 x 8
+websocket                       43    10          1       0.0  43 x 10
+redis                            2     8          1       0.0  2 x 8
+TOTAL                  138,537,357   384              5,558.0
+
+GRAND TOTAL: 217,324,544 rows, 8.13 GB across 3 datasets
+
+========================================================================
+TABLE PRESENCE ACROSS DATASETS
+========================================================================
+table                 cic-ddos-2019   cic-ids-2017   cic-ids-2018
+analyzer                        yes            yes            yes
+conn                            yes            yes            yes
+dce_rpc                           -            yes            yes
+dhcp                            yes              -            yes
+dns                             yes            yes            yes
+files                           yes            yes            yes
+ftp                               -            yes              -
+http                            yes            yes            yes
+kerberos                          -            yes            yes
+ldap                              -            yes              -
+ldap_search                     yes            yes            yes
+mqtt_connect                      -            yes              -
+ntlm                              -            yes            yes
+ntp                             yes            yes            yes
+ocsp                            yes            yes            yes
+packet_filter                   yes            yes            yes
+pe                              yes            yes            yes
+quic                            yes              -              -
+radius                          yes              -              -
+rdp                               -              -            yes
+redis                             -              -            yes
+sip                             yes              -            yes
+smb_files                         -            yes              -
+smb_mapping                       -            yes            yes
+snmp                            yes              -            yes
+socks                             -              -            yes
+ssh                             yes            yes            yes
+ssl                             yes            yes            yes
+syslog                          yes              -              -
+tunnel                            -              -            yes
+websocket                         -            yes            yes
+weird                           yes            yes            yes
+x509                            yes            yes            yes
+
+========================================================================
+COLUMN COMPARISON (tables present in 2+ datasets)
+========================================================================
+
+analyzer  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2017: fuid
+    !! missing in cic-ids-2018: fuid
+
+conn  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: tunnel_parents
+    !! missing in cic-ids-2017: tunnel_parents
+    !! column ORDER differs (align by name, never by position)
+
+dce_rpc  [cic-ids-2017, cic-ids-2018]  -- identical
+
+dhcp  [cic-ddos-2019, cic-ids-2018]
+    !! missing in cic-ddos-2019: domain
+    !! column ORDER differs (align by name, never by position)
+
+dns  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+files  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+http  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: info_code, info_msg, orig_filenames
+    !! missing in cic-ids-2017: proxied
+    !! column ORDER differs (align by name, never by position)
+
+kerberos  [cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2018: cipher, error_msg, from, success
+
+ldap_search  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: base_object
+    !! missing in cic-ids-2018: base_object, result
+
+ntlm  [cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2018: server_tree_name
+    !! column ORDER differs (align by name, never by position)
+
+ntp  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical
+
+ocsp  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: revokereason, revoketime
+    !! missing in cic-ids-2017: revokereason, revoketime
+
+packet_filter  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical
+
+pe  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical
+
+sip  [cic-ddos-2019, cic-ids-2018]  -- identical
+
+smb_mapping  [cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+snmp  [cic-ddos-2019, cic-ids-2018]
+    !! missing in cic-ids-2018: display_string, up_since
+
+ssh  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: direction
+    !! missing in cic-ids-2017: direction
+    !! column ORDER differs (align by name, never by position)
+
+ssl  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: last_alert
+    !! type mismatch on client_cert_chain_fps: cic-ddos-2019=JSON[], cic-ids-2017=JSON[], cic-ids-2018=VARCHAR[]
+    !! column ORDER differs (align by name, never by position)
+
+websocket  [cic-ids-2017, cic-ids-2018]  -- identical
+
+weird  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+x509  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: san.uri
+    !! column ORDER differs (align by name, never by position)
