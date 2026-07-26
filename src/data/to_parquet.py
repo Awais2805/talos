@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
-Talos — convert one dataset's EXTRACTED Zeek logs to Parquet (1:1 per log type),
-with a profiling report. Streams JSON->Parquet (memory-safe at any size), then
-profiles the written Parquet.
+Talos — mirror one dataset's EXTRACTED Zeek logs to Parquet, 1:1 per file.
 
-Zones:  extracted/<dataset>/ (zeek .log) -> parquets/<dataset>/ (parquet)
+Every <path>/<name>.log under --input is converted to <path>/<name>.parquet at
+the SAME location under --output, so the extracted directory structure (dated /
+per-pcap folders) is preserved exactly -- nothing is flattened or consolidated.
+Streams JSON->Parquet per file (memory-safe), re-mints S3 creds periodically.
+
+Zones:  extracted/<dataset>/ (zeek .log) -> parquets/<dataset>/ (parquet), same tree
 Input layout:  <input>/**/<logtype>.log   (Zeek NDJSON, a single dataset)
 
 Usage:
   python to_parquet.py --input s3://bkt/extracted/cic-ids-2017 --output s3://bkt/parquets/cic-ids-2017
-  optional: --logtypes conn dns | --top-k 15 | --region eu-north-1
-  optional: --tag v2   -> writes <logtype>.v2.parquet (won't overwrite untagged files)
-
-Provenance: every row gets source_path (log file relative to --input) and
-capture (first path segment under --input, i.e. the pcap/split folder).
+  optional: --logtypes conn dns | --region eu-north-1 | --threads N
 """
 from __future__ import annotations
 import argparse, logging, os, shutil, subprocess, sys, time
@@ -105,93 +104,72 @@ def refresh_secret(c, region):
     return True
 
 
-def discover(c, base):
-    rows = c.execute(
-        f"SELECT DISTINCT regexp_extract(file, '([^/]+)\\.log$', 1) lt FROM glob('{base}/**/*.log')"
-    ).fetchall()
-    return sorted(r[0] for r in rows if r[0])
+def discover(c, base, logtypes=None):
+    """Return every .log file under base, as full paths, mirroring order.
+
+    Optionally filter to given log-type stems (e.g. --logtypes conn dns).
+    """
+    rows = c.execute(f"SELECT file FROM glob('{base}/**/*.log') ORDER BY file").fetchall()
+    files = [r[0] for r in rows]
+    if logtypes:
+        want = set(logtypes)
+        files = [f for f in files if f.rsplit("/", 1)[-1].removesuffix(".log") in want]
+    return files
 
 
-def process(c, base, lt, output, top_k, tag=""):
-    src = f"{base}/**/{lt}.log"
-    fname = f"{lt}.{tag}.parquet" if tag else f"{lt}.parquet"
-    out = f"{output.rstrip('/')}/{fname}"
-    LOG.info("=" * 80); LOG.info(f"LOG TYPE: {lt}")
-    # 1) STREAM convert JSON -> Parquet (pipelined; no in-memory table),
-    #    keeping per-row provenance: source_path + capture (split folder)
-    t0 = time.time()
-    c.execute(
-        f"COPY (SELECT * EXCLUDE (filename), "
-        f"replace(filename, '{base}/', '') AS source_path, "
-        f"split_part(replace(filename, '{base}/', ''), '/', 1) AS capture "
-        f"FROM read_json_auto('{src}', format='newline_delimited', "
-        f"union_by_name=true, ignore_errors=true, filename=true)) "
-        f"TO '{out}' (FORMAT PARQUET)"
-    )
-    dt = time.time() - t0
-    # 2) profile from the written Parquet (columnar; cheap)
-    P = f"read_parquet('{out}')"
-    n = c.execute(f"SELECT count(*) FROM {P}").fetchone()[0]
-    LOG.info(f"  rows={n:,}   (streamed to parquet in {dt:.1f}s)")
-    res = c.execute(f"SUMMARIZE SELECT * FROM {P}")
-    heads = [d[0] for d in res.description]; ci = {h: i for i, h in enumerate(heads)}
-    LOG.info("  " + " | ".join(heads))
-    cats = []
-    for r in res.fetchall():
-        LOG.info("  " + " | ".join("" if v is None else str(v) for v in r))
-        try:
-            typ = str(r[ci["column_type"]]).upper()
-            au = r[ci["approx_unique"]]; au = int(au) if au is not None else 10**9
-            if typ.startswith(("VARCHAR", "BOOL")) and 0 < au <= 1000:
-                cats.append(r[ci["column_name"]])
-        except Exception:
-            pass
-    for cn in cats:  # value distribution for low-cardinality categoricals
-        try:
-            top = c.execute(
-                f'SELECT CAST("{cn}" AS VARCHAR) v, count(*) k FROM {P} '
-                f'WHERE "{cn}" IS NOT NULL GROUP BY 1 ORDER BY k DESC LIMIT {top_k}'
-            ).fetchall()
-            if top: LOG.info(f"  top {cn}: " + ", ".join(f"{v}={k:,}" for v, k in top))
-        except Exception:
-            pass
-    LOG.info(f"  wrote {n:,} rows -> {out}")
+def process_file(c, base, src, output):
+    """Convert ONE .log file to ONE .parquet at the mirrored path under output."""
+    rel = src[len(base) + 1:]                       # path of the log within the tree
+    out = f"{output.rstrip('/')}/{rel[:-4]}.parquet"  # .log -> .parquet, same location
+    if not out.startswith("s3://"):                 # local target: ensure parent dir
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+    res = c.execute(
+        f"COPY (SELECT * FROM read_json_auto('{src}', format='newline_delimited', "
+        f"ignore_errors=true)) TO '{out}' (FORMAT PARQUET)"
+    ).fetchone()
+    return out, (res[0] if res else 0)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, help="one dataset's extracted root")
-    ap.add_argument("--output", required=True, help="parquet output prefix for this dataset")
-    ap.add_argument("--logtypes", nargs="*")
-    ap.add_argument("--top-k", type=int, default=15)
-    ap.add_argument("--tag", default="",
-                    help="output name suffix: <logtype>.<tag>.parquet (avoids overwriting)")
+    ap.add_argument("--output", required=True, help="parquet output root (tree is mirrored under it)")
+    ap.add_argument("--logtypes", nargs="*", help="only these log-type stems (default: all)")
     ap.add_argument("--region", default="eu-north-1")
     ap.add_argument("--threads", type=int, default=DEF_THREADS)
     a = ap.parse_args()
 
     lf = logger()
     base = a.input.rstrip("/")
-    LOG.info(f"TALOS to_parquet  input={base}  output={a.output}  log={lf}")
-    LOG.info(f"box: {RAM_GB} GiB RAM -> memory_limit={MEM_LIMIT}, threads={a.threads}")
-    c = connect(a.input.startswith("s3://") or a.output.startswith("s3://"), a.region, a.threads)
-    lts = a.logtypes or discover(c, base)
-    if not lts:
-        sys.exit(f"no .log files under {base}")
-    LOG.info(f"log types: {lts}")
     s3 = a.input.startswith("s3://") or a.output.startswith("s3://")
-    t0 = time.time()
-    for lt in lts:
-        _tmp_guard()  # aborts the run outright if disk is low
-        if s3 and not refresh_secret(c, a.region):
-            sys.exit("ABORT: AWS CLI can no longer mint credentials (session expired?) — run 'aws login' / re-auth and rerun")
+    LOG.info(f"TALOS to_parquet (mirror)  input={base}  output={a.output}  log={lf}")
+    LOG.info(f"box: {RAM_GB} GiB RAM -> memory_limit={MEM_LIMIT}, threads={a.threads}")
+    c = connect(s3, a.region, a.threads)
+
+    files = discover(c, base, a.logtypes)
+    if not files:
+        sys.exit(f"no .log files under {base}")
+    LOG.info(f"mirroring {len(files):,} log files 1:1 -> parquet (same dir structure)")
+
+    t0 = last_refresh = time.time()
+    done = rows = skipped = 0
+    for i, src in enumerate(files, 1):
+        if s3 and time.time() - last_refresh > 600:   # re-mint creds every 10 min
+            if not refresh_secret(c, a.region):
+                sys.exit("ABORT: AWS CLI can no longer mint credentials (session expired?) — re-auth and rerun")
+            last_refresh = time.time()
+        _tmp_guard()
         try:
-            process(c, base, lt, a.output, a.top_k, a.tag)
+            _, n = process_file(c, base, src, a.output)
+            done += 1; rows += n
         except Exception as e:
-            LOG.info(f"SKIP {lt}: {e}")
+            skipped += 1; LOG.info(f"SKIP {src}: {e}")
         finally:
             _tmp_clean()
-    LOG.info("=" * 80); LOG.info(f"DONE {len(lts)} log types in {time.time()-t0:.1f}s (log: {lf})")
+        if i % 100 == 0 or i == len(files):
+            LOG.info(f"  {i:,}/{len(files):,}  ({done:,} ok, {skipped} skipped, {rows:,} rows)")
+    LOG.info("=" * 80)
+    LOG.info(f"DONE {done:,} files ({rows:,} rows, {skipped} skipped) in {time.time()-t0:.1f}s (log: {lf})")
 
 
 if __name__ == "__main__":
