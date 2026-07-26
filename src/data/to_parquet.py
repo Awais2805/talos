@@ -10,6 +10,10 @@ Input layout:  <input>/**/<logtype>.log   (Zeek NDJSON, a single dataset)
 Usage:
   python to_parquet.py --input s3://bkt/extracted/cic-ids-2017 --output s3://bkt/parquets/cic-ids-2017
   optional: --logtypes conn dns | --top-k 15 | --region eu-north-1
+  optional: --tag v2   -> writes <logtype>.v2.parquet (won't overwrite untagged files)
+
+Provenance: every row gets source_path (log file relative to --input) and
+capture (first path segment under --input, i.e. the pcap/split folder).
 """
 from __future__ import annotations
 import argparse, logging, os, shutil, subprocess, sys, time
@@ -108,15 +112,20 @@ def discover(c, base):
     return sorted(r[0] for r in rows if r[0])
 
 
-def process(c, base, lt, output, top_k):
+def process(c, base, lt, output, top_k, tag=""):
     src = f"{base}/**/{lt}.log"
-    out = f"{output.rstrip('/')}/{lt}.parquet"
+    fname = f"{lt}.{tag}.parquet" if tag else f"{lt}.parquet"
+    out = f"{output.rstrip('/')}/{fname}"
     LOG.info("=" * 80); LOG.info(f"LOG TYPE: {lt}")
-    # 1) STREAM convert JSON -> Parquet (pipelined; no in-memory table)
+    # 1) STREAM convert JSON -> Parquet (pipelined; no in-memory table),
+    #    keeping per-row provenance: source_path + capture (split folder)
     t0 = time.time()
     c.execute(
-        f"COPY (SELECT * FROM read_json_auto('{src}', format='newline_delimited', "
-        f"union_by_name=true, ignore_errors=true)) "
+        f"COPY (SELECT * EXCLUDE (filename), "
+        f"replace(filename, '{base}/', '') AS source_path, "
+        f"split_part(replace(filename, '{base}/', ''), '/', 1) AS capture "
+        f"FROM read_json_auto('{src}', format='newline_delimited', "
+        f"union_by_name=true, ignore_errors=true, filename=true)) "
         f"TO '{out}' (FORMAT PARQUET)"
     )
     dt = time.time() - t0
@@ -155,6 +164,8 @@ def main():
     ap.add_argument("--output", required=True, help="parquet output prefix for this dataset")
     ap.add_argument("--logtypes", nargs="*")
     ap.add_argument("--top-k", type=int, default=15)
+    ap.add_argument("--tag", default="",
+                    help="output name suffix: <logtype>.<tag>.parquet (avoids overwriting)")
     ap.add_argument("--region", default="eu-north-1")
     ap.add_argument("--threads", type=int, default=DEF_THREADS)
     a = ap.parse_args()
@@ -175,7 +186,7 @@ def main():
         if s3 and not refresh_secret(c, a.region):
             sys.exit("ABORT: AWS CLI can no longer mint credentials (session expired?) — run 'aws login' / re-auth and rerun")
         try:
-            process(c, base, lt, a.output, a.top_k)
+            process(c, base, lt, a.output, a.top_k, a.tag)
         except Exception as e:
             LOG.info(f"SKIP {lt}: {e}")
         finally:

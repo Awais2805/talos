@@ -1,0 +1,57 @@
+# Talos — canonical attack taxonomy
+# Maps every raw attack name used in the per-dataset manifests to one
+# canonical class. Cross-domain evaluation is only meaningful when all
+# datasets share these classes.
+
+canonical_classes:
+  benign:       traffic not matched by any attack rule in a labelled capture
+  brute_force:  credential guessing against a network service (FTP/SSH/etc.)
+  dos:          single-source denial of service
+  ddos:         distributed / reflected-amplified denial of service
+  web_attack:   attacks on web applications (brute force login, XSS, SQLi)
+  heartbleed:   OpenSSL heartbeat memory-disclosure exploitation
+  infiltration: exploitation + inside-out activity (backdoor, internal scan)
+  botnet:       C2 traffic between bot-infected hosts and controller
+  portscan:     port / service reconnaissance
+
+raw_to_canonical:
+  # cic-ids-2017
+  FTP-Patator: brute_force
+  SSH-Patator: brute_force
+  DoS-Slowloris: dos
+  DoS-Slowhttptest: dos
+  DoS-Hulk: dos
+  DoS-GoldenEye: dos
+  Heartbleed: heartbleed
+  WebAttack-BruteForce: web_attack
+  WebAttack-XSS: web_attack
+  WebAttack-SQLInjection: web_attack
+  Infiltration: infiltration
+  Botnet-ARES: botnet
+  PortScan: portscan
+  DDoS-LOIT: ddos
+  # cic-ids-2018
+  FTP-BruteForce: brute_force
+  SSH-Bruteforce: brute_force
+  DoS-SlowHTTPTest: dos
+  DDoS-LOIC-HTTP: ddos
+  DDoS-LOIC-UDP: ddos
+  DDoS-HOIC: ddos
+  BruteForce-Web: web_attack     # DVWA login brute force -> web attack, not brute_force
+  BruteForce-XSS: web_attack
+  SQL-Injection: web_attack
+  Bot: botnet
+  # cic-ddos-2019 (all reflection/exploitation DDoS except recon)
+  PortMap: ddos
+  NetBIOS: ddos
+  LDAP: ddos
+  MSSQL: ddos
+  UDP: ddos
+  UDP-Lag: ddos
+  SYN: ddos
+  NTP: ddos
+  DNS: ddos
+  SNMP: ddos
+  SSDP: ddos
+  WebDDoS: ddos
+  TFTP: ddos

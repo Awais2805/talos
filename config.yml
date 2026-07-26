@@ -1,0 +1,24 @@
+# Talos — central configuration
+# Values consolidated from the pipeline scripts; scripts still carry their own
+# defaults until they are wired to read this file.
+
+aws:
+  region: eu-north-1
+  bucket: ids-datalakec48eb2cab942494ba5059fac3b3527d9
+
+lake:
+  # zone -> S3 key prefix
+  raw: "{dataset}/pcaps"        # original immutable pcap archives
+  extracted: "extracted"        # Zeek NDJSON logs, per dataset
+  parquets: "parquets"          # 1 parquet per log type, per dataset
+  canonical: "mapped"           # registry-governed, labelled, train-ready
+
+datasets:
+  - cic-ids-2017
+  - cic-ids-2018
+  - cic-ddos-2019
+
+zeek:
+  image: zeek/zeek:8.2.1
+  flags: "-C"                   # ignore invalid TCP checksums
+  json_logs: true

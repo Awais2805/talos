@@ -1,0 +1,53 @@
+# CIC-DDoS-2019 — ground-truth label manifest
+# Transcribed 2026-07-26 from the official dataset page (attack time table).
+#
+# !! DATES UNVALIDATED !! The official page gives per-attack times but NO
+# calendar dates for "first day" / "second day", and our profiling found the
+# pcap timestamps actually fall in Nov-Dec 2018 despite the dataset's name.
+# Before labelling, anchor day_1_date / day_2_date (and utc_offset per day:
+# Atlantic time was ADT -03:00 until 2018-11-04, AST -04:00 after) against
+# the real conn ts ranges:
+#
+#   SELECT strftime(to_timestamp(ts),'%Y-%m-%d') d,
+#          strftime(min(to_timestamp(ts)),'%H:%M') mn,
+#          strftime(max(to_timestamp(ts)),'%H:%M') mx, count(*)
+#   FROM read_parquet('s3://<bucket>/parquets/cic-ddos-2019/conn.parquet')
+#   GROUP BY 1 ORDER BY 1;
+#
+# Reflection note: these are reflected/spoofed-source attacks, so attacker
+# IPs are meaningless. Match on victim + window only.
+
+dataset: cic-ddos-2019
+utc_offset: "TODO-validate"      # -03:00 or -04:00 depending on actual dates
+day_1_date: "TODO-validate"      # testing day per paper: 7 attacks
+day_2_date: "TODO-validate"      # training day per paper: 12 attacks
+match_default: [time, victim]
+
+victims:
+  day_1_server: &vd1 [192.168.50.1]
+  day_2_server: &vd2 [192.168.50.4]
+  firewall: 205.174.165.81       # victim may appear behind this publicly
+
+attacks:
+  # ---- Day 1 ("testing day") ----
+  - {name: PortMap, day: 1, start: "09:43", end: "09:51", victim_ips: *vd1}
+  - {name: NetBIOS, day: 1, start: "10:00", end: "10:09", victim_ips: *vd1}
+  - {name: LDAP,    day: 1, start: "10:21", end: "10:30", victim_ips: *vd1}
+  - {name: MSSQL,   day: 1, start: "10:33", end: "10:42", victim_ips: *vd1}
+  - {name: UDP,     day: 1, start: "10:53", end: "11:03", victim_ips: *vd1}
+  - {name: UDP-Lag, day: 1, start: "11:14", end: "11:24", victim_ips: *vd1}
+  - {name: SYN,     day: 1, start: "11:28", end: "17:35", victim_ips: *vd1}
+
+  # ---- Day 2 ("training day") ----
+  - {name: NTP,     day: 2, start: "10:35", end: "10:45", victim_ips: *vd2}
+  - {name: DNS,     day: 2, start: "10:52", end: "11:05", victim_ips: *vd2}
+  - {name: LDAP,    day: 2, start: "11:22", end: "11:32", victim_ips: *vd2}
+  - {name: MSSQL,   day: 2, start: "11:36", end: "11:45", victim_ips: *vd2}
+  - {name: NetBIOS, day: 2, start: "11:50", end: "12:00", victim_ips: *vd2}
+  - {name: SNMP,    day: 2, start: "12:12", end: "12:23", victim_ips: *vd2}
+  - {name: SSDP,    day: 2, start: "12:27", end: "12:37", victim_ips: *vd2}
+  - {name: UDP,     day: 2, start: "12:45", end: "13:09", victim_ips: *vd2}
+  - {name: UDP-Lag, day: 2, start: "13:11", end: "13:15", victim_ips: *vd2}
+  - {name: WebDDoS, day: 2, start: "13:18", end: "13:29", victim_ips: *vd2}
+  - {name: SYN,     day: 2, start: "13:29", end: "13:34", victim_ips: *vd2}
+  - {name: TFTP,    day: 2, start: "13:35", end: "17:15", victim_ips: *vd2}
