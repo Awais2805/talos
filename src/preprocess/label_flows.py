@@ -130,7 +130,9 @@ def epoch(date, hhmm, offset):
 def load_rules(dataset):
     """Normalise a manifest into flat rules: one per attack window."""
     man = yaml.safe_load((MANIFESTS / f"{dataset}.yaml").read_text())
-    tax = yaml.safe_load((MANIFESTS / "taxonomy.yaml").read_text())["raw_to_canonical"]
+    taxdoc = yaml.safe_load((MANIFESTS / "taxonomy.yaml").read_text())
+    tax = taxdoc["raw_to_canonical"]
+    needs_payload = set(taxdoc.get("requires_payload", []))
     days = man.get("days")  # 2019: per-day date + offset; others: dataset-level
 
     rules = []
@@ -153,6 +155,7 @@ def load_rules(dataset):
             "victims": [str(x) for x in a.get("victim_ips", [])] or None,
             # a /24 victim subnet becomes a cheap string prefix test
             "prefix": sub.rsplit(".", 1)[0] + "." if sub else None,
+            "needs_payload": a["name"] in needs_payload,
             "date": date, "start": a["start"], "end": a["end"],
         })
 
@@ -224,10 +227,11 @@ def rules_sql(rules):
     rows = ",\n    ".join(
         f"({r['rid']}, '{r['name']}', '{r['canonical']}', {r['t0']}, {r['t1']}, "
         f"{lst(r['attackers'])}, {lst(r['victims'])}, "
-        f"{'CAST(NULL AS VARCHAR)' if not r['prefix'] else repr(r['prefix'])})"
+        f"{'CAST(NULL AS VARCHAR)' if not r['prefix'] else repr(r['prefix'])}, "
+        f"{'true' if r['needs_payload'] else 'false'})"
         for r in rules)
     return ("SELECT * FROM (VALUES\n    " + rows +
-            "\n  ) AS r(rid, rname, rclass, t0, t1, atk, vic, vpfx)")
+            "\n  ) AS r(rid, rname, rclass, t0, t1, atk, vic, vpfx, needs_payload)")
 
 
 def _base_ctes(rules, src, base):
@@ -255,9 +259,19 @@ def _base_ctes(rules, src, base):
         GROUP BY c.uid
       ),
       matched AS (
-        SELECT h.uid, h.rid, h.nrules, r.rname, r.rclass
+        SELECT h.uid, h.rid, h.nrules, r.rname, r.rclass, r.needs_payload
         FROM hits h JOIN rules r ON r.rid = h.rid
       )"""
+
+
+# Did the attack actually execute? Only meaningful where the attack requires the
+# attacker to send payload (see taxonomy.yaml requires_payload). NULL = not
+# applicable, or Zeek could not determine the byte count -- which is NOT the same
+# as a confirmed empty connection and must not be counted as one.
+EXECUTED = """CASE WHEN m.rid IS NULL OR NOT m.needs_payload THEN NULL
+                   WHEN c.orig_bytes IS NULL THEN NULL
+                   WHEN c.orig_bytes > 0 THEN true
+                   ELSE false END"""
 
 
 def attack_query(rules, src, base):
@@ -266,10 +280,35 @@ def attack_query(rules, src, base):
     Benign is total minus attack, and the total comes from parquet footers, so
     the report never pays for a LEFT JOIN across every flow in the dataset.
     """
-    return _base_ctes(rules, src, base) + """
-      SELECT rclass, rname, rid, count(*) AS n,
-             sum(CASE WHEN nrules > 1 THEN 1 ELSE 0 END) AS overlaps
-      FROM matched GROUP BY 1, 2, 3 ORDER BY 4 DESC"""
+    return _base_ctes(rules, src, base) + f"""
+      SELECT m.rclass, m.rname, m.rid, count(*) AS n,
+             sum(CASE WHEN m.nrules > 1 THEN 1 ELSE 0 END) AS overlaps,
+             sum(CASE WHEN {EXECUTED} THEN 1 ELSE 0 END) AS executed,
+             sum(CASE WHEN {EXECUTED} = false THEN 1 ELSE 0 END) AS attempted
+      FROM matched m JOIN conn c USING (uid)
+      GROUP BY 1, 2, 3 ORDER BY 4 DESC"""
+
+
+def benign_qa_query(rules, src, base):
+    """Automated benign-class audit.
+
+    Benign traffic does not arrive in large synchronised bursts aimed at one
+    host. Where it does, the labelling has missed an attack -- this is exactly
+    how the 2019 DNS misalignment and the off-by-one-minute bug were caught, so
+    the check runs on every labelling run rather than by hand.
+    """
+    ips = sorted({ip for r in rules for ip in (r["victims"] or [])})
+    inlist = ", ".join(f"'{i}'" for i in ips) or "''"
+    return _base_ctes(rules, src, base) + f"""
+      SELECT c.capture,
+             strftime(to_timestamp(floor(c.ts/600)*600) AT TIME ZONE 'UTC',
+                      '%Y-%m-%d %H:%M') AS bucket,
+             count(*) AS n,
+             sum(CASE WHEN c."id.orig_h" IN ({inlist})
+                        OR c."id.resp_h" IN ({inlist}) THEN 1 ELSE 0 END) AS victim_flows
+      FROM conn c LEFT JOIN matched m USING (uid)
+      WHERE m.rid IS NULL
+      GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10"""
 
 
 def labelled_query(rules, src, base, dataset, man_sha, tax_sha, started):
@@ -284,6 +323,7 @@ def labelled_query(rules, src, base, dataset, man_sha, tax_sha, started):
              coalesce(m.rclass, 'benign')               AS label_class,
              m.rname                                    AS label_raw,
              m.rid                                      AS rule_id,
+             {EXECUTED}                                 AS label_executed,
              CASE WHEN m.rid IS NOT NULL THEN 'schedule'
                   ELSE 'schedule-closed-world' END      AS label_source,
              coalesce(m.nrules, 0)                      AS rules_matched,
@@ -327,9 +367,12 @@ def main():
     attack = sum(r[3] for r in rows)
     overlaps = sum(r[4] for r in rows)
 
-    print(f"{'canonical class':<16}{'raw attack name':<26}{'flows':>14}")
-    for cls, raw, _, n, _ in rows:
-        print(f"{cls:<16}{raw:<26}{n:>14,}")
+    print(f"{'canonical class':<15}{'raw attack name':<25}{'flows':>13}"
+          f"{'executed':>11}{'attempted':>11}")
+    for cls, raw, _, n, _, ex, att in rows:
+        note = "  <-- mostly attempts" if att and att > n / 2 else ""
+        print(f"{cls:<15}{raw:<25}{n:>13,}"
+              f"{(f'{ex:,}' if ex else '-'):>11}{(f'{att:,}' if att else '-'):>11}{note}")
     print(f"{'-' * 56}\n{'ATTACK':<42}{attack:>14,}")
     print(f"{'BENIGN (closed-world)':<42}{total - attack:>14,}")
     print(f"{'TOTAL':<42}{total:>14,}")
@@ -347,6 +390,21 @@ def main():
     if overlaps:
         print(f"note: {overlaps:,} flow(s) matched >1 rule; lowest rule id wins")
 
+    # ---- automated benign-class audit -------------------------------------
+    qa = lake.sql(benign_qa_query(rules, src, base))
+    suspect = [(cap, b, n, v) for cap, b, n, v in qa
+               if n > max(10_000, 0.005 * total) and v > 0.9 * n]
+    print("\nbenign-class audit (largest unmatched bursts):")
+    if suspect:
+        print(f"  !! {len(suspect)} burst(s) look like MISSED ATTACKS — large, and "
+              f"almost entirely aimed at a known victim:")
+        for cap, b, n, v in suspect[:5]:
+            print(f"     {cap:<24}{b}Z  {n:>12,} flows, {100*v/n:.1f}% victim-involving")
+        print("     -> a rule's window is probably wrong; check the schedule against "
+              "the traffic")
+    else:
+        print("  no benign bursts concentrated on a victim — labelling looks complete")
+
     report = {
         "dataset": a.dataset, "source": src, "started_utc": started,
         "manifest_sha": man_sha, "taxonomy_sha": tax_sha,
@@ -356,10 +414,17 @@ def main():
         "flows_total": total, "flows_attack": attack, "flows_benign": total - attack,
         "attack_ratio": (attack / total) if total else 0.0,
         "flows_multi_rule": overlaps,
+        "flows_executed": sum(r[5] or 0 for r in rows),
+        "flows_attempted": sum(r[6] or 0 for r in rows),
+        "qa_benign_bursts": [{"capture": q[0], "bucket_utc": q[1], "flows": q[2],
+                              "victim_involving": q[3],
+                              "victim_pct": round(100*q[3]/q[2], 1) if q[2] else 0}
+                             for q in qa],
+        "qa_suspect_bursts": len(suspect),
         "by_class": dict({c: sum(r[3] for r in rows if r[0] == c) for c in {r[0] for r in rows}},
                          **{"benign": total - attack}),
-        "by_rule": [{"rule_id": r[2], "raw": r[1], "class": r[0], "flows": r[3]}
-                    for r in rows],
+        "by_rule": [{"rule_id": r[2], "raw": r[1], "class": r[0], "flows": r[3],
+                     "executed": r[5], "attempted": r[6]} for r in rows],
         "output": out,
     }
     rpath = a.report or REPORTS / f"labelling_{a.dataset}.json"

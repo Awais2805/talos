@@ -14,6 +14,42 @@ canonical_classes:
   botnet:       C2 traffic between bot-infected hosts and controller
   portscan:     port / service reconnaissance
 
+# Attacks whose execution REQUIRES the attacker to send payload. A flow matched
+# by time+endpoints but carrying zero forward bytes is then a connection attempt,
+# not an executed attack, and is marked label_executed=false rather than being
+# silently counted as a successful attack.
+#
+# Following Engelen, Rimmer & Joosen, "Troubleshooting an Intrusion Detection
+# Dataset: the CICIDS2017 Case Study" (WTMC 2021), who show that labelling on
+# time+IP alone counts empty and failed TCP connections as executed attacks.
+# Independently reproduced on our Zeek extraction: 2017 WebAttack-BruteForce is
+# 1,213/1,356 empty and WebAttack-XSS 652/679.
+#
+# Deliberately EXCLUDED are attacks where an empty connection IS the mechanism --
+# port scans, slow-DoS (Slowloris/SlowHTTPTest hold sockets open by sending
+# almost nothing), SYN floods and UDP reflection. Marking those "attempted"
+# would discard real attack traffic.
+requires_payload:
+  - FTP-Patator
+  - SSH-Patator
+  - FTP-BruteForce
+  - SSH-Bruteforce
+  - WebAttack-BruteForce
+  - WebAttack-XSS
+  - WebAttack-SQLInjection
+  - BruteForce-Web
+  - BruteForce-XSS
+  - SQL-Injection
+  - Botnet-ARES
+  - Bot
+  - Infiltration
+  - Heartbleed
+  - DoS-Hulk
+  - DoS-GoldenEye
+  - DDoS-LOIT
+  - DDoS-LOIC-HTTP
+  - DDoS-HOIC
+
 raw_to_canonical:
   # cic-ids-2017
   FTP-Patator: brute_force

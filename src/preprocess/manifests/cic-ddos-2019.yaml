@@ -65,7 +65,14 @@ attacks:
 
   # ---- Day 2 ("training day") ----
   - {name: NTP,     day: 2, start: "10:35", end: "10:45", victim_ips: *vd2}
-  - {name: DNS,     day: 2, start: "10:52", end: "11:05", victim_ips: *vd2}
+  # CORRECTED from the documented 10:52-11:05. That window holds 15,743 flows
+  # (effectively nothing) while a 4,981,469-flow reflection flood sits at
+  # 11:06-11:16, matching the shape of the LDAP flood beside it. Every other
+  # day-2 attack maps 1:1 to an observed burst in the documented order, leaving
+  # exactly one unexplained burst and exactly one unexplained attack — the same
+  # sequence-alignment evidence used to correct the swapped victim IPs above.
+  # Leaving it documented would put ~5M attack flows in the benign class.
+  - {name: DNS,     day: 2, start: "11:06", end: "11:16", victim_ips: *vd2}
   - {name: LDAP,    day: 2, start: "11:22", end: "11:32", victim_ips: *vd2}
   - {name: MSSQL,   day: 2, start: "11:36", end: "11:45", victim_ips: *vd2}
   - {name: NetBIOS, day: 2, start: "11:50", end: "12:00", victim_ips: *vd2}
