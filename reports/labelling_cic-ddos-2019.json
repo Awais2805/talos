@@ -1,0 +1,136 @@
+{
+  "dataset": "cic-ddos-2019",
+  "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ddos-2019/**/conn.parquet",
+  "started_utc": "2026-07-27T20:54:55+00:00",
+  "manifest_sha": "b27dd8e6f4b6",
+  "taxonomy_sha": "a32b4b07b598",
+  "rules_total": 19,
+  "rules_fired": 19,
+  "rules_silent": [],
+  "flows_total": 72533839,
+  "flows_attack": 66843941,
+  "flows_benign": 5689898,
+  "attack_ratio": 0.9215552619515975,
+  "flows_multi_rule": 0,
+  "by_class": {
+    "ddos": 66843941,
+    "benign": 5689898
+  },
+  "by_rule": [
+    {
+      "rule_id": 18,
+      "raw": "TFTP",
+      "class": "ddos",
+      "flows": 19926419
+    },
+    {
+      "rule_id": 6,
+      "raw": "SYN",
+      "class": "ddos",
+      "flows": 6233851
+    },
+    {
+      "rule_id": 3,
+      "raw": "MSSQL",
+      "class": "ddos",
+      "flows": 5777686
+    },
+    {
+      "rule_id": 12,
+      "raw": "SNMP",
+      "class": "ddos",
+      "flows": 4952465
+    },
+    {
+      "rule_id": 11,
+      "raw": "NetBIOS",
+      "class": "ddos",
+      "flows": 4271667
+    },
+    {
+      "rule_id": 10,
+      "raw": "MSSQL",
+      "class": "ddos",
+      "flows": 3991794
+    },
+    {
+      "rule_id": 4,
+      "raw": "UDP",
+      "class": "ddos",
+      "flows": 3853325
+    },
+    {
+      "rule_id": 1,
+      "raw": "NetBIOS",
+      "class": "ddos",
+      "flows": 3842475
+    },
+    {
+      "rule_id": 14,
+      "raw": "UDP",
+      "class": "ddos",
+      "flows": 3109792
+    },
+    {
+      "rule_id": 17,
+      "raw": "SYN",
+      "class": "ddos",
+      "flows": 2920125
+    },
+    {
+      "rule_id": 13,
+      "raw": "SSDP",
+      "class": "ddos",
+      "flows": 2630857
+    },
+    {
+      "rule_id": 9,
+      "raw": "LDAP",
+      "class": "ddos",
+      "flows": 2204808
+    },
+    {
+      "rule_id": 2,
+      "raw": "LDAP",
+      "class": "ddos",
+      "flows": 1914542
+    },
+    {
+      "rule_id": 7,
+      "raw": "NTP",
+      "class": "ddos",
+      "flows": 1193308
+    },
+    {
+      "rule_id": 8,
+      "raw": "DNS",
+      "class": "ddos",
+      "flows": 14603
+    },
+    {
+      "rule_id": 15,
+      "raw": "UDP-Lag",
+      "class": "ddos",
+      "flows": 4176
+    },
+    {
+      "rule_id": 5,
+      "raw": "UDP-Lag",
+      "class": "ddos",
+      "flows": 1015
+    },
+    {
+      "rule_id": 0,
+      "raw": "PortMap",
+      "class": "ddos",
+      "flows": 685
+    },
+    {
+      "rule_id": 16,
+      "raw": "WebDDoS",
+      "class": "ddos",
+      "flows": 348
+    }
+  ],
+  "output": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ddos-2019/conn.parquet"
+}

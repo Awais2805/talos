@@ -1,0 +1,137 @@
+{
+  "dataset": "cic-ids-2017",
+  "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2017/**/conn.parquet",
+  "started_utc": "2026-07-27T20:51:37+00:00",
+  "manifest_sha": "7333f89b97d1",
+  "taxonomy_sha": "a32b4b07b598",
+  "rules_total": 18,
+  "rules_fired": 18,
+  "rules_silent": [],
+  "flows_total": 2119182,
+  "flows_attack": 533336,
+  "flows_benign": 1585846,
+  "attack_ratio": 0.251670691804668,
+  "flows_multi_rule": 0,
+  "by_class": {
+    "portscan": 238039,
+    "ddos": 95683,
+    "web_attack": 2047,
+    "botnet": 736,
+    "heartbleed": 1,
+    "brute_force": 6462,
+    "infiltration": 25,
+    "dos": 190343,
+    "benign": 1585846
+  },
+  "by_rule": [
+    {
+      "rule_id": 4,
+      "raw": "DoS-Hulk",
+      "class": "dos",
+      "flows": 162767
+    },
+    {
+      "rule_id": 16,
+      "raw": "PortScan",
+      "class": "portscan",
+      "flows": 160824
+    },
+    {
+      "rule_id": 17,
+      "raw": "DDoS-LOIT",
+      "class": "ddos",
+      "flows": 95683
+    },
+    {
+      "rule_id": 13,
+      "raw": "Infiltration-PortScan",
+      "class": "portscan",
+      "flows": 76831
+    },
+    {
+      "rule_id": 3,
+      "raw": "DoS-Slowhttptest",
+      "class": "dos",
+      "flows": 15936
+    },
+    {
+      "rule_id": 5,
+      "raw": "DoS-GoldenEye",
+      "class": "dos",
+      "flows": 7739
+    },
+    {
+      "rule_id": 0,
+      "raw": "FTP-Patator",
+      "class": "brute_force",
+      "flows": 3951
+    },
+    {
+      "rule_id": 2,
+      "raw": "DoS-Slowloris",
+      "class": "dos",
+      "flows": 3901
+    },
+    {
+      "rule_id": 1,
+      "raw": "SSH-Patator",
+      "class": "brute_force",
+      "flows": 2511
+    },
+    {
+      "rule_id": 7,
+      "raw": "WebAttack-BruteForce",
+      "class": "web_attack",
+      "flows": 1356
+    },
+    {
+      "rule_id": 14,
+      "raw": "Botnet-ARES",
+      "class": "botnet",
+      "flows": 736
+    },
+    {
+      "rule_id": 8,
+      "raw": "WebAttack-XSS",
+      "class": "web_attack",
+      "flows": 679
+    },
+    {
+      "rule_id": 15,
+      "raw": "PortScan",
+      "class": "portscan",
+      "flows": 384
+    },
+    {
+      "rule_id": 10,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 19
+    },
+    {
+      "rule_id": 9,
+      "raw": "WebAttack-SQLInjection",
+      "class": "web_attack",
+      "flows": 12
+    },
+    {
+      "rule_id": 11,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 5
+    },
+    {
+      "rule_id": 12,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 1
+    },
+    {
+      "rule_id": 6,
+      "raw": "Heartbleed",
+      "class": "heartbleed",
+      "flows": 1
+    }
+  ],
+  "output": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2017/conn.parquet"
+}

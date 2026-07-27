@@ -1,0 +1,159 @@
+{
+  "dataset": "cic-ids-2018",
+  "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/conn.parquet",
+  "started_utc": "2026-07-27T20:51:42+00:00",
+  "manifest_sha": "d0170ecfd267",
+  "taxonomy_sha": "a32b4b07b598",
+  "rules_total": 22,
+  "rules_fired": 22,
+  "rules_silent": [],
+  "flows_total": 62341777,
+  "flows_attack": 3702208,
+  "flows_benign": 58639569,
+  "attack_ratio": 0.059385666853865905,
+  "flows_multi_rule": 0,
+  "by_class": {
+    "web_attack": 427,
+    "ddos": 1373323,
+    "infiltration": 8,
+    "botnet": 97386,
+    "dos": 1945058,
+    "brute_force": 286006,
+    "benign": 58639569
+  },
+  "by_rule": [
+    {
+      "rule_id": 5,
+      "raw": "DoS-Hulk",
+      "class": "dos",
+      "flows": 1803685
+    },
+    {
+      "rule_id": 9,
+      "raw": "DDoS-HOIC",
+      "class": "ddos",
+      "flows": 1082322
+    },
+    {
+      "rule_id": 6,
+      "raw": "DDoS-LOIC-HTTP",
+      "class": "ddos",
+      "flows": 289527
+    },
+    {
+      "rule_id": 0,
+      "raw": "FTP-BruteForce",
+      "class": "brute_force",
+      "flows": 192300
+    },
+    {
+      "rule_id": 4,
+      "raw": "DoS-SlowHTTPTest",
+      "class": "dos",
+      "flows": 105550
+    },
+    {
+      "rule_id": 1,
+      "raw": "SSH-Bruteforce",
+      "class": "brute_force",
+      "flows": 93706
+    },
+    {
+      "rule_id": 20,
+      "raw": "Bot",
+      "class": "botnet",
+      "flows": 49239
+    },
+    {
+      "rule_id": 21,
+      "raw": "Bot",
+      "class": "botnet",
+      "flows": 48147
+    },
+    {
+      "rule_id": 2,
+      "raw": "DoS-GoldenEye",
+      "class": "dos",
+      "flows": 28661
+    },
+    {
+      "rule_id": 3,
+      "raw": "DoS-Slowloris",
+      "class": "dos",
+      "flows": 7162
+    },
+    {
+      "rule_id": 7,
+      "raw": "DDoS-LOIC-UDP",
+      "class": "ddos",
+      "flows": 1363
+    },
+    {
+      "rule_id": 10,
+      "raw": "BruteForce-Web",
+      "class": "web_attack",
+      "flows": 137
+    },
+    {
+      "rule_id": 13,
+      "raw": "BruteForce-Web",
+      "class": "web_attack",
+      "flows": 123
+    },
+    {
+      "rule_id": 8,
+      "raw": "DDoS-LOIC-UDP",
+      "class": "ddos",
+      "flows": 111
+    },
+    {
+      "rule_id": 14,
+      "raw": "BruteForce-XSS",
+      "class": "web_attack",
+      "flows": 74
+    },
+    {
+      "rule_id": 11,
+      "raw": "BruteForce-XSS",
+      "class": "web_attack",
+      "flows": 43
+    },
+    {
+      "rule_id": 15,
+      "raw": "SQL-Injection",
+      "class": "web_attack",
+      "flows": 33
+    },
+    {
+      "rule_id": 12,
+      "raw": "SQL-Injection",
+      "class": "web_attack",
+      "flows": 17
+    },
+    {
+      "rule_id": 17,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 3
+    },
+    {
+      "rule_id": 18,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 3
+    },
+    {
+      "rule_id": 19,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 1
+    },
+    {
+      "rule_id": 16,
+      "raw": "Infiltration",
+      "class": "infiltration",
+      "flows": 1
+    }
+  ],
+  "output": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/conn.parquet"
+}
