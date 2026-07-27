@@ -24,6 +24,7 @@ Usage:
 
 import argparse
 import random
+import subprocess
 import sys
 from collections import defaultdict
 
@@ -50,14 +51,45 @@ def parse_args():
     return p.parse_args()
 
 
+def _aws_creds():
+    """Current S3 creds straight from the AWS CLI (handles session refresh)."""
+    d = {}
+    try:
+        out = subprocess.run(["aws", "configure", "export-credentials", "--format", "env"],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            if line.startswith("export "):
+                k, _, v = line[7:].partition("="); d[k.strip()] = v.strip()
+    except Exception:
+        pass
+    return d
+
+
+def refresh_secret(con, region):
+    """Re-mint the DuckDB S3 secret from the CLI's current (rotating) creds.
+
+    Called before each log type so a long footer-reading run can't die on an
+    ExpiredToken partway through. Returns False if the CLI can no longer supply
+    credentials (session fully expired -> caller should tell the user to re-auth).
+    """
+    cr = _aws_creds()
+    akid, secret, token = (cr.get("AWS_ACCESS_KEY_ID"), cr.get("AWS_SECRET_ACCESS_KEY"),
+                           cr.get("AWS_SESSION_TOKEN"))
+    if not (akid and secret):
+        return False
+    extra = f", SESSION_TOKEN '{token}'" if token else ""
+    con.execute(f"CREATE OR REPLACE SECRET aws_lake "
+                f"(TYPE S3, KEY_ID '{akid}', SECRET '{secret}'{extra}, REGION '{region}');")
+    return True
+
+
 def connect(region):
     con = duckdb.connect()
     con.execute(f"INSTALL httpfs FROM '{EXT_REPO}'; LOAD httpfs;")
     con.execute(f"INSTALL aws FROM '{EXT_REPO}'; LOAD aws;")
-    con.execute(
-        "CREATE OR REPLACE SECRET aws_lake "
-        f"(TYPE s3, PROVIDER credential_chain, CHAIN 'env', REGION '{region}');"
-    )
+    if not refresh_secret(con, region):
+        sys.exit('no AWS credentials from the CLI — re-auth (aws login) or run:\n'
+                 '  eval "$(aws configure export-credentials --format env)"')
     return con
 
 
@@ -150,12 +182,15 @@ def summarize(con, bucket, prefix, dataset, logtype, paths, drift_sample):
             "n_sampled": n_sampled, "n_sigs": n_sigs or 1, "optional": optional_cols}
 
 
-def collect(con, catalog, selected, bucket, prefix, drift_sample):
+def collect(con, catalog, selected, bucket, prefix, drift_sample, region):
     """Return {dataset: {logtype: summary}}, printing progress to stderr."""
     out = {}
     for ds in selected:
         out[ds] = {}
         for lt in sorted(catalog[ds]):
+            if not refresh_secret(con, region):  # keep creds fresh across a long run
+                sys.exit("\nAWS session expired mid-run and the CLI can no longer mint "
+                         "credentials — re-auth (aws login) and rerun.")
             print(f"  ... {ds}/{lt}", file=sys.stderr, flush=True)
             try:
                 out[ds][lt] = summarize(con, bucket, prefix, ds, lt,
@@ -269,7 +304,8 @@ def main():
 
     selected = choose_datasets(catalog, args)
     print("profiling (footers only) ...", file=sys.stderr)
-    data = collect(con, catalog, selected, args.bucket, args.prefix, args.drift_sample)
+    data = collect(con, catalog, selected, args.bucket, args.prefix,
+                   args.drift_sample, args.region)
     print_inventory(data)
     print_schemas(data)
     print_cross_dataset(data)

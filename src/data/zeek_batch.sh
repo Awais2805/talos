@@ -7,8 +7,10 @@
 set -uo pipefail
 
 BUCKET=ids-datalakec48eb2cab942494ba5059fac3b3527d9
-RAW_PREFIXES=(cic-ids-2017/pcaps cic-ddos-2019/pcaps cic-ids-2018/pcaps)
-PROC=processed/zeek
+RAW_PREFIXES=(${RAW_ONLY:-cic-ids-2017/pcaps cic-ddos-2019/pcaps cic-ids-2018/pcaps})
+# zone-2 prefix: must match where the lake's Zeek logs (and _DONE markers) live,
+# otherwise the resume check misses and everything re-extracts
+PROC=${PROC:-extracted}
 ZEEK_IMG=zeek/zeek:8.2.1
 WORK=$HOME/zeekwork
 JOBS=${PARALLEL:-$(nproc)}
@@ -16,7 +18,7 @@ JOBS=${PARALLEL:-$(nproc)}
 process_one() {
   local key="$1" dataset rest outpref
   dataset=${key%%/*}
-  rest="${key#${dataset}/pcaps/}"; rest="${rest%.zip}"; rest="${rest%.pcap}"
+  rest="${key#${dataset}/pcaps/}"; rest="${rest%.zip}"; rest="${rest%.rar}"; rest="${rest%.pcap}"
   outpref="$PROC/$dataset/$rest"
 
   [ -n "$(aws s3 ls "s3://$BUCKET/$outpref/_DONE" 2>/dev/null)" ] && { echo "SKIP $key"; return 0; }
@@ -31,11 +33,16 @@ process_one() {
     echo "  unzipping $(basename "$key") ..."
     unzip -o -q "$f" -d "$d/in/" || { echo "UNZIP FAIL $key"; rm -rf "$d"; return 1; }
     rm -f "$f"
+  elif [[ "$key" == *.rar ]]; then
+    # some CIC days ship as .rar (e.g. cic-ids-2018 Tuesday-20-02-2018)
+    echo "  unrar $(basename "$key") ..."
+    unar -q -f -o "$d/in/" "$f" || { echo "UNRAR FAIL $key (need: sudo apt-get install -y unar)"; rm -rf "$d"; return 1; }
+    rm -f "$f"
   fi
 
   # detect pcaps by MAGIC (files are often extensionless splits)
   mapfile -t pcaps < <(
-    find "$d/in" -type f ! -iname '*.zip' | while IFS= read -r ff; do
+    find "$d/in" -type f ! -iname '*.zip' ! -iname '*.rar' | while IFS= read -r ff; do
       case "$(file -b "$ff" 2>/dev/null)" in *pcap*|*tcpdump*|*capture*) printf '%s\n' "$ff";; esac
     done)
   [ ${#pcaps[@]} -eq 0 ] && { echo "NO PCAP $key"; rm -rf "$d"; return 1; }
