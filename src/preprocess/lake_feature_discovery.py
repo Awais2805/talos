@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
-"""Inspect feature (column) schemas of parquet datasets in the S3 lake.
+"""Profile the Talos parquet lake -- aggregated by LOG TYPE, not per file.
 
-Discovers every dataset under s3://<bucket>/<prefix>/ -- anything extracted and
-converted to parquet appears automatically, nothing is hardcoded -- then offers
-an interactive menu to pick datasets and reports:
+The parquet zone mirrors the extracted Zeek tree (one parquet per source .log),
+so each dataset holds thousands of small files that are really many captures of
+the same handful of log types (conn, dns, http, ssl, ...). Listing them one by
+one is noise. This tool rolls them up: for each dataset x log type it reports
 
-  1. full column list + types, per table, per dataset
-  2. size analysis: rows, columns, dimensions, file size per table + totals
-  3. table presence matrix across the chosen datasets
-  4. column-level comparison for tables shared by 2+ datasets
+  1. INVENTORY   -- files, capture folders, total rows, size, column count
+  2. SCHEMA      -- the UNION of every column+type seen (the feature universe),
+                    with a within-type consistency check (uniform vs varies)
+  3. CROSS-DATASET comparison of the log types shared by 2+ datasets
+                    (missing columns, type mismatches, column-order drift)
 
-Reads parquet footers only -- no data is downloaded.
+Reads parquet footers only -- no row data is downloaded.
 
 Usage:
     eval "$(aws configure export-credentials --format env)"   # once per terminal
-    python3 lake_features.py                        # menu, report to stdout
-    python3 lake_features.py > features_report.txt  # menu still visible (stderr)
-    python3 lake_features.py --non_interactive      # all datasets, no menu
-    python3 lake_features.py --datasets cic-ids-2017,cic-ids-2018
+    python lake_feature_discovery.py                          # menu -> stdout
+    python lake_feature_discovery.py --non_interactive        # all datasets
+    python lake_feature_discovery.py --datasets cic-ids-2017,cic-ids-2018
+    optional: --drift-sample N   (files sampled per type for the consistency check)
 """
 
 import argparse
+import random
 import sys
 from collections import defaultdict
 
@@ -42,6 +45,8 @@ def parse_args():
                    help="comma-separated dataset names to inspect (skips the menu)")
     p.add_argument("--non_interactive", action="store_true",
                    help="no menu; inspect all discovered datasets")
+    p.add_argument("--drift-sample", type=int, default=200,
+                   help="files sampled per log type for the schema-consistency check")
     return p.parse_args()
 
 
@@ -57,22 +62,22 @@ def connect(region):
 
 
 def discover(con, bucket, prefix):
-    """Return {dataset: {table: s3_path}} for every parquet under the prefix.
+    """Return {dataset: {logtype: [paths]}} grouping the mirror by log type.
 
-    The first path segment under the prefix is the dataset name; anything
-    deeper is part of the table name, so nested layouts still work.
+    dataset = first path segment under the prefix; logtype = file basename
+    (conn, dns, ...), so every capture folder's conn.parquet is one group.
     """
     root = f"s3://{bucket}/{prefix}/"
     files = [r[0] for r in con.execute(
         "SELECT file FROM glob(?)", [root + "**/*.parquet"]).fetchall()]
-    catalog = defaultdict(dict)
-    for path in sorted(files):
+    catalog = defaultdict(lambda: defaultdict(list))
+    for path in files:
         rel = path[len(root):]
-        dataset, _, table_path = rel.partition("/")
-        if not table_path:  # parquet sitting directly under the prefix
-            dataset, table_path = "(root)", rel
-        catalog[dataset][table_path.removesuffix(".parquet")] = path
-    return dict(catalog)
+        segs = rel.split("/")
+        dataset = segs[0] if len(segs) > 1 else "(root)"
+        logtype = segs[-1].removesuffix(".parquet")
+        catalog[dataset][logtype].append(path)
+    return {ds: dict(lts) for ds, lts in catalog.items()}
 
 
 def choose_datasets(catalog, args):
@@ -90,7 +95,8 @@ def choose_datasets(catalog, args):
     err = sys.stderr
     print(f"\nDatasets in s3://{args.bucket}/{args.prefix}/:", file=err)
     for i, ds in enumerate(names, 1):
-        print(f"  [{i}] {ds:<28} ({len(catalog[ds])} tables)", file=err)
+        nfiles = sum(len(p) for p in catalog[ds].values())
+        print(f"  [{i}] {ds:<28} ({len(catalog[ds])} log types, {nfiles:,} files)", file=err)
     print("Select datasets [Enter = all, e.g. 1,3]: ", end="", file=err, flush=True)
     reply = input().strip()
     if not reply:
@@ -103,109 +109,126 @@ def choose_datasets(catalog, args):
     return picked
 
 
-def load_schemas(con, catalog, selected):
-    """Return {dataset: {table: [(column, type), ...]}} preserving column order."""
-    schemas = {}
+def captures_of(paths, dataset):
+    """Distinct first-level folder under the dataset root -- the capture split."""
+    caps = set()
+    for p in paths:
+        rel = p.split(f"/{dataset}/", 1)[-1]
+        caps.add(rel.split("/", 1)[0] if "/" in rel else "(root)")
+    return caps
+
+
+def summarize(con, bucket, prefix, dataset, logtype, paths, drift_sample):
+    """Roll up one dataset x log type: counts, size, union schema, consistency."""
+    glob = f"s3://{bucket}/{prefix}/{dataset}/**/{logtype}.parquet"
+
+    nfiles, rows, nbytes = con.execute(
+        "SELECT count(*), coalesce(sum(num_rows), 0), coalesce(sum(file_size_bytes), 0) "
+        "FROM parquet_file_metadata(?)", [glob]).fetchone()
+
+    # union schema (friendly DuckDB types), reading footers only
+    schema = [(r[0], r[1]) for r in con.execute(
+        f"DESCRIBE SELECT * FROM read_parquet('{glob}', union_by_name=true)").fetchall()]
+
+    # schema-consistency check on a bounded sample of files
+    sample = paths if len(paths) <= drift_sample else random.sample(paths, drift_sample)
+    n_sampled, n_sigs = con.execute(
+        "SELECT count(DISTINCT file_name), count(DISTINCT sig) FROM ("
+        "  SELECT file_name, string_agg(name, ',' ORDER BY name) sig "
+        "  FROM parquet_schema(?) WHERE type IS NOT NULL GROUP BY file_name)",
+        [sample]).fetchone()
+
+    optional_cols = []
+    if n_sigs and n_sigs > 1:  # only dig into which columns vary when they do
+        optional_cols = [r[0] for r in con.execute(
+            "SELECT name FROM parquet_schema(?) WHERE type IS NOT NULL "
+            "GROUP BY name HAVING count(DISTINCT file_name) < ?",
+            [sample, n_sampled]).fetchall()]
+
+    return {"nfiles": nfiles, "rows": rows, "bytes": nbytes, "schema": schema,
+            "captures": len(captures_of(paths, dataset)),
+            "n_sampled": n_sampled, "n_sigs": n_sigs or 1, "optional": optional_cols}
+
+
+def collect(con, catalog, selected, bucket, prefix, drift_sample):
+    """Return {dataset: {logtype: summary}}, printing progress to stderr."""
+    out = {}
     for ds in selected:
-        tables = {}
-        for table, path in sorted(catalog[ds].items()):
-            rows = con.execute(
-                f"DESCRIBE SELECT * FROM read_parquet('{path}')").fetchall()
-            tables[table] = [(r[0], r[1]) for r in rows]
-        schemas[ds] = tables
-    return schemas
+        out[ds] = {}
+        for lt in sorted(catalog[ds]):
+            print(f"  ... {ds}/{lt}", file=sys.stderr, flush=True)
+            try:
+                out[ds][lt] = summarize(con, bucket, prefix, ds, lt,
+                                        catalog[ds][lt], drift_sample)
+            except duckdb.Error as e:
+                print(f"      skip {ds}/{lt}: {e}", file=sys.stderr)
+    return out
 
 
-def load_stats(con, catalog, selected):
-    """Return {dataset: {table: {rows, row_groups, bytes}}} from parquet footers."""
-    stats = {}
-    for ds in selected:
-        paths = [catalog[ds][table] for table in sorted(catalog[ds])]
-        meta = con.execute(
-            "SELECT file_name, num_rows, num_row_groups, file_size_bytes "
-            "FROM parquet_file_metadata(?)", [paths]).fetchall()
-        by_path = {fname: (nrows, ngroups, nbytes)
-                   for fname, nrows, ngroups, nbytes in meta}
-        stats[ds] = {
-            table: {"rows": by_path[path][0],
-                    "row_groups": by_path[path][1],
-                    "bytes": by_path[path][2]}
-            for table, path in catalog[ds].items()
-        }
-    return stats
+def print_inventory(data):
+    print("=" * 78)
+    print("INVENTORY  (rolled up by log type)")
+    print("=" * 78)
+    g_files = g_rows = g_bytes = 0
+    for ds, lts in data.items():
+        d_files = sum(s["nfiles"] for s in lts.values())
+        d_rows = sum(s["rows"] for s in lts.values())
+        d_bytes = sum(s["bytes"] for s in lts.values())
+        g_files += d_files; g_rows += d_rows; g_bytes += d_bytes
+        print(f"\n## {ds} -- {len(lts)} log types, {d_files:,} files, "
+              f"{d_rows:,} rows, {d_bytes / 1048576:,.1f} MB")
+        print(f"{'log type':<16}{'files':>8}{'captures':>10}{'rows':>16}"
+              f"{'cols':>6}{'MB':>10}")
+        for lt in sorted(lts, key=lambda t: -lts[t]["rows"]):
+            s = lts[lt]
+            print(f"{lt:<16}{s['nfiles']:>8,}{s['captures']:>10,}{s['rows']:>16,}"
+                  f"{len(s['schema']):>6}{s['bytes'] / 1048576:>10,.1f}")
+        print(f"{'TOTAL':<16}{d_files:>8,}{'':>10}{d_rows:>16,}{'':>6}"
+              f"{d_bytes / 1048576:>10,.1f}")
+    if len(data) > 1:
+        print(f"\nGRAND TOTAL: {g_files:,} files, {g_rows:,} rows, "
+              f"{g_bytes / 1073741824:,.2f} GB across {len(data)} datasets")
 
 
-def print_feature_lists(schemas):
-    print("=" * 72)
-    print("FEATURES PER DATASET")
-    print("=" * 72)
-    for ds, tables in schemas.items():
-        print(f"\n## {ds} -- {len(tables)} tables")
-        for table, cols in tables.items():
-            print(f"\n{ds}/{table} ({len(cols)} columns)")
-            for name, typ in cols:
-                print(f"    {name:<24} {typ}")
+def print_schemas(data):
+    print("\n" + "=" * 78)
+    print("UNION SCHEMA per log type  (the feature universe)")
+    print("=" * 78)
+    for ds, lts in data.items():
+        print(f"\n## {ds}")
+        for lt in sorted(lts):
+            s = lts[lt]
+            if s["n_sigs"] == 1:
+                note = f"uniform across {s['nfiles']:,} files"
+                if s["n_sampled"] < s["nfiles"]:
+                    note += f" (checked {s['n_sampled']})"
+            else:
+                note = (f"VARIES across files ({s['n_sigs']} schemas in "
+                        f"{s['n_sampled']} sampled)")
+                if s["optional"]:
+                    note += f"; not-universal cols: {', '.join(sorted(s['optional']))}"
+            print(f"\n{lt}  ({len(s['schema'])} columns, {note})")
+            for name, typ in s["schema"]:
+                print(f"    {name:<26} {typ}")
 
 
-def print_size_analysis(schemas, stats):
-    print("\n" + "=" * 72)
-    print("DATASET SIZE ANALYSIS")
-    print("=" * 72)
-    grand_rows = grand_bytes = 0
-    for ds, tables in stats.items():
-        total_rows = sum(t["rows"] for t in tables.values())
-        total_bytes = sum(t["bytes"] for t in tables.values())
-        total_cols = sum(len(schemas[ds][t]) for t in tables)
-        grand_rows += total_rows
-        grand_bytes += total_bytes
-        print(f"\n## {ds} -- {len(tables)} tables, {total_rows:,} rows, "
-              f"{total_cols} columns across tables, {total_bytes / 1048576:,.1f} MB")
-        print(f"{'table':<20}{'rows':>14}{'cols':>6}{'rowgroups':>11}"
-              f"{'size MB':>10}  dimensions")
-        for table in sorted(tables, key=lambda t: -tables[t]["rows"]):
-            s = tables[table]
-            ncols = len(schemas[ds][table])
-            print(f"{table:<20}{s['rows']:>14,}{ncols:>6}{s['row_groups']:>11}"
-                  f"{s['bytes'] / 1048576:>10,.1f}  {s['rows']:,} x {ncols}")
-        print(f"{'TOTAL':<20}{total_rows:>14,}{total_cols:>6}{'':>11}"
-              f"{total_bytes / 1048576:>10,.1f}")
-    if len(stats) > 1:
-        print(f"\nGRAND TOTAL: {grand_rows:,} rows, "
-              f"{grand_bytes / 1073741824:,.2f} GB across {len(stats)} datasets")
-
-
-def print_table_matrix(schemas):
-    print("\n" + "=" * 72)
-    print("TABLE PRESENCE ACROSS DATASETS")
-    print("=" * 72)
-    datasets = list(schemas)
-    width = max(len(ds) for ds in datasets) + 2
-    all_tables = sorted(set().union(*(schemas[ds].keys() for ds in datasets)))
-    print(f"{'table':<20}" + "".join(f"{ds:>{width}}" for ds in datasets))
-    for table in all_tables:
-        marks = "".join(
-            f"{('yes' if table in schemas[ds] else '-'):>{width}}" for ds in datasets
-        )
-        print(f"{table:<20}{marks}")
-
-
-def print_column_comparison(schemas):
-    print("\n" + "=" * 72)
-    print("COLUMN COMPARISON (tables present in 2+ datasets)")
-    print("=" * 72)
-    datasets = list(schemas)
+def print_cross_dataset(data):
+    print("\n" + "=" * 78)
+    print("CROSS-DATASET COMPARISON  (log types in 2+ datasets)")
+    print("=" * 78)
+    datasets = list(data)
     if len(datasets) < 2:
         print("\n(only one dataset selected -- nothing to compare)")
         return
-    all_tables = sorted(set().union(*(schemas[ds].keys() for ds in datasets)))
-    for table in all_tables:
-        present = {ds: dict(schemas[ds][table]) for ds in datasets if table in schemas[ds]}
-        orders = {ds: [c for c, _ in schemas[ds][table]] for ds in present}
+    all_lts = sorted(set().union(*(set(lts) for lts in data.values())))
+    for lt in all_lts:
+        present = {ds: dict(data[ds][lt]["schema"]) for ds in datasets if lt in data[ds]}
         if len(present) < 2:
             continue
+        orders = {ds: [c for c, _ in data[ds][lt]["schema"]] for ds in present}
+        union_cols = set().union(*(set(d) for d in present.values()))
 
         issues = []
-        union_cols = set().union(*(set(d) for d in present.values()))
         for ds, cols in present.items():
             missing = sorted(union_cols - set(cols))
             if missing:
@@ -220,12 +243,13 @@ def print_column_comparison(schemas):
         if len({tuple(o) for o in shared_orders.values()}) > 1:
             issues.append("column ORDER differs (align by name, never by position)")
 
+        tag = f"[{', '.join(present)}]"
         if issues:
-            print(f"\n{table}  [{', '.join(present)}]")
+            print(f"\n{lt}  {tag}")
             for issue in issues:
                 print(f"    !! {issue}")
         else:
-            print(f"\n{table}  [{', '.join(present)}]  -- identical")
+            print(f"\n{lt}  {tag}  -- identical schema")
 
 
 def main():
@@ -244,14 +268,12 @@ def main():
         sys.exit(f"no parquet datasets found under s3://{args.bucket}/{args.prefix}/")
 
     selected = choose_datasets(catalog, args)
-    schemas = load_schemas(con, catalog, selected)
-    stats = load_stats(con, catalog, selected)
-    print_feature_lists(schemas)
-    print_size_analysis(schemas, stats)
-    print_table_matrix(schemas)
-    print_column_comparison(schemas)
+    print("profiling (footers only) ...", file=sys.stderr)
+    data = collect(con, catalog, selected, args.bucket, args.prefix, args.drift_sample)
+    print_inventory(data)
+    print_schemas(data)
+    print_cross_dataset(data)
 
 
 if __name__ == "__main__":
     main()
-
