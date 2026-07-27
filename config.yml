@@ -14,10 +14,28 @@ lake:
   labelled: "labelled"          # conn flows + ground-truth labels, per dataset
   canonical: "mapped"           # registry-governed, labelled, train-ready
 
+# role governs how a dataset may be used downstream:
+#   train    -- may contribute flows to a training pool
+#   holdout  -- evaluation only; MUST NOT enter a training pool
 datasets:
-  - cic-ids-2017
-  - cic-ids-2018
-  - cic-ddos-2019
+  cic-ids-2017:
+    role: train
+  cic-ids-2018:
+    role: train
+  cic-ddos-2019:
+    role: holdout
+    reason: >
+      Excluded from training to prevent domain leakage. 97.9% of all ddos-labelled
+      flows in the lake come from this one capture (66.8M of 68.3M), and it supplies
+      94% of every attack flow across all three datasets, so in any merged pool
+      "2019-ness" and "attack-ness" become nearly the same variable -- a model would
+      learn the environment, not the behaviour, and stripping IPs at Map time does
+      not remove packet-size, timing or protocol-mix signatures. Its benign class is
+      also ~98% unlabelled attack traffic and only ~110k flows are genuinely benign,
+      because the testbed ran 25 simulated users against a victim under near-constant
+      attack. Used instead as a held-out evaluation domain measuring attack RECALL
+      under domain shift (ladder rungs 2 and 4); false-positive rate is taken from
+      2017/2018, whose benign classes are verified clean.
 
 zeek:
   image: zeek/zeek:8.2.1
