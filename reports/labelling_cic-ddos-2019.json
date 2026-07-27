@@ -1,135 +1,248 @@
 {
   "dataset": "cic-ddos-2019",
   "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ddos-2019/**/conn.parquet",
-  "started_utc": "2026-07-27T20:54:55+00:00",
-  "manifest_sha": "b27dd8e6f4b6",
-  "taxonomy_sha": "a32b4b07b598",
+  "started_utc": "2026-07-27T22:41:28+00:00",
+  "manifest_sha": "e13850f182b9",
+  "taxonomy_sha": "c1730fc59e18",
   "rules_total": 19,
   "rules_fired": 19,
   "rules_silent": [],
   "flows_total": 72533839,
-  "flows_attack": 66843941,
-  "flows_benign": 5689898,
-  "attack_ratio": 0.9215552619515975,
+  "flows_attack": 71851781,
+  "flows_benign": 682058,
+  "attack_ratio": 0.9905966923934634,
   "flows_multi_rule": 0,
+  "flows_executed": 0,
+  "flows_attempted": 0,
+  "qa_benign_bursts": [
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 15:40",
+      "flows": 556201,
+      "victim_involving": 555046,
+      "victim_pct": 99.8
+    },
+    {
+      "capture": "03-11",
+      "bucket_utc": "2018-11-03 13:50",
+      "flows": 14321,
+      "victim_involving": 13051,
+      "victim_pct": 91.1
+    },
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 16:20",
+      "flows": 12803,
+      "victim_involving": 12406,
+      "victim_pct": 96.9
+    },
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 14:50",
+      "flows": 12191,
+      "victim_involving": 11248,
+      "victim_pct": 92.3
+    },
+    {
+      "capture": "03-11",
+      "bucket_utc": "2018-11-03 13:40",
+      "flows": 7222,
+      "victim_involving": 6318,
+      "victim_pct": 87.5
+    },
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 15:00",
+      "flows": 5355,
+      "victim_involving": 4597,
+      "victim_pct": 85.8
+    },
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 14:40",
+      "flows": 5221,
+      "victim_involving": 4465,
+      "victim_pct": 85.5
+    },
+    {
+      "capture": "03-11",
+      "bucket_utc": "2018-11-03 13:20",
+      "flows": 2232,
+      "victim_involving": 3,
+      "victim_pct": 0.1
+    },
+    {
+      "capture": "01-12",
+      "bucket_utc": "2018-12-01 17:40",
+      "flows": 2183,
+      "victim_involving": 0,
+      "victim_pct": 0.0
+    },
+    {
+      "capture": "03-11",
+      "bucket_utc": "2018-11-03 13:30",
+      "flows": 1857,
+      "victim_involving": 144,
+      "victim_pct": 7.8
+    }
+  ],
+  "qa_suspect_bursts": 1,
   "by_class": {
-    "ddos": 66843941,
-    "benign": 5689898
+    "ddos": 71851781,
+    "benign": 682058
   },
   "by_rule": [
     {
       "rule_id": 18,
       "raw": "TFTP",
       "class": "ddos",
-      "flows": 19926419
+      "flows": 19926419,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 6,
       "raw": "SYN",
       "class": "ddos",
-      "flows": 6233851
+      "flows": 6233851,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 3,
       "raw": "MSSQL",
       "class": "ddos",
-      "flows": 5777686
-    },
-    {
-      "rule_id": 12,
-      "raw": "SNMP",
-      "class": "ddos",
-      "flows": 4952465
-    },
-    {
-      "rule_id": 11,
-      "raw": "NetBIOS",
-      "class": "ddos",
-      "flows": 4271667
-    },
-    {
-      "rule_id": 10,
-      "raw": "MSSQL",
-      "class": "ddos",
-      "flows": 3991794
-    },
-    {
-      "rule_id": 4,
-      "raw": "UDP",
-      "class": "ddos",
-      "flows": 3853325
-    },
-    {
-      "rule_id": 1,
-      "raw": "NetBIOS",
-      "class": "ddos",
-      "flows": 3842475
-    },
-    {
-      "rule_id": 14,
-      "raw": "UDP",
-      "class": "ddos",
-      "flows": 3109792
-    },
-    {
-      "rule_id": 17,
-      "raw": "SYN",
-      "class": "ddos",
-      "flows": 2920125
-    },
-    {
-      "rule_id": 13,
-      "raw": "SSDP",
-      "class": "ddos",
-      "flows": 2630857
-    },
-    {
-      "rule_id": 9,
-      "raw": "LDAP",
-      "class": "ddos",
-      "flows": 2204808
-    },
-    {
-      "rule_id": 2,
-      "raw": "LDAP",
-      "class": "ddos",
-      "flows": 1914542
-    },
-    {
-      "rule_id": 7,
-      "raw": "NTP",
-      "class": "ddos",
-      "flows": 1193308
+      "flows": 5777686,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 8,
       "raw": "DNS",
       "class": "ddos",
-      "flows": 14603
+      "flows": 5022443,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 12,
+      "raw": "SNMP",
+      "class": "ddos",
+      "flows": 4952465,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 11,
+      "raw": "NetBIOS",
+      "class": "ddos",
+      "flows": 4271667,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 10,
+      "raw": "MSSQL",
+      "class": "ddos",
+      "flows": 3991794,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 4,
+      "raw": "UDP",
+      "class": "ddos",
+      "flows": 3853325,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 1,
+      "raw": "NetBIOS",
+      "class": "ddos",
+      "flows": 3842475,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 14,
+      "raw": "UDP",
+      "class": "ddos",
+      "flows": 3109792,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 17,
+      "raw": "SYN",
+      "class": "ddos",
+      "flows": 2920125,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 13,
+      "raw": "SSDP",
+      "class": "ddos",
+      "flows": 2630857,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 9,
+      "raw": "LDAP",
+      "class": "ddos",
+      "flows": 2204808,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 2,
+      "raw": "LDAP",
+      "class": "ddos",
+      "flows": 1914542,
+      "executed": 0,
+      "attempted": 0
+    },
+    {
+      "rule_id": 7,
+      "raw": "NTP",
+      "class": "ddos",
+      "flows": 1193308,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 15,
       "raw": "UDP-Lag",
       "class": "ddos",
-      "flows": 4176
+      "flows": 4176,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 5,
       "raw": "UDP-Lag",
       "class": "ddos",
-      "flows": 1015
+      "flows": 1015,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 0,
       "raw": "PortMap",
       "class": "ddos",
-      "flows": 685
+      "flows": 685,
+      "executed": 0,
+      "attempted": 0
     },
     {
       "rule_id": 16,
       "raw": "WebDDoS",
       "class": "ddos",
-      "flows": 348
+      "flows": 348,
+      "executed": 0,
+      "attempted": 0
     }
   ],
   "output": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ddos-2019/conn.parquet"
