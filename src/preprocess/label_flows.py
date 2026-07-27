@@ -148,13 +148,24 @@ def load_rules(dataset):
             "name": a["name"],
             "canonical": tax[a["name"]],
             "t0": epoch(date, a["start"], off),
-            "t1": epoch(date, a["end"], off),
+            "t1": epoch(date, a["end"], off),   # extended below
             "attackers": [str(x) for x in a.get("attacker_ips", [])] or None,
             "victims": [str(x) for x in a.get("victim_ips", [])] or None,
             # a /24 victim subnet becomes a cheap string prefix test
             "prefix": sub.rsplit(".", 1)[0] + "." if sub else None,
             "date": date, "start": a["start"], "end": a["end"],
         })
+
+    # Schedules are minute-granular: "13:29 - 13:34" means the attack ran THROUGH
+    # 13:34:59, not until 13:34:00, so each window is extended to the end of its
+    # final minute (MATCH uses ts < t1). Without this every rule silently drops
+    # its last minute -- on flood datasets, hundreds of thousands of flows each.
+    # The extension is clamped at the next window's start so back-to-back
+    # attacks (2019's WebDDoS 13:18-13:29 then SYN 13:29-13:34) never overlap.
+    starts = sorted(r["t0"] for r in rules)
+    for r in rules:
+        nxt = next((s for s in starts if s >= r["t1"]), None)
+        r["t1"] = min(r["t1"] + 60, nxt) if nxt is not None else r["t1"] + 60
     return man, rules
 
 
@@ -187,7 +198,7 @@ def _victim_ok(col):
 
 
 MATCH = f"""
-  c.ts >= r.t0 AND c.ts <= r.t1
+  c.ts >= r.t0 AND c.ts < r.t1
   AND (
     -- attacker known: the flow must run between attacker and victim, either way
     (r.atk IS NOT NULL AND (
