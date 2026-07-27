@@ -15,6 +15,18 @@ ZEEK_IMG=zeek/zeek:8.2.1
 WORK=$HOME/zeekwork
 JOBS=${PARALLEL:-$(nproc)}
 
+preflight() {
+  command -v docker >/dev/null 2>&1 || {
+    echo "FATAL: docker not installed — sudo apt-get install -y docker.io"; exit 1; }
+  docker info >/dev/null 2>&1 || {
+    echo "FATAL: docker daemon down or user lacks permission —"
+    echo "       sudo systemctl enable --now docker && sudo usermod -aG docker \$USER (then re-login)"; exit 1; }
+  docker image inspect "$ZEEK_IMG" >/dev/null 2>&1 || {
+    echo "pulling $ZEEK_IMG ..."; docker pull "$ZEEK_IMG" >/dev/null || {
+      echo "FATAL: cannot pull $ZEEK_IMG"; exit 1; }; }
+  echo "preflight OK: docker up, $ZEEK_IMG present"
+}
+
 process_one() {
   local key="$1" dataset rest outpref
   dataset=${key%%/*}
@@ -71,9 +83,10 @@ process_one() {
   local running=0 p rel pstem
   for p in "${pcaps[@]}"; do
     rel="${p#$d/in/}"; pstem="${rel//\//_}"
-    ( mkdir -p "$d/out/$pstem"
+    ( mkdir -p "$d/out/$pstem" "$d/err"
       docker run --rm -v "$d":/data -w "/data/out/$pstem" "$ZEEK_IMG" \
-        zeek -C -r "/data/in/$rel" LogAscii::use_json=T >/dev/null 2>&1
+        zeek -C -r "/data/in/$rel" LogAscii::use_json=T >"$d/err/$pstem.txt" 2>&1 \
+        || echo "ZEEK FAIL $rel :: $(head -c 200 "$d/err/$pstem.txt" | tr '\n' ' ')" >>"$d/err/failures.txt"
       touch "$d/out/$pstem/.complete" ) &
     running=$((running+1))
     if (( running >= JOBS )); then wait -n 2>/dev/null; running=$((running-1)); fi
@@ -81,7 +94,10 @@ process_one() {
   wait
   kill "$prog" 2>/dev/null; wait "$prog" 2>/dev/null
 
-  [ -z "$(find "$d/out" -name '*.log' -type f -print -quit)" ] && { echo "NO LOGS $key"; rm -rf "$d"; return 1; }
+  [ -z "$(find "$d/out" -name '*.log' -type f -print -quit)" ] && {
+    echo "NO LOGS $key"
+    [ -s "$d/err/failures.txt" ] && head -3 "$d/err/failures.txt" | sed 's/^/    /'
+    rm -rf "$d"; return 1; }
 
   local nlogs; nlogs=$(find "$d/out" -name '*.log' -type f | wc -l)
   echo "  uploading $nlogs log files -> $outpref"
@@ -93,6 +109,7 @@ process_one() {
   echo "$(date '+%F %T') DONE  $key -> $outpref"
 }
 
+preflight
 for pref in "${RAW_PREFIXES[@]}"; do
   echo "==== $pref ===="
   aws s3 ls "s3://$BUCKET/$pref/" --recursive \
