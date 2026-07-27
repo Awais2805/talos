@@ -1,0 +1,1347 @@
+==============================================================================
+INVENTORY  (rolled up by log type)
+==============================================================================
+
+## cic-ddos-2019 -- 20 log types, 7,532 files, 72,925,722 rows, 2,533.4 MB
+log type           files  captures            rows  cols        MB
+conn                 965         2      72,533,839    21   2,430.8
+syslog               855         2         197,351    10      81.8
+dns                  826         2         104,738    26       6.6
+weird                844         2          40,208    11       2.8
+files                350         2          11,698    20       1.5
+ssl                  243         2          11,250    17       1.4
+http                 346         2           9,249    25       2.0
+ocsp                 119         2           3,905     9       0.4
+analyzer             720         2           3,800    12       1.7
+x509                 213         2           2,680    20       1.5
+ssh                  285         2           2,577    17       0.9
+dhcp                 233         2           1,242    12       0.3
+ntp                  238         2           1,209    19       0.4
+packet_filter        965         2             965     5       0.6
+snmp                  90         2             600    15       0.3
+quic                 137         2             245    10       0.2
+ldap_search           84         2             127    12       0.1
+sip                   13         2              33    17       0.0
+radius                 5         1               5     7       0.0
+pe                     1         1               1    17       0.0
+TOTAL              7,532                72,925,722         2,533.4
+
+## cic-ids-2017 -- 23 log types, 111 files, 5,861,465 rows, 249.0 MB
+log type           files  captures            rows  cols        MB
+conn                   5         5       2,119,182    21      90.7
+dns                    5         5       1,973,379    26      68.1
+files                  5         5         570,753    20      25.6
+http                   5         5         534,153    27      38.2
+ssl                    5         5         333,050    18      13.0
+weird                  5         5         104,611    11       2.9
+ocsp                   5         5          99,869     9       3.5
+ntp                    5         5          73,174    19       3.0
+x509                   5         5          12,032    21       2.6
+ssh                    5         5           8,254    17       0.3
+ldap_search            5         5           7,630    13       0.2
+ldap                   5         5           7,418    11       0.1
+ftp                    5         5           5,294    18       0.3
+kerberos               5         5           5,023    16       0.2
+dce_rpc                5         5           3,049    10       0.1
+smb_mapping            5         5           1,892     9       0.1
+smb_files              5         5           1,740    14       0.1
+mqtt_connect           2         2             572     7       0.0
+ntlm                   5         5             317    13       0.0
+analyzer               5         5              41    11       0.0
+pe                     5         5              21    17       0.0
+websocket              4         4               6    10       0.0
+packet_filter          5         5               5     5       0.0
+TOTAL                111                 5,861,465           249.0
+
+## cic-ids-2018 -- 26 log types, 64,618 files, 138,537,357 rows, 6,387.0 MB
+log type           files  captures            rows  cols        MB
+conn               4,005         9      56,245,493    22   2,501.0
+dns                4,004         9      27,252,013    26   1,275.1
+ssl                3,944         9      17,442,596    19     677.2
+files              3,967         9      11,954,308    20     544.3
+rdp                3,933         9      11,277,609    22     348.7
+http               3,965         9       8,366,386    28     522.9
+ocsp               3,931         9       3,773,569    11     161.7
+x509               3,942         9         962,466    22     235.9
+smb_mapping        1,360         9         436,659     9      19.8
+ntp                2,859         9         192,339    19      18.6
+weird              3,999         9         175,777    11      11.5
+ntlm               2,223         9         110,509    12       7.3
+sip                3,977         9         109,627    17      22.7
+ssh                   71         9         101,913    18       3.0
+dhcp               3,964         9          69,547    13      12.5
+dce_rpc            1,000         8          41,289    10       2.6
+snmp               3,771         9           6,741    14       7.1
+analyzer           2,073         9           5,619    11       6.0
+ldap_search        2,099         9           5,474    11       3.7
+packet_filter      4,005         9           4,005     5       2.5
+pe                 1,261         9           2,052    17       2.6
+socks                  2         2             990    12       0.0
+kerberos             166         9             184    12       0.3
+tunnel                74         9             147     8       0.1
+websocket             21         7              43    10       0.0
+redis                  2         2               2     8       0.0
+TOTAL             64,618               138,537,357         6,387.0
+
+GRAND TOTAL: 72,261 files, 217,324,544 rows, 8.95 GB across 3 datasets
+
+==============================================================================
+UNION SCHEMA per log type  (the feature universe)
+==============================================================================
+
+## cic-ddos-2019
+
+analyzer  (12 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: failure_data)
+    ts                         DOUBLE
+    analyzer_kind              VARCHAR
+    analyzer_name              VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    failure_reason             VARCHAR
+    failure_data               VARCHAR
+    fuid                       VARCHAR
+
+conn  (21 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: service)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    duration                   DOUBLE
+    orig_bytes                 BIGINT
+    resp_bytes                 BIGINT
+    conn_state                 VARCHAR
+    local_orig                 BOOLEAN
+    local_resp                 BOOLEAN
+    missed_bytes               BIGINT
+    history                    VARCHAR
+    orig_pkts                  BIGINT
+    orig_ip_bytes              BIGINT
+    resp_pkts                  BIGINT
+    resp_ip_bytes              BIGINT
+    ip_proto                   BIGINT
+    service                    VARCHAR
+
+dhcp  (12 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: assigned_addr, client_addr, client_fqdn, lease_time, server_addr)
+    ts                         DOUBLE
+    uids                       VARCHAR[]
+    mac                        VARCHAR
+    host_name                  VARCHAR
+    requested_addr             VARCHAR
+    msg_types                  VARCHAR[]
+    duration                   DOUBLE
+    client_addr                VARCHAR
+    server_addr                VARCHAR
+    assigned_addr              VARCHAR
+    lease_time                 DOUBLE
+    client_fqdn                VARCHAR
+
+dns  (26 columns, VARIES across files (5 schemas in 200 sampled); not-universal cols: element, qclass, qclass_name, qtype, qtype_name, query, rcode, rcode_name, rtt)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    trans_id                   BIGINT
+    rtt                        DOUBLE
+    query                      VARCHAR
+    qclass                     BIGINT
+    qclass_name                VARCHAR
+    qtype                      BIGINT
+    qtype_name                 VARCHAR
+    rcode                      BIGINT
+    rcode_name                 VARCHAR
+    AA                         BOOLEAN
+    TC                         BOOLEAN
+    RD                         BOOLEAN
+    RA                         BOOLEAN
+    Z                          BIGINT
+    answers                    VARCHAR[]
+    TTLs                       DOUBLE[]
+    rejected                   BOOLEAN
+    opcode                     BIGINT
+    opcode_name                VARCHAR
+
+files  (20 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: filename, total_bytes)
+    ts                         DOUBLE
+    fuid                       VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    source                     VARCHAR
+    depth                      BIGINT
+    analyzers                  JSON[]
+    mime_type                  VARCHAR
+    duration                   DOUBLE
+    local_orig                 BOOLEAN
+    is_orig                    BOOLEAN
+    seen_bytes                 BIGINT
+    missing_bytes              BIGINT
+    overflow_bytes             BIGINT
+    timedout                   BOOLEAN
+    total_bytes                BIGINT
+    filename                   VARCHAR
+
+http  (25 columns, VARIES across files (12 schemas in 200 sampled); not-universal cols: origin, referrer, status_code, status_msg, user_agent, version)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    trans_depth                BIGINT
+    method                     VARCHAR
+    host                       VARCHAR
+    uri                        VARCHAR
+    version                    VARCHAR
+    user_agent                 VARCHAR
+    request_body_len           BIGINT
+    response_body_len          BIGINT
+    status_code                BIGINT
+    status_msg                 VARCHAR
+    tags                       JSON[]
+    resp_fuids                 VARCHAR[]
+    resp_mime_types            VARCHAR[]
+    referrer                   VARCHAR
+    orig_fuids                 VARCHAR[]
+    orig_mime_types            VARCHAR[]
+    resp_filenames             VARCHAR[]
+    proxied                    VARCHAR[]
+    origin                     VARCHAR
+
+ldap_search  (12 columns, VARIES across files (2 schemas in 84 sampled); not-universal cols: deref_aliases, filter, result, scope)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    message_id                 BIGINT
+    scope                      VARCHAR
+    deref_aliases              VARCHAR
+    result_count               BIGINT
+    filter                     VARCHAR
+    result                     VARCHAR
+
+ntp  (19 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: org_time, poll, precision, rec_time, ref_id, ref_time, root_delay, root_disp, stratum, xmt_time)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    mode                       BIGINT
+    stratum                    BIGINT
+    poll                       DOUBLE
+    precision                  DOUBLE
+    root_delay                 DOUBLE
+    root_disp                  DOUBLE
+    ref_id                     VARCHAR
+    ref_time                   DOUBLE
+    org_time                   DOUBLE
+    rec_time                   DOUBLE
+    xmt_time                   DOUBLE
+    num_exts                   BIGINT
+
+ocsp  (9 columns, uniform across 119 files)
+    ts                         DOUBLE
+    id                         VARCHAR
+    hashAlgorithm              VARCHAR
+    issuerNameHash             VARCHAR
+    issuerKeyHash              VARCHAR
+    serialNumber               VARCHAR
+    certStatus                 VARCHAR
+    thisUpdate                 DOUBLE
+    nextUpdate                 DOUBLE
+
+packet_filter  (5 columns, uniform across 965 files (checked 200))
+    ts                         DOUBLE
+    node                       VARCHAR
+    filter                     VARCHAR
+    init                       BOOLEAN
+    success                    BOOLEAN
+
+pe  (17 columns, uniform across 1 files)
+    ts                         DOUBLE
+    id                         VARCHAR
+    machine                    VARCHAR
+    compile_ts                 DOUBLE
+    os                         VARCHAR
+    subsystem                  VARCHAR
+    is_exe                     BOOLEAN
+    is_64bit                   BOOLEAN
+    uses_aslr                  BOOLEAN
+    uses_dep                   BOOLEAN
+    uses_code_integrity        BOOLEAN
+    uses_seh                   BOOLEAN
+    has_import_table           BOOLEAN
+    has_export_table           BOOLEAN
+    has_cert_table             BOOLEAN
+    has_debug_data             BOOLEAN
+    section_names              VARCHAR[]
+
+quic  (10 columns, VARIES across files (2 schemas in 137 sampled); not-universal cols: client_initial_dcid)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    VARCHAR
+    client_initial_dcid        VARCHAR
+    client_scid                VARCHAR
+    history                    VARCHAR
+
+radius  (7 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    result                     VARCHAR
+
+sip  (17 columns, uniform across 13 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    trans_depth                BIGINT
+    method                     VARCHAR
+    uri                        VARCHAR
+    request_from               VARCHAR
+    request_to                 VARCHAR
+    call_id                    VARCHAR
+    seq                        VARCHAR
+    request_path               VARCHAR[]
+    response_path              JSON[]
+    user_agent                 VARCHAR
+    request_body_len           BIGINT
+
+snmp  (15 columns, VARIES across files (2 schemas in 90 sampled); not-universal cols: display_string, up_since)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    duration                   DOUBLE
+    version                    VARCHAR
+    community                  VARCHAR
+    get_requests               BIGINT
+    get_bulk_requests          BIGINT
+    get_responses              BIGINT
+    set_requests               BIGINT
+    display_string             VARCHAR
+    up_since                   DOUBLE
+
+ssh  (17 columns, VARIES across files (5 schemas in 200 sampled); not-universal cols: auth_success, cipher_alg, client, compression_alg, host_key_alg, host_key_fingerprint, kex_alg, mac_alg, version)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    auth_attempts              BIGINT
+    client                     VARCHAR
+    server                     VARCHAR
+    cipher_alg                 VARCHAR
+    mac_alg                    VARCHAR
+    compression_alg            VARCHAR
+    kex_alg                    VARCHAR
+    host_key_alg               VARCHAR
+    host_key_fingerprint       VARCHAR
+    auth_success               BOOLEAN
+
+ssl  (17 columns, VARIES across files (5 schemas in 200 sampled); not-universal cols: cipher, curve, element, next_protocol, sni_matches_cert, version)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    VARCHAR
+    cipher                     VARCHAR
+    curve                      VARCHAR
+    server_name                VARCHAR
+    resumed                    BOOLEAN
+    next_protocol              VARCHAR
+    established                BOOLEAN
+    ssl_history                VARCHAR
+    cert_chain_fps             VARCHAR[]
+    client_cert_chain_fps      JSON[]
+    sni_matches_cert           BOOLEAN
+
+syslog  (10 columns, uniform across 855 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    facility                   VARCHAR
+    severity                   VARCHAR
+    message                    VARCHAR
+
+weird  (11 columns, VARIES across files (4 schemas in 200 sampled); not-universal cols: addl, source, uid)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    name                       VARCHAR
+    notice                     BOOLEAN
+    peer                       VARCHAR
+    source                     VARCHAR
+    addl                       VARCHAR
+
+x509  (20 columns, VARIES across files (5 schemas in 200 sampled); not-universal cols: basic_constraints.path_len, certificate.curve, certificate.exponent)
+    ts                         DOUBLE
+    fingerprint                VARCHAR
+    certificate.version        BIGINT
+    certificate.serial         VARCHAR
+    certificate.subject        VARCHAR
+    certificate.issuer         VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg        VARCHAR
+    certificate.sig_alg        VARCHAR
+    certificate.key_type       VARCHAR
+    certificate.key_length     BIGINT
+    certificate.exponent       VARCHAR
+    san.dns                    VARCHAR[]
+    basic_constraints.ca       BOOLEAN
+    host_cert                  BOOLEAN
+    client_cert                BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve          VARCHAR
+    san.email                  VARCHAR[]
+
+## cic-ids-2017
+
+analyzer  (11 columns, uniform across 5 files)
+    ts                         DOUBLE
+    analyzer_kind              VARCHAR
+    analyzer_name              VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    failure_reason             VARCHAR
+    failure_data               VARCHAR
+
+conn  (21 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    service                    VARCHAR
+    duration                   DOUBLE
+    orig_bytes                 BIGINT
+    resp_bytes                 BIGINT
+    conn_state                 VARCHAR
+    local_orig                 BOOLEAN
+    local_resp                 BOOLEAN
+    missed_bytes               BIGINT
+    history                    VARCHAR
+    orig_pkts                  BIGINT
+    orig_ip_bytes              BIGINT
+    resp_pkts                  BIGINT
+    resp_ip_bytes              BIGINT
+    ip_proto                   BIGINT
+
+dce_rpc  (10 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    rtt                        DOUBLE
+    named_pipe                 VARCHAR
+    endpoint                   VARCHAR
+    operation                  VARCHAR
+
+dns  (26 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    trans_id                   BIGINT
+    query                      VARCHAR
+    qclass                     BIGINT
+    qclass_name                VARCHAR
+    qtype                      BIGINT
+    qtype_name                 VARCHAR
+    rcode                      BIGINT
+    rcode_name                 VARCHAR
+    AA                         BOOLEAN
+    TC                         BOOLEAN
+    RD                         BOOLEAN
+    RA                         BOOLEAN
+    Z                          BIGINT
+    rejected                   BOOLEAN
+    opcode                     BIGINT
+    opcode_name                VARCHAR
+    rtt                        DOUBLE
+    answers                    VARCHAR[]
+    TTLs                       DOUBLE[]
+
+files  (20 columns, uniform across 5 files)
+    ts                         DOUBLE
+    fuid                       VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    source                     VARCHAR
+    depth                      BIGINT
+    analyzers                  VARCHAR[]
+    mime_type                  VARCHAR
+    duration                   DOUBLE
+    local_orig                 BOOLEAN
+    is_orig                    BOOLEAN
+    seen_bytes                 BIGINT
+    total_bytes                BIGINT
+    missing_bytes              BIGINT
+    overflow_bytes             BIGINT
+    timedout                   BOOLEAN
+    filename                   VARCHAR
+
+ftp  (18 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    user                       VARCHAR
+    password                   VARCHAR
+    command                    VARCHAR
+    reply_code                 BIGINT
+    reply_msg                  VARCHAR
+    data_channel.passive       BOOLEAN
+    data_channel.orig_h        VARCHAR
+    data_channel.resp_h        VARCHAR
+    data_channel.resp_p        BIGINT
+    arg                        VARCHAR
+    mime_type                  VARCHAR
+    fuid                       VARCHAR
+
+http  (27 columns, VARIES across files (3 schemas in 5 sampled); not-universal cols: info_code, info_msg)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    trans_depth                BIGINT
+    method                     VARCHAR
+    host                       VARCHAR
+    uri                        VARCHAR
+    version                    VARCHAR
+    user_agent                 VARCHAR
+    request_body_len           BIGINT
+    response_body_len          BIGINT
+    status_code                BIGINT
+    status_msg                 VARCHAR
+    tags                       JSON[]
+    resp_fuids                 VARCHAR[]
+    resp_mime_types            VARCHAR[]
+    orig_fuids                 VARCHAR[]
+    orig_mime_types            VARCHAR[]
+    resp_filenames             VARCHAR[]
+    referrer                   VARCHAR
+    origin                     VARCHAR
+    orig_filenames             VARCHAR[]
+    info_code                  BIGINT
+    info_msg                   VARCHAR
+
+kerberos  (16 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    request_type               VARCHAR
+    client                     VARCHAR
+    service                    VARCHAR
+    success                    BOOLEAN
+    error_msg                  VARCHAR
+    till                       DOUBLE
+    forwardable                BOOLEAN
+    renewable                  BOOLEAN
+    cipher                     VARCHAR
+    from                       DOUBLE
+
+ldap  (11 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    message_id                 BIGINT
+    version                    BIGINT
+    opcode                     VARCHAR
+    result                     VARCHAR
+    argument                   VARCHAR
+
+ldap_search  (13 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    message_id                 BIGINT
+    scope                      VARCHAR
+    deref_aliases              VARCHAR
+    result_count               BIGINT
+    result                     VARCHAR
+    filter                     VARCHAR
+    base_object                VARCHAR
+
+mqtt_connect  (7 columns, uniform across 2 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    connect_status             VARCHAR
+
+ntlm  (13 columns, VARIES across files (3 schemas in 5 sampled); not-universal cols: domainname, username)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    hostname                   VARCHAR
+    server_nb_computer_name    VARCHAR
+    server_dns_computer_name   VARCHAR
+    server_tree_name           VARCHAR
+    success                    BOOLEAN
+    domainname                 VARCHAR
+    username                   VARCHAR
+
+ntp  (19 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    mode                       BIGINT
+    stratum                    BIGINT
+    poll                       DOUBLE
+    precision                  DOUBLE
+    root_delay                 DOUBLE
+    root_disp                  DOUBLE
+    ref_id                     VARCHAR
+    ref_time                   DOUBLE
+    org_time                   DOUBLE
+    rec_time                   DOUBLE
+    xmt_time                   DOUBLE
+    num_exts                   BIGINT
+
+ocsp  (9 columns, uniform across 5 files)
+    ts                         DOUBLE
+    id                         VARCHAR
+    hashAlgorithm              VARCHAR
+    issuerNameHash             VARCHAR
+    issuerKeyHash              VARCHAR
+    serialNumber               VARCHAR
+    certStatus                 VARCHAR
+    thisUpdate                 DOUBLE
+    nextUpdate                 DOUBLE
+
+packet_filter  (5 columns, uniform across 5 files)
+    ts                         DOUBLE
+    node                       VARCHAR
+    filter                     VARCHAR
+    init                       BOOLEAN
+    success                    BOOLEAN
+
+pe  (17 columns, uniform across 5 files)
+    ts                         DOUBLE
+    id                         VARCHAR
+    machine                    VARCHAR
+    compile_ts                 DOUBLE
+    os                         VARCHAR
+    subsystem                  VARCHAR
+    is_exe                     BOOLEAN
+    is_64bit                   BOOLEAN
+    uses_aslr                  BOOLEAN
+    uses_dep                   BOOLEAN
+    uses_code_integrity        BOOLEAN
+    uses_seh                   BOOLEAN
+    has_import_table           BOOLEAN
+    has_export_table           BOOLEAN
+    has_cert_table             BOOLEAN
+    has_debug_data             BOOLEAN
+    section_names              VARCHAR[]
+
+smb_files  (14 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    action                     VARCHAR
+    path                       VARCHAR
+    name                       VARCHAR
+    size                       BIGINT
+    times.modified             DOUBLE
+    times.accessed             DOUBLE
+    times.created              DOUBLE
+    times.changed              DOUBLE
+
+smb_mapping  (9 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    path                       VARCHAR
+    share_type                 VARCHAR
+    service                    VARCHAR
+
+ssh  (17 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    auth_success               BOOLEAN
+    auth_attempts              BIGINT
+    client                     VARCHAR
+    server                     VARCHAR
+    cipher_alg                 VARCHAR
+    mac_alg                    VARCHAR
+    compression_alg            VARCHAR
+    kex_alg                    VARCHAR
+    host_key_alg               VARCHAR
+    host_key_fingerprint       VARCHAR
+
+ssl  (18 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    VARCHAR
+    cipher                     VARCHAR
+    curve                      VARCHAR
+    server_name                VARCHAR
+    resumed                    BOOLEAN
+    established                BOOLEAN
+    ssl_history                VARCHAR
+    cert_chain_fps             VARCHAR[]
+    client_cert_chain_fps      JSON[]
+    sni_matches_cert           BOOLEAN
+    next_protocol              VARCHAR
+    last_alert                 VARCHAR
+
+websocket  (10 columns, uniform across 4 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    host                       VARCHAR
+    uri                        VARCHAR
+    user_agent                 VARCHAR
+    client_extensions          VARCHAR[]
+
+weird  (11 columns, uniform across 5 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    name                       VARCHAR
+    addl                       VARCHAR
+    notice                     BOOLEAN
+    peer                       VARCHAR
+    source                     VARCHAR
+
+x509  (21 columns, VARIES across files (2 schemas in 5 sampled))
+    ts                         DOUBLE
+    fingerprint                VARCHAR
+    certificate.version        BIGINT
+    certificate.serial         VARCHAR
+    certificate.subject        VARCHAR
+    certificate.issuer         VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg        VARCHAR
+    certificate.sig_alg        VARCHAR
+    certificate.key_type       VARCHAR
+    certificate.key_length     BIGINT
+    certificate.exponent       VARCHAR
+    san.dns                    VARCHAR[]
+    basic_constraints.ca       BOOLEAN
+    host_cert                  BOOLEAN
+    client_cert                BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve          VARCHAR
+    san.email                  VARCHAR[]
+    san.uri                    VARCHAR[]
+
+## cic-ids-2018
+
+analyzer  (11 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: failure_data)
+    ts                         DOUBLE
+    analyzer_kind              VARCHAR
+    analyzer_name              VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    failure_reason             VARCHAR
+    failure_data               VARCHAR
+
+conn  (22 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: element)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    duration                   DOUBLE
+    orig_bytes                 BIGINT
+    resp_bytes                 BIGINT
+    conn_state                 VARCHAR
+    local_orig                 BOOLEAN
+    local_resp                 BOOLEAN
+    missed_bytes               BIGINT
+    history                    VARCHAR
+    orig_pkts                  BIGINT
+    orig_ip_bytes              BIGINT
+    resp_pkts                  BIGINT
+    resp_ip_bytes              BIGINT
+    ip_proto                   BIGINT
+    service                    VARCHAR
+    tunnel_parents             VARCHAR[]
+
+dce_rpc  (10 columns, uniform across 1,000 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    rtt                        DOUBLE
+    named_pipe                 VARCHAR
+    endpoint                   VARCHAR
+    operation                  VARCHAR
+
+dhcp  (13 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: client_fqdn)
+    ts                         DOUBLE
+    uids                       VARCHAR[]
+    client_addr                VARCHAR
+    server_addr                VARCHAR
+    mac                        VARCHAR
+    host_name                  VARCHAR
+    domain                     VARCHAR
+    assigned_addr              VARCHAR
+    lease_time                 DOUBLE
+    msg_types                  VARCHAR[]
+    duration                   DOUBLE
+    client_fqdn                VARCHAR
+    requested_addr             VARCHAR
+
+dns  (26 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: element, rcode, rcode_name, rtt)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    proto                      VARCHAR
+    trans_id                   BIGINT
+    query                      VARCHAR
+    qclass                     BIGINT
+    qclass_name                VARCHAR
+    qtype                      BIGINT
+    qtype_name                 VARCHAR
+    AA                         BOOLEAN
+    TC                         BOOLEAN
+    RD                         BOOLEAN
+    RA                         BOOLEAN
+    Z                          BIGINT
+    rejected                   BOOLEAN
+    opcode                     BIGINT
+    opcode_name                VARCHAR
+    rcode                      BIGINT
+    rcode_name                 VARCHAR
+    rtt                        DOUBLE
+    answers                    VARCHAR[]
+    TTLs                       DOUBLE[]
+
+files  (20 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: filename)
+    ts                         DOUBLE
+    fuid                       VARCHAR
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    source                     VARCHAR
+    depth                      BIGINT
+    analyzers                  JSON[]
+    mime_type                  VARCHAR
+    duration                   DOUBLE
+    local_orig                 BOOLEAN
+    is_orig                    BOOLEAN
+    seen_bytes                 BIGINT
+    total_bytes                BIGINT
+    missing_bytes              BIGINT
+    overflow_bytes             BIGINT
+    timedout                   BOOLEAN
+    filename                   VARCHAR
+
+http  (28 columns, VARIES across files (7 schemas in 200 sampled); not-universal cols: info_code, info_msg, origin, referrer)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    trans_depth                BIGINT
+    method                     VARCHAR
+    host                       VARCHAR
+    uri                        VARCHAR
+    version                    VARCHAR
+    user_agent                 VARCHAR
+    request_body_len           BIGINT
+    response_body_len          BIGINT
+    status_code                BIGINT
+    status_msg                 VARCHAR
+    tags                       JSON[]
+    resp_fuids                 VARCHAR[]
+    resp_mime_types            VARCHAR[]
+    orig_fuids                 VARCHAR[]
+    orig_mime_types            VARCHAR[]
+    referrer                   VARCHAR
+    resp_filenames             VARCHAR[]
+    origin                     VARCHAR
+    orig_filenames             VARCHAR[]
+    info_code                  BIGINT
+    info_msg                   VARCHAR
+    proxied                    VARCHAR[]
+
+kerberos  (12 columns, uniform across 166 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    request_type               VARCHAR
+    client                     VARCHAR
+    service                    VARCHAR
+    till                       DOUBLE
+    forwardable                BOOLEAN
+    renewable                  BOOLEAN
+
+ldap_search  (11 columns, uniform across 2,099 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    message_id                 BIGINT
+    scope                      VARCHAR
+    deref_aliases              VARCHAR
+    result_count               BIGINT
+    filter                     VARCHAR
+
+ntlm  (12 columns, VARIES across files (11 schemas in 200 sampled); not-universal cols: domainname, hostname, success, username)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    username                   VARCHAR
+    hostname                   VARCHAR
+    server_nb_computer_name    VARCHAR
+    server_dns_computer_name   VARCHAR
+    success                    BOOLEAN
+    domainname                 VARCHAR
+
+ntp  (19 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: org_time, poll, precision, rec_time, ref_id, ref_time, root_delay, root_disp, stratum, xmt_time)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    mode                       BIGINT
+    stratum                    BIGINT
+    poll                       DOUBLE
+    precision                  DOUBLE
+    root_delay                 DOUBLE
+    root_disp                  DOUBLE
+    ref_id                     VARCHAR
+    ref_time                   DOUBLE
+    org_time                   DOUBLE
+    rec_time                   DOUBLE
+    xmt_time                   DOUBLE
+    num_exts                   BIGINT
+
+ocsp  (11 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: revokereason, revoketime)
+    ts                         DOUBLE
+    id                         VARCHAR
+    hashAlgorithm              VARCHAR
+    issuerNameHash             VARCHAR
+    issuerKeyHash              VARCHAR
+    serialNumber               VARCHAR
+    certStatus                 VARCHAR
+    thisUpdate                 DOUBLE
+    nextUpdate                 DOUBLE
+    revoketime                 DOUBLE
+    revokereason               VARCHAR
+
+packet_filter  (5 columns, uniform across 4,005 files (checked 200))
+    ts                         DOUBLE
+    node                       VARCHAR
+    filter                     VARCHAR
+    init                       BOOLEAN
+    success                    BOOLEAN
+
+pe  (17 columns, uniform across 1,261 files (checked 200))
+    ts                         DOUBLE
+    id                         VARCHAR
+    machine                    VARCHAR
+    compile_ts                 DOUBLE
+    os                         VARCHAR
+    subsystem                  VARCHAR
+    is_exe                     BOOLEAN
+    is_64bit                   BOOLEAN
+    uses_aslr                  BOOLEAN
+    uses_dep                   BOOLEAN
+    uses_code_integrity        BOOLEAN
+    uses_seh                   BOOLEAN
+    has_import_table           BOOLEAN
+    has_export_table           BOOLEAN
+    has_cert_table             BOOLEAN
+    has_debug_data             BOOLEAN
+    section_names              VARCHAR[]
+
+rdp  (22 columns, VARIES across files (4 schemas in 200 sampled); not-universal cols: cert_permanent, cert_type, client_build, client_dig_product_id, client_name, desktop_height, desktop_width, element, encryption_level, encryption_method, keyboard_layout, requested_color_depth)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    cookie                     VARCHAR
+    result                     VARCHAR
+    security_protocol          VARCHAR
+    cert_count                 BIGINT
+    keyboard_layout            VARCHAR
+    client_build               VARCHAR
+    client_name                VARCHAR
+    client_dig_product_id      VARCHAR
+    desktop_width              BIGINT
+    desktop_height             BIGINT
+    requested_color_depth      VARCHAR
+    cert_type                  VARCHAR
+    cert_permanent             BOOLEAN
+    encryption_level           VARCHAR
+    encryption_method          VARCHAR
+    client_channels            VARCHAR[]
+
+redis  (8 columns, uniform across 2 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    success                    BOOLEAN
+    reply.value                VARCHAR
+
+sip  (17 columns, uniform across 3,977 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    trans_depth                BIGINT
+    method                     VARCHAR
+    uri                        VARCHAR
+    request_from               VARCHAR
+    request_to                 VARCHAR
+    call_id                    VARCHAR
+    seq                        VARCHAR
+    request_path               VARCHAR[]
+    response_path              JSON[]
+    user_agent                 VARCHAR
+    request_body_len           BIGINT
+
+smb_mapping  (9 columns, uniform across 1,360 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    path                       VARCHAR
+    service                    VARCHAR
+    share_type                 VARCHAR
+
+snmp  (14 columns, uniform across 3,771 files (checked 200))
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    duration                   DOUBLE
+    version                    VARCHAR
+    community                  VARCHAR
+    get_requests               BIGINT
+    get_bulk_requests          BIGINT
+    get_responses              BIGINT
+    set_requests               BIGINT
+    json                       JSON
+
+socks  (12 columns, uniform across 2 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    status                     VARCHAR
+    request.name               VARCHAR
+    request_p                  BIGINT
+    bound.host                 VARCHAR
+    bound_p                    BIGINT
+
+ssh  (18 columns, VARIES across files (2 schemas in 71 sampled); not-universal cols: auth_success, direction)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    version                    BIGINT
+    auth_attempts              BIGINT
+    direction                  VARCHAR
+    client                     VARCHAR
+    server                     VARCHAR
+    cipher_alg                 VARCHAR
+    mac_alg                    VARCHAR
+    compression_alg            VARCHAR
+    kex_alg                    VARCHAR
+    host_key_alg               VARCHAR
+    host_key_fingerprint       VARCHAR
+    auth_success               BOOLEAN
+
+ssl  (19 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: last_alert, next_protocol)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    server_name                VARCHAR
+    resumed                    BOOLEAN
+    established                BOOLEAN
+    ssl_history                VARCHAR
+    version                    VARCHAR
+    cipher                     VARCHAR
+    curve                      VARCHAR
+    cert_chain_fps             VARCHAR[]
+    client_cert_chain_fps      JSON[]
+    next_protocol              VARCHAR
+    sni_matches_cert           BOOLEAN
+    last_alert                 VARCHAR
+    json                       JSON
+
+tunnel  (8 columns, VARIES across files (2 schemas in 74 sampled); not-universal cols: uid)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    tunnel_type                VARCHAR
+    action                     VARCHAR
+
+websocket  (10 columns, uniform across 21 files)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    host                       VARCHAR
+    uri                        VARCHAR
+    user_agent                 VARCHAR
+    client_extensions          VARCHAR[]
+
+weird  (11 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: addl, id.orig_h, id.orig_p, id.resp_h, id.resp_p, uid)
+    ts                         DOUBLE
+    uid                        VARCHAR
+    id.orig_h                  VARCHAR
+    id.orig_p                  BIGINT
+    id.resp_h                  VARCHAR
+    id.resp_p                  BIGINT
+    name                       VARCHAR
+    notice                     BOOLEAN
+    peer                       VARCHAR
+    source                     VARCHAR
+    addl                       VARCHAR
+
+x509  (22 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: certificate.curve)
+    ts                         DOUBLE
+    fingerprint                VARCHAR
+    certificate.version        BIGINT
+    certificate.serial         VARCHAR
+    certificate.subject        VARCHAR
+    certificate.issuer         VARCHAR
+    certificate.not_valid_before DOUBLE
+    certificate.not_valid_after DOUBLE
+    certificate.key_alg        VARCHAR
+    certificate.sig_alg        VARCHAR
+    certificate.key_type       VARCHAR
+    certificate.key_length     BIGINT
+    certificate.exponent       VARCHAR
+    host_cert                  BOOLEAN
+    client_cert                BOOLEAN
+    san.dns                    VARCHAR[]
+    basic_constraints.ca       BOOLEAN
+    basic_constraints.path_len BIGINT
+    certificate.curve          VARCHAR
+    san.email                  VARCHAR[]
+    san.uri                    VARCHAR[]
+    json                       JSON
+
+==============================================================================
+CROSS-DATASET COMPARISON  (log types in 2+ datasets)
+==============================================================================
+
+analyzer  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2017: fuid
+    !! missing in cic-ids-2018: fuid
+
+conn  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: tunnel_parents
+    !! missing in cic-ids-2017: tunnel_parents
+    !! column ORDER differs (align by name, never by position)
+
+dce_rpc  [cic-ids-2017, cic-ids-2018]  -- identical schema
+
+dhcp  [cic-ddos-2019, cic-ids-2018]
+    !! missing in cic-ddos-2019: domain
+    !! column ORDER differs (align by name, never by position)
+
+dns  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+files  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! type mismatch on analyzers: cic-ddos-2019=JSON[], cic-ids-2017=VARCHAR[], cic-ids-2018=JSON[]
+    !! column ORDER differs (align by name, never by position)
+
+http  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: info_code, info_msg, orig_filenames
+    !! missing in cic-ids-2017: proxied
+    !! column ORDER differs (align by name, never by position)
+
+kerberos  [cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2018: cipher, error_msg, from, success
+
+ldap_search  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: base_object
+    !! missing in cic-ids-2018: base_object, result
+
+ntlm  [cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ids-2018: server_tree_name
+    !! column ORDER differs (align by name, never by position)
+
+ntp  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical schema
+
+ocsp  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: revokereason, revoketime
+    !! missing in cic-ids-2017: revokereason, revoketime
+
+packet_filter  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical schema
+
+pe  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]  -- identical schema
+
+sip  [cic-ddos-2019, cic-ids-2018]  -- identical schema
+
+smb_mapping  [cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+snmp  [cic-ddos-2019, cic-ids-2018]
+    !! missing in cic-ddos-2019: json
+    !! missing in cic-ids-2018: display_string, up_since
+
+ssh  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: direction
+    !! missing in cic-ids-2017: direction
+    !! column ORDER differs (align by name, never by position)
+
+ssl  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: json, last_alert
+    !! missing in cic-ids-2017: json
+    !! column ORDER differs (align by name, never by position)
+
+websocket  [cic-ids-2017, cic-ids-2018]  -- identical schema
+
+weird  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! column ORDER differs (align by name, never by position)
+
+x509  [cic-ddos-2019, cic-ids-2017, cic-ids-2018]
+    !! missing in cic-ddos-2019: json, san.uri
+    !! missing in cic-ids-2017: json
+    !! column ORDER differs (align by name, never by position)
