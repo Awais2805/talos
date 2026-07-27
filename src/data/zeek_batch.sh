@@ -34,9 +34,16 @@ process_one() {
     unzip -o -q "$f" -d "$d/in/" || { echo "UNZIP FAIL $key"; rm -rf "$d"; return 1; }
     rm -f "$f"
   elif [[ "$key" == *.rar ]]; then
-    # some CIC days ship as .rar (e.g. cic-ids-2018 Tuesday-20-02-2018)
+    # some CIC days ship as .rar (e.g. cic-ids-2018 Tuesday-20-02-2018).
+    # prefer RARLAB unrar: Ubuntu's unar mis-handles RAR5 / multi-GB members.
     echo "  unrar $(basename "$key") ..."
-    unar -q -f -o "$d/in/" "$f" || { echo "UNRAR FAIL $key (need: sudo apt-get install -y unar)"; rm -rf "$d"; return 1; }
+    if command -v unrar >/dev/null 2>&1; then
+      unrar x -y "$f" "$d/in/" || { echo "UNRAR FAIL $key"; rm -rf "$d"; return 1; }
+    elif command -v unar >/dev/null 2>&1; then
+      unar -f -o "$d/in/" "$f" || { echo "UNRAR FAIL $key"; rm -rf "$d"; return 1; }
+    else
+      echo "NO RAR TOOL $key — install: sudo apt-get install -y unrar"; rm -rf "$d"; return 1
+    fi
     rm -f "$f"
   fi
 
