@@ -27,6 +27,10 @@ raw_to_canonical:
   WebAttack-XSS: web_attack
   WebAttack-SQLInjection: web_attack
   Infiltration: infiltration
+  # CIC's "Second Step (Portscan + Nmap)" of the 2017 infiltration scenario.
+  # Behaviourally a scan, so it classes with portscan; the raw name preserves
+  # which scenario it came from. Keeps `infiltration` comparable across datasets.
+  Infiltration-PortScan: portscan
   Botnet-ARES: botnet
   PortScan: portscan
   DDoS-LOIT: ddos

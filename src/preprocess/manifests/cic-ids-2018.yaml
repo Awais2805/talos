@@ -65,6 +65,14 @@ attacks:
   - {name: SQL-Injection, date: 2018-02-23, start: "15:05", end: "15:18",
      attacker_ips: [18.218.115.60], victim_ips: *v2}
 
+  # KNOWN GAP: CIC describes this scenario as two levels — "First level: Dropbox
+  # download in a windows machine. Second Level: Nmap and portscan" — but Table 2
+  # publishes IPs only for the external phase and never names the infected host
+  # that performs the internal scan. That second step is therefore unlabellable
+  # from the official schedule and falls to benign under the closed-world
+  # assumption: a documented false-negative forced by the source, not by method.
+  # (2017 publishes the infected host, so its second step IS labelled — as
+  # Infiltration-PortScan -> canonical `portscan`.)
   - {name: Infiltration, date: 2018-02-28, start: "10:50", end: "12:05",
      attacker_ips: [13.58.225.34], victim_ips: [172.31.69.24, 18.221.148.137]}
   - {name: Infiltration, date: 2018-02-28, start: "13:42", end: "14:40",

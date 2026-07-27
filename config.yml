@@ -11,6 +11,7 @@ lake:
   raw: "{dataset}/pcaps"        # original immutable pcap archives
   extracted: "extracted"        # Zeek NDJSON logs, per dataset
   parquets: "parquets"          # 1 parquet per log type, per dataset
+  labelled: "labelled"          # conn flows + ground-truth labels, per dataset
   canonical: "mapped"           # registry-governed, labelled, train-ready
 
 datasets:

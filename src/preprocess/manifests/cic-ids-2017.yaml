@@ -34,8 +34,13 @@ attacks:
      attacker_ips: *kali, victim_ips: *webserver}
   - {name: DoS-GoldenEye,    date: 2017-07-05, start: "11:10", end: "11:23",
      attacker_ips: *kali, victim_ips: *webserver}
+  # CIC's NAT chain for THIS attack reads "... -> 172.16.0.11 -> 192.168.10.51"
+  # (.11, not the .1 used everywhere else). Almost certainly a typo — the reply
+  # path in the same paragraph uses .1 — but both are listed so a post-NAT
+  # capture matches either way. Time + victim still constrain the rule.
   - {name: Heartbleed, date: 2017-07-05, start: "15:12", end: "15:32",
-     attacker_ips: *kali, victim_ips: *ubuntu12, note: "port 444"}
+     attacker_ips: [205.174.165.73, 172.16.0.1, 172.16.0.11],
+     victim_ips: *ubuntu12, note: "port 444"}
 
   # ---- Thursday 2017-07-06 (morning: web attacks) ----
   - {name: WebAttack-BruteForce,    date: 2017-07-06, start: "09:20", end: "10:00",
@@ -46,15 +51,25 @@ attacks:
      attacker_ips: *kali, victim_ips: *webserver}
 
   # ---- Thursday 2017-07-06 (afternoon: infiltration) ----
-  - {name: Infiltration, date: 2017-07-06, start: "14:19", end: "14:21",
-     attacker_ips: *kali, victim_ips: [192.168.10.8], note: "metasploit Win Vista"}
-  - {name: Infiltration, date: 2017-07-06, start: "14:33", end: "14:35",
+  # CIC's detail line reads "(14:19 and 14:20-14:21) and (14:33-14:35)", but the
+  # real Vista<->Kali callback traffic (port 444) sits at ~14:28-14:30, in the
+  # gap between them, and the 14:33-14:35 window is empty. CIC's own page
+  # summarises this as a single 14:19-14:35 block, which is what we use.
+  - {name: Infiltration, date: 2017-07-06, start: "14:19", end: "14:35",
      attacker_ips: *kali, victim_ips: [192.168.10.8], note: "metasploit Win Vista"}
   - {name: Infiltration, date: 2017-07-06, start: "14:53", end: "15:00",
      attacker_ips: *kali, victim_ips: [192.168.10.25], note: "cool disk MAC"}
   - {name: Infiltration, date: 2017-07-06, start: "15:04", end: "15:45",
      attacker_ips: *kali, victim_ips: [192.168.10.8], note: "dropbox download Vista"}
-  - {name: Infiltration, date: 2017-07-06, start: "15:04", end: "15:45",
+  # CIC calls this "Second Step (Portscan + Nmap)" of the Infiltration scenario:
+  # the compromised Vista box scans "All other clients". The raw name keeps that
+  # provenance; the taxonomy maps it to canonical `portscan` because the traffic
+  # IS scanning (12 hosts / 1,105 dst ports in 41 min) and because 2018's
+  # equivalent second step cannot be labelled at all — CIC never publishes the
+  # infected host's IP there. Classing this as `infiltration` would leave that
+  # class meaning "internal scanning" in 2017 and "external exploit" in 2018,
+  # which would make cross-domain evaluation of it meaningless.
+  - {name: Infiltration-PortScan, date: 2017-07-06, start: "15:04", end: "15:45",
      attacker_ips: [192.168.10.8], victim_subnet: "192.168.10.0/24",
      note: "second step: infected Vista portscans the LAN"}
 
@@ -71,6 +86,10 @@ attacks:
   # Firewall rules OFF sub-windows (nmap scan types sS..sI, b): 14:51 - 15:29
   - {name: PortScan, date: 2017-07-07, start: "14:51", end: "15:29",
      attacker_ips: *kali, victim_ips: *webserver, note: "firewall rules off; coarse window"}
+  # The three Win 8.1 attackers sit outside the firewall, so inside the capture
+  # they all appear post-NAT as 172.16.0.1 (CIC documents the same chain:
+  # 205.174.165.69/70/71 -> 205.174.165.80 -> 172.16.0.1). Without the alias
+  # this rule matched ZERO flows while 94,614 sat in the window.
   - {name: DDoS-LOIT, date: 2017-07-07, start: "15:56", end: "16:16",
-     attacker_ips: [205.174.165.69, 205.174.165.70, 205.174.165.71],
+     attacker_ips: [205.174.165.69, 205.174.165.70, 205.174.165.71, 172.16.0.1],
      victim_ips: *webserver}

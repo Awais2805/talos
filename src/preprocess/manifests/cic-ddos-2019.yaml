@@ -1,35 +1,60 @@
 # CIC-DDoS-2019 — ground-truth label manifest
 # Transcribed 2026-07-26 from the official dataset page (attack time table).
 #
-# !! DATES UNVALIDATED !! The official page gives per-attack times but NO
-# calendar dates for "first day" / "second day", and our profiling found the
-# pcap timestamps actually fall in Nov-Dec 2018 despite the dataset's name.
-# Before labelling, anchor day_1_date / day_2_date (and utc_offset per day:
-# Atlantic time was ADT -03:00 until 2018-11-04, AST -04:00 after) against
-# the real conn ts ranges:
+# DATES VALIDATED 2026-07-27 against the lake's conn ts ranges. Despite the
+# "2019" name the captures are from 2018, and the two lake folders map cleanly
+# onto the paper's "first"/"second" day:
 #
-#   SELECT strftime(to_timestamp(ts),'%Y-%m-%d') d,
-#          strftime(min(to_timestamp(ts)),'%H:%M') mn,
-#          strftime(max(to_timestamp(ts)),'%H:%M') mx, count(*)
-#   FROM read_parquet('s3://<bucket>/parquets/cic-ddos-2019/conn.parquet')
-#   GROUP BY 1 ORDER BY 1;
+#   folder 03-11  conn spans 2018-11-03 12:18 -> 20:36 UTC  (= 09:18 -> 17:36 ADT)
+#                 paper day 1 runs 09:43 -> 17:35 local  -> fits exactly
+#   folder 01-12  conn spans 2018-12-01 13:17 -> 21:16 UTC  (= 09:17 -> 17:16 AST)
+#                 paper day 2 runs 10:35 -> 17:15 local  -> fits exactly
+#
+# NOTE the offsets DIFFER: 2018-11-03 is before Atlantic DST ended (2018-11-04)
+# so it is ADT (-03:00); 2018-12-01 is AST (-04:00). Labelling must apply the
+# per-day offset below, not one dataset-wide value.
 #
 # Reflection note: these are reflected/spoofed-source attacks, so attacker
 # IPs are meaningless. Match on victim + window only.
 
 dataset: cic-ddos-2019
-utc_offset: "TODO-validate"      # -03:00 or -04:00 depending on actual dates
-day_1_date: "TODO-validate"      # testing day per paper: 7 attacks
-day_2_date: "TODO-validate"      # training day per paper: 12 attacks
 match_default: [time, victim]
 
+days:
+  1:                              # paper "First Day" — 7 attacks (testing day)
+    lake_folder: "03-11"
+    date: 2018-11-03
+    utc_offset: "-03:00"          # ADT — DST ended 2018-11-04
+  2:                              # paper "Second Day" — 12 attacks (training day)
+    lake_folder: "01-12"
+    date: 2018-12-01
+    utc_offset: "-04:00"          # AST
+
+# !! CIC's infrastructure table is WRONG here — it states "Server Ubuntu 16.04:
+# 192.168.50.1 (first day), 192.168.50.4 (second day)". The captures say the
+# opposite, and the evidence is unambiguous: labelling with the documented IPs
+# fired 0 of 19 rules across 72.5M flows. Per-minute flow histograms show
+#   03-11 -> 192.168.50.4, with exactly 7 attack bursts on day 1's schedule
+#           (PortMap 09:43, NetBIOS 10:01, LDAP 10:21, MSSQL 10:34, UDP 10:53,
+#            UDP-Lag 11:14, SYN 11:29)
+#   01-12 -> 192.168.50.1, with 12 bursts on day 2's schedule, several matching
+#           to the exact minute (LDAP 11:22, NetBIOS 11:50, SNMP 12:12, SSDP
+#            12:27, SYN 13:29)
+# The day<->folder mapping itself is unchanged and independently confirmed by
+# the capture spans. Only the server IPs are swapped relative to the doc.
 victims:
-  day_1_server: &vd1 [192.168.50.1]
-  day_2_server: &vd2 [192.168.50.4]
+  day_1_server: &vd1 [192.168.50.4]
+  day_2_server: &vd2 [192.168.50.1]
   firewall: 205.174.165.81       # victim may appear behind this publicly
 
 attacks:
   # ---- Day 1 ("testing day") ----
+  # CIC's prose lists this day's attacks as "PortScan, NetBIOS, LDAP, MSSQL,
+  # UDP, UDP-Lag and SYN" while the timing table says PortMap. They are not the
+  # same thing — PortMap is the RPC portmapper amplification vector, PortScan is
+  # reconnaissance. The timing table is authoritative for names and times, and
+  # PortMap is consistent with every other vector on this day being a reflection
+  # amplifier, so PortMap it is (-> canonical ddos, not portscan).
   - {name: PortMap, day: 1, start: "09:43", end: "09:51", victim_ips: *vd1}
   - {name: NetBIOS, day: 1, start: "10:00", end: "10:09", victim_ips: *vd1}
   - {name: LDAP,    day: 1, start: "10:21", end: "10:30", victim_ips: *vd1}

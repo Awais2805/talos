@@ -53,37 +53,37 @@ websocket              4         4               6    10       0.0
 packet_filter          5         5               5     5       0.0
 TOTAL                111                 5,861,465           249.0
 
-## cic-ids-2018 -- 26 log types, 64,618 files, 138,537,357 rows, 6,387.0 MB
+## cic-ids-2018 -- 26 log types, 72,307 files, 154,033,086 rows, 7,099.3 MB
 log type           files  captures            rows  cols        MB
-conn               4,005         9      56,245,493    22   2,501.0
-dns                4,004         9      27,252,013    26   1,275.1
-ssl                3,944         9      17,442,596    19     677.2
-files              3,967         9      11,954,308    20     544.3
-rdp                3,933         9      11,277,609    22     348.7
-http               3,965         9       8,366,386    28     522.9
-ocsp               3,931         9       3,773,569    11     161.7
-x509               3,942         9         962,466    22     235.9
-smb_mapping        1,360         9         436,659     9      19.8
-ntp                2,859         9         192,339    19      18.6
-weird              3,999         9         175,777    11      11.5
-ntlm               2,223         9         110,509    12       7.3
-sip                3,977         9         109,627    17      22.7
-ssh                   71         9         101,913    18       3.0
-dhcp               3,964         9          69,547    13      12.5
+conn               4,456        10      62,341,777    22   2,774.9
+dns                4,455        10      30,545,242    26   1,423.8
+ssl                4,388        10      19,239,040    19     749.0
+files              4,414        10      13,303,538    20     605.8
+rdp                4,377        10      12,353,834    22     381.9
+http               4,413        10       9,294,716    28     578.3
+ocsp               4,375        10       4,213,261    11     180.5
+x509               4,386        10       1,073,863    22     263.6
+smb_mapping        1,514        10         489,327     9      22.1
+weird              4,450        10         479,346    11      20.1
+ntp                3,187        10         214,116    19      20.7
+sip                4,428        10         123,324    17      25.3
+ntlm               2,466        10         111,632    12       7.7
+ssh                   78        10         102,739    18       3.1
+dhcp               4,415        10          77,627    13      13.9
 dce_rpc            1,000         8          41,289    10       2.6
-snmp               3,771         9           6,741    14       7.1
-analyzer           2,073         9           5,619    11       6.0
-ldap_search        2,099         9           5,474    11       3.7
-packet_filter      4,005         9           4,005     5       2.5
-pe                 1,261         9           2,052    17       2.6
+snmp               4,217        10           7,794    14       7.9
+analyzer           2,519        10           6,289    11       7.3
+ldap_search        2,545        10           6,147    11       4.4
+packet_filter      4,456        10           4,456     5       2.8
+pe                 1,428        10           2,285    17       3.0
 socks                  2         2             990    12       0.0
-kerberos             166         9             184    12       0.3
-tunnel                74         9             147     8       0.1
+kerberos             238        10             256    12       0.4
+tunnel                77        10             153     8       0.1
 websocket             21         7              43    10       0.0
 redis                  2         2               2     8       0.0
-TOTAL             64,618               138,537,357         6,387.0
+TOTAL             72,307               154,033,086         7,099.3
 
-GRAND TOTAL: 72,261 files, 217,324,544 rows, 8.95 GB across 3 datasets
+GRAND TOTAL: 79,950 files, 232,820,273 rows, 9.65 GB across 3 datasets
 
 ==============================================================================
 UNION SCHEMA per log type  (the feature universe)
@@ -142,7 +142,7 @@ dhcp  (12 columns, VARIES across files (3 schemas in 200 sampled); not-universal
     lease_time                 DOUBLE
     client_fqdn                VARCHAR
 
-dns  (26 columns, VARIES across files (5 schemas in 200 sampled); not-universal cols: element, qclass, qclass_name, qtype, qtype_name, query, rcode, rcode_name, rtt)
+dns  (26 columns, VARIES across files (6 schemas in 200 sampled); not-universal cols: element, qclass, qclass_name, qtype, qtype_name, query, rcode, rcode_name, rtt)
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -192,7 +192,7 @@ files  (20 columns, VARIES across files (3 schemas in 200 sampled); not-universa
     total_bytes                BIGINT
     filename                   VARCHAR
 
-http  (25 columns, VARIES across files (12 schemas in 200 sampled); not-universal cols: origin, referrer, status_code, status_msg, user_agent, version)
+http  (25 columns, VARIES across files (11 schemas in 200 sampled); not-universal cols: origin, referrer, user_agent)
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -875,7 +875,7 @@ dce_rpc  (10 columns, uniform across 1,000 files (checked 200))
     endpoint                   VARCHAR
     operation                  VARCHAR
 
-dhcp  (13 columns, VARIES across files (2 schemas in 200 sampled); not-universal cols: client_fqdn)
+dhcp  (13 columns, VARIES across files (3 schemas in 200 sampled); not-universal cols: client_fqdn, requested_addr)
     ts                         DOUBLE
     uids                       VARCHAR[]
     client_addr                VARCHAR
@@ -940,7 +940,7 @@ files  (20 columns, VARIES across files (2 schemas in 200 sampled); not-universa
     timedout                   BOOLEAN
     filename                   VARCHAR
 
-http  (28 columns, VARIES across files (7 schemas in 200 sampled); not-universal cols: info_code, info_msg, origin, referrer)
+http  (28 columns, VARIES across files (8 schemas in 200 sampled); not-universal cols: info_code, info_msg, origin, referrer)
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -970,7 +970,7 @@ http  (28 columns, VARIES across files (7 schemas in 200 sampled); not-universal
     info_msg                   VARCHAR
     proxied                    VARCHAR[]
 
-kerberos  (12 columns, uniform across 166 files)
+kerberos  (12 columns, uniform across 238 files (checked 200))
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -984,7 +984,7 @@ kerberos  (12 columns, uniform across 166 files)
     forwardable                BOOLEAN
     renewable                  BOOLEAN
 
-ldap_search  (11 columns, uniform across 2,099 files (checked 200))
+ldap_search  (11 columns, uniform across 2,545 files (checked 200))
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -1045,14 +1045,14 @@ ocsp  (11 columns, VARIES across files (2 schemas in 200 sampled); not-universal
     revoketime                 DOUBLE
     revokereason               VARCHAR
 
-packet_filter  (5 columns, uniform across 4,005 files (checked 200))
+packet_filter  (5 columns, uniform across 4,456 files (checked 200))
     ts                         DOUBLE
     node                       VARCHAR
     filter                     VARCHAR
     init                       BOOLEAN
     success                    BOOLEAN
 
-pe  (17 columns, uniform across 1,261 files (checked 200))
+pe  (17 columns, uniform across 1,428 files (checked 200))
     ts                         DOUBLE
     id                         VARCHAR
     machine                    VARCHAR
@@ -1105,7 +1105,7 @@ redis  (8 columns, uniform across 2 files)
     success                    BOOLEAN
     reply.value                VARCHAR
 
-sip  (17 columns, uniform across 3,977 files (checked 200))
+sip  (17 columns, uniform across 4,428 files (checked 200))
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -1124,7 +1124,7 @@ sip  (17 columns, uniform across 3,977 files (checked 200))
     user_agent                 VARCHAR
     request_body_len           BIGINT
 
-smb_mapping  (9 columns, uniform across 1,360 files (checked 200))
+smb_mapping  (9 columns, uniform across 1,514 files (checked 200))
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -1135,7 +1135,7 @@ smb_mapping  (9 columns, uniform across 1,360 files (checked 200))
     service                    VARCHAR
     share_type                 VARCHAR
 
-snmp  (14 columns, uniform across 3,771 files (checked 200))
+snmp  (14 columns, uniform across 4,217 files (checked 200))
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -1165,7 +1165,7 @@ socks  (12 columns, uniform across 2 files)
     bound.host                 VARCHAR
     bound_p                    BIGINT
 
-ssh  (18 columns, VARIES across files (2 schemas in 71 sampled); not-universal cols: auth_success, direction)
+ssh  (18 columns, VARIES across files (2 schemas in 78 sampled); not-universal cols: auth_success, direction)
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
@@ -1206,7 +1206,7 @@ ssl  (19 columns, VARIES across files (3 schemas in 200 sampled); not-universal 
     last_alert                 VARCHAR
     json                       JSON
 
-tunnel  (8 columns, VARIES across files (2 schemas in 74 sampled); not-universal cols: uid)
+tunnel  (8 columns, VARIES across files (2 schemas in 77 sampled); not-universal cols: uid)
     ts                         DOUBLE
     uid                        VARCHAR
     id.orig_h                  VARCHAR
