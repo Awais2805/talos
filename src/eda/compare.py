@@ -429,8 +429,11 @@ def compare_one(dataset, profiles, spec):
             "spec_sha": me["meta"]["spec_sha"], "spec_version": me["meta"]["spec_version"],
             "profiles_used": {p["meta"]["dataset"]: p["meta"]["generated_utc"]
                               for p in [me] + others},
-            "sampled": {p["meta"]["dataset"]: p["meta"]["sample_pct"]
-                        for p in [me] + others if p["meta"]["sample_pct"]},
+            # Pooling a full profile with a smoke-test one is legitimate -- every
+            # comparison is on shares, not counts -- but the reader has to be
+            # told, so it travels with the report rather than being inferred.
+            "partial": {p["meta"]["dataset"]: p["meta"].get("partial")
+                        for p in [me] + others if p["meta"].get("partial")},
             "features_compared": len(feats),
             "features_only_self": sorted(feats_self - feats_rest) if others else [],
             "features_only_rest": sorted(feats_rest - feats_self) if others else [],

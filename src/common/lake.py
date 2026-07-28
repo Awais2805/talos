@@ -15,6 +15,7 @@ import duckdb
 
 REFRESH_EVERY = 300          # seconds between re-mints; well inside any session TTL
 
+
 def cli_creds():
     """Current S3 credentials straight from the AWS CLI (handles rotation)."""
     try:
@@ -35,6 +36,11 @@ class Lake:
         self.region, self._minted, self.require_s3 = region, 0.0, require_s3
         self.con = duckdb.connect()
         if require_s3:
+            # LOAD first, INSTALL only if it is genuinely missing. Naming a
+            # repository in INSTALL fails outright when the box already has the
+            # extension from a different origin (http:// vs https://), which is
+            # exactly the state a machine that has been running this pipeline
+            # for months is in.
             try:
                 self.con.execute("LOAD httpfs;")
             except duckdb.Error:

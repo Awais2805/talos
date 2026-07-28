@@ -53,7 +53,11 @@ def parse_args():
     p.add_argument("--zone", default="labelled", choices=["labelled", "canonical", "parquets"],
                    help="lake zone to read when --source is not given")
     p.add_argument("--sample", type=float, default=None,
-                   help="profile a random %% of rows (smoke test; recorded in the profile)")
+                   help="profile a random %% of rows (recorded in the profile)")
+    p.add_argument("--limit", type=int, default=None,
+                   help="stop after N rows — a SECONDS-long smoke test of the whole "
+                        "pipeline. Biased (it is the head of the file, so the earliest "
+                        "flows), so the profile is marked partial and must not be reported")
     p.add_argument("--out", default=None, help="profile JSON path")
     p.add_argument("--no-cascade", action="store_true",
                    help="do not regenerate the comparison reports afterwards")
@@ -69,7 +73,24 @@ def parse_args():
 
 # --------------------------------------------------------------- query build
 
-def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample):
+def scan_clause(src, sample, limit):
+    """The source expression both queries read from.
+
+    LIMIT is pushed into the scan, so a smoke test stops after N rows instead of
+    reading the whole zone -- the difference between validating the pipeline in
+    five seconds and finding out twenty minutes into 2019 that a column is not
+    the type the spec assumed. SAMPLE still reads everything; it trades
+    aggregation work for statistical validity, which is the opposite trade.
+    """
+    sql = f"SELECT * FROM read_parquet('{src}', union_by_name = true)"
+    if sample:
+        sql += f" USING SAMPLE {sample} PERCENT (bernoulli)"
+    if limit:
+        sql += f" LIMIT {int(limit)}"
+    return sql
+
+
+def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample, limit):
     """One pass, one GROUP BY, every heavy statistic.
 
     The `f` CTE projects each feature exactly once (raw value + transformed
@@ -86,7 +107,6 @@ def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample):
     proj += [f"{_q(c)} AS id{k}" for k, c in enumerate(ident)]
     proj += [f"{_q(c)} AS nz{k}" for k, c in enumerate(nulls)]
 
-    sample_clause = f" USING SAMPLE {sample} PERCENT (bernoulli)" if sample else ""
     qs = ", ".join(str(q) for q in spec.quantiles)
 
     agg = ["grp", "count(*) AS n"]
@@ -111,23 +131,21 @@ def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample):
         agg.append("[" + ", ".join(f"count(*) FILTER (nz{k} IS NULL)::DOUBLE"
                                    for k in range(len(nulls))) + "] AS nul")
 
-    return (f"WITH src AS (\n"
-            f"  SELECT * FROM read_parquet('{src}', union_by_name = true){sample_clause}\n"
+    return (f"WITH src AS (\n  {scan_clause(src, sample, limit)}\n"
             f"), f AS (\n  SELECT " + ",\n         ".join(proj) + "\n  FROM src\n)\n"
             "SELECT " + ",\n       ".join(agg) + "\nFROM f GROUP BY grp ORDER BY n DESC")
 
 
-def build_capture_query(src, group_expr, sample):
+def build_capture_query(src, group_expr, sample, limit):
     """Domain sub-structure: flows and time span per capture x class.
 
     Cheap next to the main pass -- parquet column pruning means it reads three
     columns, not twenty -- and it is what turns "this dataset" into "these ten
     capture days", which is the unit domain shift actually happens in.
     """
-    sample_clause = f" USING SAMPLE {sample} PERCENT (bernoulli)" if sample else ""
     return (f"WITH src AS (\n"
             f"  SELECT capture, ts, {group_expr} AS grp "
-            f"FROM read_parquet('{src}', union_by_name = true){sample_clause}\n)\n"
+            f"FROM ({scan_clause(src, sample, limit)})\n)\n"
             f"SELECT capture, grp, count(*)::DOUBLE AS n, "
             f"min(ts)::DOUBLE AS t0, max(ts)::DOUBLE AS t1 "
             f"FROM src GROUP BY 1, 2 ORDER BY 3 DESC")
@@ -198,8 +216,12 @@ def main():
 
     print(f"dataset   {a.dataset}  (role: {role})")
     print(f"source    {src}")
+    partial = ("; ".join(x for x in (
+        f"{a.sample}% random sample" if a.sample else "",
+        f"first {a.limit:,} rows only" if a.limit else "") if x) or None)
+
     print(f"spec      v{spec.version} sha {spec.sha}"
-          f"{'  SAMPLED ' + str(a.sample) + '%' if a.sample else ''}")
+          f"{'  PARTIAL: ' + partial if partial else ''}")
     print(f"duckdb    {a.threads} threads, {a.memory_limit} memory"
           f"{f', spill {a.temp_dir} capped {a.max_temp}' if a.temp_dir else ''}")
 
@@ -219,13 +241,15 @@ def main():
     print("\nscanning (one pass) ...", flush=True)
 
     t0 = time.time()
-    rows = lake.sql(build_stats_query(src, spec, num, cat, ident, nulls, group_expr, a.sample))
+    rows = lake.sql(build_stats_query(src, spec, num, cat, ident, nulls, group_expr,
+                                      a.sample, a.limit))
     by_class = dict(parse_row(r, spec, num, cat, ident, nulls) for r in rows)
     elapsed = time.time() - t0
 
     captures = []
     if "capture" in cols and "ts" in cols:
-        for cap, grp, n, t_0, t_1 in lake.sql(build_capture_query(src, group_expr, a.sample)):
+        for cap, grp, n, t_0, t_1 in lake.sql(
+                build_capture_query(src, group_expr, a.sample, a.limit)):
             captures.append({"capture": cap, "class": grp, "n": int(n),
                              "ts_min": t_0, "ts_max": t_1})
 
@@ -235,7 +259,11 @@ def main():
             "dataset": a.dataset, "role": role, "source": src, "zone": a.zone,
             "generated_utc": started, "scan_seconds": round(elapsed, 1),
             "spec_version": spec.version, "spec_sha": spec.sha,
-            "sample_pct": a.sample, "duckdb": duckdb.__version__,
+            # A partial profile is still a valid profile -- it just describes a
+            # slice. It is carried through to both reports as a banner so a
+            # smoke-test run can never be mistaken for the real thing.
+            "sample_pct": a.sample, "limit_rows": a.limit, "partial": partial,
+            "duckdb": duckdb.__version__,
             "rows": sum(b["n"] for b in by_class.values()),
             "columns": sorted(cols),
             "numeric_features": len(num), "categorical_features": len(cat),

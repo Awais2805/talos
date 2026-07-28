@@ -5,7 +5,16 @@ PY := $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
 
 DATASETS = cic-ids-2017 cic-ids-2018 cic-ddos-2019
 
-.PHONY: help extract convert discover label label-all
+# EDA guard rails for the 16 GB box: cap the DuckDB spill so a long scan cannot
+# fill the root disk and wedge sshd, and keep threads/memory off the settings
+# that thrash-froze it during conversion. Defaults live here rather than in the
+# command line so the safe run is the one you get without remembering anything.
+DUCK_TMP  ?= /tmp/talos_duckdb
+EDA_FLAGS ?= --temp-dir $(DUCK_TMP) --threads 4 --memory-limit 8GB
+
+.PHONY: help extract convert discover label label-all \
+        eda eda-all eda-smoke eda-compare eda-render
+
 help:            ## show available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
 
@@ -28,16 +37,26 @@ label-all:       ## label every dataset
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
 		$(PY) src/preprocess/label_flows.py --dataset $$d || exit 1; done
 
+eda-smoke:       ## 200k-row dry run of every dataset -> /tmp, proves the pipeline in seconds
+	@mkdir -p $(DUCK_TMP)
+	@for d in $(DATASETS); do echo "=== $$d ==="; \
+		$(PY) src/eda/profile_dataset.py --dataset $$d --limit 200000 \
+			--out /tmp/eda_smoke_$$d.json --no-cascade $(EDA_FLAGS) || exit 1; done
+	@echo "smoke ok — schema, spec and query all agree with the lake; now: make eda-all"
+
 eda:             ## profile one dataset -> its report + regen every comparison (DATASET=…)
-      $(PY) src/eda/profile_dataset.py --dataset $(DATASET)
+	@mkdir -p $(DUCK_TMP)
+	$(PY) src/eda/profile_dataset.py --dataset $(DATASET) $(EDA_FLAGS)
 
 eda-all:         ## profile every dataset, then rebuild all reports once at the end
-      @for d in $(DATASETS); do echo "=== $$d ==="; \
-              $(PY) src/eda/profile_dataset.py --dataset $$d --no-cascade || exit 1; done
-      $(PY) src/eda/compare.py --render
+	@mkdir -p $(DUCK_TMP)
+	@for d in $(DATASETS); do echo "=== $$d ==="; \
+		$(PY) src/eda/profile_dataset.py --dataset $$d --no-cascade $(EDA_FLAGS) \
+			|| exit 1; done
+	$(PY) src/eda/compare.py --render
 
 eda-compare:     ## rebuild every comparison from existing profiles (no lake access)
-      $(PY) src/eda/compare.py --render
+	$(PY) src/eda/compare.py --render
 
 eda-render:      ## rebuild the HTML from existing JSON
-      $(PY) src/eda/render.py
+	$(PY) src/eda/render.py

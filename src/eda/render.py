@@ -229,10 +229,11 @@ def render_profile(profile):
         ("scan", f"{meta['scan_seconds']}s",
          f"spec v{meta['spec_version']}·{meta['spec_sha']}"),
     ])
-    if meta["sample_pct"]:
-        head += (f"<div class=note><b>Sampled profile.</b> Built from a "
-                 f"{meta['sample_pct']}% Bernoulli sample — shares are usable, absolute "
-                 f"counts are not, and rare classes may be missing entirely.</div>")
+    if meta.get("partial"):
+        head += (f"<div class=note><b>Partial profile — not a result.</b> Built from "
+                 f"{e(meta['partial'])}. Shares are indicative, absolute counts are not, "
+                 f"rare classes may be missing entirely, and a row limit takes the "
+                 f"earliest flows rather than a representative draw.</div>")
     if meta["skipped_features"]:
         miss = "; ".join(f"<b>{e(k)}</b> needs {e(', '.join(v))}"
                          for k, v in meta["skipped_features"].items())
@@ -496,10 +497,11 @@ def render_compare(doc):
                        f"<span class='mono mut'>{e(', '.join(r['only_self'][:6]) or '—')}</span>")
                       for r in doc["categorical"]])
 
-    sampled = ("<div class=note><b>Mixed sampling.</b> " +
-               ", ".join(f"{e(k)} at {v}%" for k, v in m["sampled"].items()) +
-               " — shares are comparable, absolute counts are not.</div>"
-               if m["sampled"] else "")
+    sampled = ("<div class=note><b>Partial profiles in this pool.</b> " +
+               "; ".join(f"{e(k)}: {e(v)}" for k, v in m.get("partial", {}).items()) +
+               " — the comparison is on shares so it still holds, but absolute counts "
+               "and rare classes do not.</div>"
+               if m.get("partial") else "")
 
     body = f"""{head}{interp}{sampled}
 <h2>At a glance</h2>{ov}
