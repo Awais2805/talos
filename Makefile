@@ -27,3 +27,17 @@ label:           ## label one dataset -> lake labelled zone (DATASET=…)
 label-all:       ## label every dataset
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
 		$(PY) src/preprocess/label_flows.py --dataset $$d || exit 1; done
+
+eda:             ## profile one dataset -> its report + regen every comparison (DATASET=…)
+      $(PY) src/eda/profile_dataset.py --dataset $(DATASET)
+
+eda-all:         ## profile every dataset, then rebuild all reports once at the end
+      @for d in $(DATASETS); do echo "=== $$d ==="; \
+              $(PY) src/eda/profile_dataset.py --dataset $$d --no-cascade || exit 1; done
+      $(PY) src/eda/compare.py --render
+
+eda-compare:     ## rebuild every comparison from existing profiles (no lake access)
+      $(PY) src/eda/compare.py --render
+
+eda-render:      ## rebuild the HTML from existing JSON
+      $(PY) src/eda/render.py

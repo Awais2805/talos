@@ -1,0 +1,198 @@
+# Talos — EDA contract
+#
+# This file is the reason the comparison stage never has to touch the lake.
+#
+# Two independently-profiled datasets are only comparable if they were measured
+# on the SAME ruler: the same feature definitions, the same histogram bin edges,
+# the same transforms. Those live here, not in the profiling code, and every
+# profile records this file's content hash. compare.py refuses to compare
+# profiles whose spec_sha differs, which turns "these numbers were produced by
+# different code" from a silent wrong answer into a loud error.
+#
+# Changing anything below invalidates every existing profile -- bump `version`
+# and re-run `make eda-all`.
+
+version: 1
+
+# ---------------------------------------------------------------- row scope
+# The grouping key of every heavy aggregate. Everything downstream (attack vs
+# benign, overall, per-class) is a merge over these groups, so the profile is a
+# sufficient statistic rather than a set of pre-baked answers.
+group_by: label_class
+benign_class: benign
+
+# Columns that must exist for a feature to be measured. Features whose columns
+# are absent are skipped and listed in the profile's meta.skipped_features,
+# which is what lets the same spec run against the labelled zone today and the
+# canonical `mapped` zone later without edits.
+
+# ------------------------------------------------------------------ numeric
+# expr      -- raw value, in units a human reads (bytes, seconds, packets)
+# transform -- space used for moments and correlations only:
+#              log1p for the heavy-tailed counters, where a raw Pearson r is
+#              really a statement about the top 0.01% of flows; none otherwise
+# edges     -- FIXED bin boundaries. n edges => n+1 bins: (-inf,e0), [e0,e1),
+#              ..., [e_last, +inf). Fixed, not per-dataset quantiles: quantile
+#              bins would make every dataset's histogram a different ruler and
+#              cross-dataset divergence meaningless.
+numeric:
+  duration:
+    expr: "coalesce(duration, 0)"
+    requires: [duration]
+    transform: log1p
+    edges: [0, 0.001, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10, 30, 60, 300, 900, 3600]
+
+  orig_bytes:
+    expr: "coalesce(orig_bytes, 0)"
+    requires: [orig_bytes]
+    transform: log1p
+    edges: [0, 1, 64, 128, 256, 512, 1024, 4096, 16384, 65536, 262144, 1048576, 10485760, 104857600]
+
+  resp_bytes:
+    expr: "coalesce(resp_bytes, 0)"
+    requires: [resp_bytes]
+    transform: log1p
+    edges: [0, 1, 64, 128, 256, 512, 1024, 4096, 16384, 65536, 262144, 1048576, 10485760, 104857600]
+
+  orig_ip_bytes:
+    expr: "coalesce(orig_ip_bytes, 0)"
+    requires: [orig_ip_bytes]
+    transform: log1p
+    edges: [0, 1, 64, 128, 256, 512, 1024, 4096, 16384, 65536, 262144, 1048576, 10485760, 104857600]
+
+  resp_ip_bytes:
+    expr: "coalesce(resp_ip_bytes, 0)"
+    requires: [resp_ip_bytes]
+    transform: log1p
+    edges: [0, 1, 64, 128, 256, 512, 1024, 4096, 16384, 65536, 262144, 1048576, 10485760, 104857600]
+
+  total_bytes:
+    expr: "coalesce(orig_ip_bytes, 0) + coalesce(resp_ip_bytes, 0)"
+    requires: [orig_ip_bytes, resp_ip_bytes]
+    transform: log1p
+    edges: [0, 1, 128, 512, 1024, 4096, 16384, 65536, 262144, 1048576, 10485760, 104857600]
+
+  missed_bytes:
+    expr: "coalesce(missed_bytes, 0)"
+    requires: [missed_bytes]
+    transform: log1p
+    edges: [0, 1, 1024, 65536, 1048576]
+
+  orig_pkts:
+    expr: "coalesce(orig_pkts, 0)"
+    requires: [orig_pkts]
+    transform: log1p
+    edges: [0, 1, 2, 3, 5, 10, 20, 50, 100, 500, 1000, 10000, 100000]
+
+  resp_pkts:
+    expr: "coalesce(resp_pkts, 0)"
+    requires: [resp_pkts]
+    transform: log1p
+    edges: [0, 1, 2, 3, 5, 10, 20, 50, 100, 500, 1000, 10000, 100000]
+
+  total_pkts:
+    expr: "coalesce(orig_pkts, 0) + coalesce(resp_pkts, 0)"
+    requires: [orig_pkts, resp_pkts]
+    transform: log1p
+    edges: [0, 1, 2, 3, 5, 10, 20, 50, 100, 500, 1000, 10000, 100000]
+
+  # Shape features. A scan, a SYN flood and a file download differ far more in
+  # packet SHAPE than in raw volume, and shape survives a change of testbed
+  # better than volume does -- so they are first-class, not derived at model time.
+  orig_bytes_per_pkt:
+    expr: "coalesce(orig_ip_bytes, 0) / nullif(coalesce(orig_pkts, 0), 0)"
+    requires: [orig_ip_bytes, orig_pkts]
+    transform: log1p
+    edges: [0, 1, 40, 60, 64, 128, 256, 512, 1024, 1500, 9000]
+
+  resp_bytes_per_pkt:
+    expr: "coalesce(resp_ip_bytes, 0) / nullif(coalesce(resp_pkts, 0), 0)"
+    requires: [resp_ip_bytes, resp_pkts]
+    transform: log1p
+    edges: [0, 1, 40, 60, 64, 128, 256, 512, 1024, 1500, 9000]
+
+  pkt_rate:
+    expr: "(coalesce(orig_pkts, 0) + coalesce(resp_pkts, 0)) / nullif(duration, 0)"
+    requires: [orig_pkts, resp_pkts, duration]
+    transform: log1p
+    edges: [0, 0.1, 1, 10, 100, 1000, 10000, 100000]
+
+  # Directionality: log10((resp+1)/(orig+1)). Negative = the originator did the
+  # talking (scan, flood, upload), positive = the responder did (download).
+  # Already on a log scale, so no further transform.
+  byte_ratio:
+    expr: "log10((coalesce(resp_ip_bytes, 0) + 1.0) / (coalesce(orig_ip_bytes, 0) + 1.0))"
+    requires: [orig_ip_bytes, resp_ip_bytes]
+    transform: none
+    edges: [-6, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 4, 6]
+
+  resp_port:
+    expr: "coalesce(\"id.resp_p\", -1)"
+    requires: ["id.resp_p"]
+    transform: none
+    edges: [0, 20, 53, 80, 123, 443, 1024, 3389, 8080, 10000, 32768, 49152, 65535]
+
+  history_len:
+    expr: "coalesce(length(history), 0)"
+    requires: [history]
+    transform: none
+    edges: [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32]
+
+  # Carried as a numeric feature purely so it joins the co-moment matrix: the
+  # Pearson r between a feature and a 0/1 label is the point-biserial
+  # correlation, i.e. per-feature label signal, for free and exactly mergeable.
+  label_binary:
+    expr: "CASE WHEN label_binary THEN 1.0 ELSE 0.0 END"
+    requires: [label_binary]
+    transform: none
+    edges: [0, 1]
+
+# -------------------------------------------------------------- categorical
+# Value -> count maps. Kept whole in DuckDB, truncated to top_k in the profile
+# with the tail folded into `n_other`, so the JSON stays small while the shares
+# stay exact. Only put BOUNDED columns here -- see `identity` for the rest.
+categorical:
+  proto:        {expr: "coalesce(proto, '(null)')", requires: [proto]}
+  service:      {expr: "coalesce(service, '(none)')", requires: [service]}
+  conn_state:   {expr: "coalesce(conn_state, '(null)')", requires: [conn_state]}
+  history:      {expr: "coalesce(history, '(none)')", requires: [history]}
+  ip_proto:     {expr: "coalesce(ip_proto, -1)::VARCHAR", requires: [ip_proto]}
+  local_orig:   {expr: "coalesce(local_orig::VARCHAR, '(null)')", requires: [local_orig]}
+  local_resp:   {expr: "coalesce(local_resp::VARCHAR, '(null)')", requires: [local_resp]}
+  # Cross-dataset comparable only because it is derived from an absolute epoch:
+  # every capture is stored in UTC, whatever local clock the testbed ran on.
+  hour_utc:     {expr: "lpad(hour(to_timestamp(ts))::VARCHAR, 2, '0')", requires: [ts]}
+  port_class:
+    expr: |
+      CASE WHEN "id.resp_p" IS NULL THEN '(null)'
+           WHEN "id.resp_p" < 1024 THEN 'well-known'
+           WHEN "id.resp_p" < 32768 THEN 'registered'
+           ELSE 'ephemeral' END
+    requires: ["id.resp_p"]
+  label_executed:
+    expr: "coalesce(label_executed::VARCHAR, 'n/a')"
+    requires: [label_executed]
+
+# ----------------------------------------------------------------- identity
+# Environment-specific columns: never features, never compared by value, and
+# far too high-cardinality to histogram (2019's spoofed sources alone run to
+# millions of distinct addresses). Counted only, as a domain-size statistic.
+identity: ["id.orig_h", "id.resp_h", "uid"]
+
+# Nullability is measured on the RAW columns, before the coalesce policies
+# above erase it -- "0 because Zeek saw zero bytes" and "0 because Zeek could
+# not tell" must stay distinguishable in the report.
+null_checks: [duration, orig_bytes, resp_bytes, service, history, conn_state,
+              local_orig, local_resp, ip_proto, missed_bytes]
+
+quantiles: [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]
+top_k: 40                 # categorical values kept per class before the tail folds
+
+# --------------------------------------------------------------- thresholds
+# Only ever used to colour a verdict column in the comparison report; every
+# underlying number is reported raw so a reader can disagree with these.
+thresholds:
+  js_domain_high: 0.15      # benign-vs-benign JS above this = the feature encodes the testbed
+  js_domain_low: 0.05       # ...and below this it transfers cleanly
+  utility_low: 0.02         # normalised MI with the label below this = no signal to lose
+  near_constant_var: 1.0e-6 # transformed-space variance below this = dead feature
