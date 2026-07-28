@@ -14,8 +14,6 @@ import time
 import duckdb
 
 REFRESH_EVERY = 300          # seconds between re-mints; well inside any session TTL
-EXT_REPO = "https://extensions.duckdb.org"
-
 
 def cli_creds():
     """Current S3 credentials straight from the AWS CLI (handles rotation)."""
@@ -37,7 +35,10 @@ class Lake:
         self.region, self._minted, self.require_s3 = region, 0.0, require_s3
         self.con = duckdb.connect()
         if require_s3:
-            self.con.execute(f"INSTALL httpfs FROM '{EXT_REPO}'; LOAD httpfs;")
+            try:
+                self.con.execute("LOAD httpfs;")
+            except duckdb.Error:
+                self.con.execute("INSTALL httpfs; LOAD httpfs;")
         # Guard rails for the 16 GB box, which has twice frozen on this lake --
         # once by filling the root disk with spill, once by thrashing itself to
         # death with 8 threads against a 12 GB limit. Neither failure produced an
