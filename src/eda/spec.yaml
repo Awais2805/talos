@@ -12,7 +12,7 @@
 # Changing anything below invalidates every existing profile -- bump `version`
 # and re-run `make eda-all`.
 
-version: 1
+version: 2
 
 # ---------------------------------------------------------------- row scope
 # The grouping key of every heavy aggregate. Everything downstream (attack vs
@@ -185,6 +185,18 @@ identity: ["id.orig_h", "id.resp_h", "uid"]
 null_checks: [duration, orig_bytes, resp_bytes, service, history, conn_state,
               local_orig, local_resp, ip_proto, missed_bytes]
 
+# Feature pairs kept as full 2-D joint histograms (bins x bins, per class), so
+# the reports can show a real density surface instead of two marginals side by
+# side. Deliberately a short list: every pair costs nbins^2 numbers per class.
+# Chosen for the shapes that separate flood, scan and session traffic.
+joint_pairs:
+  - [orig_pkts, resp_pkts]           # the scan/flood signature: talk, no answer
+  - [duration, total_pkts]           # slow-and-low vs fast-and-loud
+  - [orig_bytes_per_pkt, resp_bytes_per_pkt]
+  - [total_bytes, byte_ratio]        # volume against directionality
+  - [resp_port, total_pkts]
+  - [duration, byte_ratio]
+
 quantiles: [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]
 top_k: 40                 # categorical values kept per class before the tail folds
 
@@ -195,4 +207,8 @@ thresholds:
   js_domain_high: 0.15      # benign-vs-benign JS above this = the feature encodes the testbed
   js_domain_low: 0.05       # ...and below this it transfers cleanly
   utility_low: 0.02         # normalised MI with the label below this = no signal to lose
+  utility_useful: 0.10      # ...and this much is needed before recommending it
   near_constant_var: 1.0e-6 # transformed-space variance below this = dead feature
+  undefined_high: 0.25      # undefined for this share of flows = judge nothing from it
+  zero_high: 0.98           # this share of exact zeros, with no signal, is a dead column
+  rho_meaningful: 0.15      # a correlation smaller than this cannot meaningfully "flip sign"

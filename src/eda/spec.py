@@ -79,6 +79,23 @@ class Feature:
         out.append(f"count(*) FILTER ({r} >= {e[-1]})")
         return out
 
+    def bin_index(self, col=None):
+        """The bin number, 0..nbins-1, as a single monotone expression.
+
+        Two things ride on this. Pearson r over bin indices is a rank-style
+        correlation -- Spearman's robustness to the heavy tails, without needing
+        a global sort -- and because the grid is fixed by the spec rather than
+        by the data, those co-moments stay additive, so the pooled rest keeps
+        working. True ranks would not: they depend on the whole dataset, so no
+        sum of them could be merged across datasets.
+
+        It is also the key for the 2-D joint histograms: two bin indices pack
+        into one integer, turning a density surface into one MAP aggregate.
+        """
+        r, e = (col or self.raw), self.edges
+        whens = " ".join(f"WHEN {r} < {v} THEN {i}" for i, v in enumerate(e))
+        return f"CASE {whens} ELSE {len(e)} END"
+
     def bin_labels(self):
         """Human-readable bin names, in the same order as bin_counts()."""
         def fmt(v):
@@ -108,6 +125,21 @@ class Spec:
         self.quantiles = list(doc["quantiles"])
         self.top_k = int(doc["top_k"])
         self.thresholds = dict(doc["thresholds"])
+        self.joint_pairs = [tuple(p) for p in doc.get("joint_pairs", [])]
+
+    def contract(self, numeric_spec=None):
+        """The part of the spec two profiles must agree on to be comparable.
+
+        Measured, not hashed from the file: a profile carries its own edges and
+        transforms, so comparability is checked against what was actually used
+        rather than against a hash that also moves when a comment or a new
+        optional measurement is added. Adding statistics stays backward
+        compatible; changing a bin edge does not, and says which feature.
+        """
+        if numeric_spec is not None:
+            return {n: (c["transform"], tuple(c["edges"]), c["expr"])
+                    for n, c in numeric_spec.items()}
+        return {f.name: (f.transform, tuple(f.edges), f.expr) for f in self.numeric}
 
     def resolve(self, columns):
         """Drop what this source cannot supply; report it rather than hide it.

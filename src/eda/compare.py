@@ -37,7 +37,8 @@ sys.path.insert(0, str(ROOT))
 from src.eda.spec import Spec                                  # noqa: E402
 
 EDA_DIR = ROOT / "reports" / "eda"
-COMPARE_VERSION = 1
+COMPARE_VERSION = 2
+LABEL_COL = "label_binary"
 EPS = 1e-12
 
 
@@ -56,14 +57,25 @@ def load_profiles(directory):
         profiles[doc["meta"]["dataset"]] = doc
     if not profiles:
         return profiles
-    spec = Spec()
-    stale = {ds: p["meta"]["spec_sha"] for ds, p in profiles.items()
-             if p["meta"]["spec_sha"] != spec.sha}
-    if stale:
-        lines = "\n  ".join(f"{ds}: profiled with spec {sha}" for ds, sha in stale.items())
-        sys.exit(f"spec.yaml is now sha {spec.sha}, but these profiles are not:\n  "
-                 f"{lines}\nre-run `make eda-all` — comparing across bin edges is "
-                 f"meaningless, so this is refused rather than approximated.")
+
+    # Comparability is checked against the ruler each profile CARRIES -- its own
+    # transforms and bin edges -- not against a hash of the spec file. A hash
+    # also moves when a comment changes or a new optional statistic is added,
+    # which would force a re-scan of 137M flows to answer a question that the
+    # profiles can answer themselves. This only objects when a bin edge or a
+    # transform actually differs, and says which feature.
+    spec, bad = Spec(), []
+    want = spec.contract()
+    for ds, p in profiles.items():
+        got = spec.contract(p["numeric_spec"])
+        for f, cfg in got.items():
+            if f in want and want[f] != cfg:
+                bad.append(f"{ds}: {f} was measured as {cfg[0]} on {len(cfg[1])} edges, "
+                           f"spec.yaml now says {want[f][0]} on {len(want[f][1])}")
+    if bad:
+        sys.exit("these profiles were measured on a different ruler:\n  " +
+                 "\n  ".join(bad) + "\nre-run `make eda-all` — comparing across bin "
+                 "edges is meaningless, so this is refused rather than approximated.")
     return profiles
 
 
@@ -72,9 +84,13 @@ def load_profiles(directory):
 def _blank(feature_names, pair_names):
     return {"n": 0,
             "numeric": {f: {"n_undefined": 0, "n_zero": 0, "min": None, "max": None,
-                            "sum_t": 0.0, "sumsq_t": 0.0, "hist": None} for f in feature_names},
+                            "sum_t": 0.0, "sumsq_t": 0.0,
+                            "hist": None} for f in feature_names},
             "categorical": {},
-            "pairs": {p: 0.0 for p in pair_names}}
+            # Pearson rides on the co-moment sums; the rank matrix rides on the
+            # joint bin counts. Both are additive, so both survive pooling.
+            "pairs": {p: 0.0 for p in pair_names},
+            "joint": {p: {} for p in pair_names}}
 
 
 def _add_numeric(dst, src):
@@ -113,6 +129,10 @@ def class_view(profile, which):
         for i, p in enumerate(pairs):
             if i < len(blk["pairs_xy"]):
                 view["pairs"][p] += blk["pairs_xy"][i]
+            if i < len(blk.get("pairs_joint", [])):
+                tgt = view["joint"][p]
+                for cell, cnt in blk["pairs_joint"][i].items():
+                    tgt[cell] = tgt.get(cell, 0) + cnt
         for cat, cblk in blk["categorical"].items():
             tgt = view["categorical"].setdefault(cat, {"counts": {}, "n_other": 0,
                                                        "n_distinct": 0})
@@ -137,6 +157,9 @@ def pool(views):
                 _add_numeric(out["numeric"][f], v["numeric"][f])
         for p in pairs:
             out["pairs"][p] += v["pairs"].get(p, 0.0)
+            tgt = out["joint"].setdefault(p, {})
+            for cell, cnt in v.get("joint", {}).get(p, {}).items():
+                tgt[cell] = tgt.get(cell, 0) + cnt
         for cat, cblk in v["categorical"].items():
             tgt = out["categorical"].setdefault(cat, {"counts": {}, "n_other": 0,
                                                       "n_distinct": 0})
@@ -176,18 +199,87 @@ def moments(block, n):
     return mean, max(0.0, block["sumsq_t"] / n - mean * mean)
 
 
-def corr_matrix(view, feats):
-    """Pearson correlation of the pool, exactly, from its summed moments."""
+def has_rank_space(view):
+    """v1 profiles predate the joint histograms; the rank matrix is skipped, not faked."""
+    return any(view.get("joint", {}).values())
+
+
+def midrank_map(hist):
+    """Bin -> its mid-quantile under this distribution: the binned equivalent of
+    a rank. A bin holding the 10th to 30th percentile maps to 0.20, so a
+    variable becomes approximately uniform on [0, 1] exactly as ranking makes
+    it. Doing this at COMPARE time is what keeps the pipeline additive: the map
+    is derived from the merged histogram of whichever pool is being described,
+    while the stored joint counts stay pool-independent."""
+    total = sum(hist) or 1
+    out, cum = [], 0
+    for c in hist:
+        out.append((cum + c / 2) / total)
+        cum += c
+    return out
+
+
+def rank_corr_matrix(view, feats):
+    """Spearman-style correlation over binned mid-ranks, from the joint counts.
+
+    Equal to Spearman's rho up to the resolution of the bin grid: within a bin
+    the ordering is unknown, so ties are broken as the bin's average rank --
+    the same convention Spearman itself uses for genuine ties.
+    """
     n = view["n"]
     if n < 2:
         return np.full((len(feats), len(feats)), np.nan)
-    s = np.array([view["numeric"][f]["sum_t"] for f in feats])
-    ss = np.array([view["numeric"][f]["sumsq_t"] for f in feats])
+    qmap = {f: midrank_map(view["numeric"][f]["hist"] or []) for f in feats}
+    mean, var = {}, {}
+    for f in feats:
+        h = np.asarray(view["numeric"][f]["hist"] or [], float)
+        q = np.asarray(qmap[f])
+        if h.sum() <= 0:
+            mean[f], var[f] = np.nan, np.nan
+            continue
+        p = h / h.sum()
+        mean[f] = float(p @ q)
+        var[f] = float(p @ (q * q) - mean[f] ** 2)
+
+    out = np.full((len(feats), len(feats)), np.nan)
+    for i, a in enumerate(feats):
+        out[i, i] = 1.0 if var[a] and var[a] > 0 else np.nan
+        for j, b in enumerate(feats[i + 1:], start=i + 1):
+            cells = view["joint"].get((a, b)) or view["joint"].get((b, a))
+            if not cells or not var[a] or not var[b]:
+                continue
+            flip = (a, b) not in view["joint"]
+            tot = exy = 0
+            qa, qb = qmap[a], qmap[b]
+            for cell, cnt in cells.items():
+                x, y = cell.split(",")
+                x, y = int(x), int(y)
+                if flip:
+                    x, y = y, x
+                if x < len(qa) and y < len(qb):
+                    exy += cnt * qa[x] * qb[y]
+                    tot += cnt
+            if tot < 2:
+                continue
+            cov = exy / tot - mean[a] * mean[b]
+            out[i, j] = out[j, i] = cov / np.sqrt(var[a] * var[b])
+    return np.clip(out, -1, 1)
+
+
+def corr_matrix(view, feats, space="t"):
+    """Pearson correlation of the pool, exactly, from its summed moments."""
+    n = view["n"]
+    key_s, key_ss = f"sum_{space}", f"sumsq_{space}"
+    pairs = view["pairs"]
+    if n < 2:
+        return np.full((len(feats), len(feats)), np.nan)
+    s = np.array([view["numeric"][f][key_s] for f in feats])
+    ss = np.array([view["numeric"][f][key_ss] for f in feats])
     sxy = np.zeros((len(feats), len(feats)))
     for i, a in enumerate(feats):
         sxy[i, i] = ss[i]
         for j, b in enumerate(feats[i + 1:], start=i + 1):
-            v = view["pairs"].get((a, b), view["pairs"].get((b, a)))
+            v = pairs.get((a, b), pairs.get((b, a)))
             sxy[i, j] = sxy[j, i] = 0.0 if v is None else v
     cov = sxy - np.outer(s, s) / n
     sd = np.sqrt(np.clip(np.diag(cov), 0, None))
@@ -290,8 +382,11 @@ def compare_one(dataset, profiles, spec):
                              [r["n_rest"] for r in class_rows]) if others else None
 
     # ---- per-feature drift -------------------------------------------------
+    # LABEL_COL rides in `feats` so that the correlation matrices carry the
+    # point-biserial row, but it is not a feature and must never appear in a
+    # feature table or be counted as one that transfers.
     numeric_rows = []
-    for f in feats:
+    for f in [x for x in feats if x != LABEL_COL]:
         s_all, s_ben, s_atk = (views_self[w]["numeric"].get(f) for w in
                                ("all", "benign", "attack"))
         r_all, r_ben, r_atk = ((views_rest[w]["numeric"].get(f) if views_rest[w] else None)
@@ -318,9 +413,23 @@ def compare_one(dataset, profiles, spec):
         u_rest = (label_signal(hist(r_ben), hist(r_atk), balanced=True)
                   if hist(r_ben) and hist(r_atk) else None)
 
+        undef_share = s_all["n_undefined"] / max(views_self["all"]["n"], 1)
+        zero_share = s_all["n_zero"] / max(views_self["all"]["n"], 1)
+
+        # Order matters: every disqualifying condition is tested before any
+        # recommendation, because the failure mode that actually bit was a
+        # feature undefined for 96% of rows being recommended on the strength of
+        # the other 4%.
         verdict, why = "ok", ""
-        if v_s is not None and v_s < th["near_constant_var"]:
+        if undef_share >= th["undefined_high"]:
+            verdict, why = ("mostly undefined",
+                            f"undefined for {100 * undef_share:.1f}% of flows here — "
+                            f"every statistic below is computed on the remainder")
+        elif v_s is not None and v_s < th["near_constant_var"]:
             verdict, why = "dead", "near-constant in this dataset"
+        elif zero_share >= th["zero_high"] and (u_self or 0) < th["utility_useful"]:
+            verdict, why = ("dead", f"{100 * zero_share:.1f}% zeros and almost no "
+                                    f"label signal — nothing to carry")
         elif js_domain is not None and js_domain >= th["js_domain_high"]:
             verdict, why = ("domain-biased",
                             "benign traffic alone separates this dataset from the pool")
@@ -328,7 +437,7 @@ def compare_one(dataset, profiles, spec):
                 u_rest is None or u_rest < th["utility_low"]):
             verdict, why = "uninformative", "carries almost no label signal anywhere"
         elif (js_domain is not None and js_domain <= th["js_domain_low"]
-                and u_self is not None and u_self >= th["utility_low"]):
+                and u_self is not None and u_self >= th["utility_useful"]):
             verdict, why = "transfers", "stable across domains and informative in both"
 
         numeric_rows.append({
@@ -351,6 +460,10 @@ def compare_one(dataset, profiles, spec):
             "label_signal_gap": r6(abs(u_self - u_rest)
                                    if u_self is not None and u_rest is not None else None),
             "verdict": verdict, "verdict_reason": why,
+            # The benign-vs-benign histograms travel with the row so the page can
+            # draw the shift it is reporting, without reopening the profiles.
+            "bin_labels": me["numeric_spec"][f]["bin_labels"],
+            "hist_self": hist(s_ben), "hist_rest": hist(r_ben),
         })
 
     # ---- categorical drift -------------------------------------------------
@@ -401,23 +514,79 @@ def compare_one(dataset, profiles, spec):
     # Correlation with the 0/1 label is the point-biserial label relation; a
     # sign flip between domains is the clearest possible statement that a
     # feature means something different here than it does in the pool.
-    lb = "label_binary"
     label_corr = []
-    if lb in feats:
-        k = feats.index(lb)
+    if LABEL_COL in feats:
+        k = feats.index(LABEL_COL)
         for i, f in enumerate(feats):
-            if f == lb or not np.isfinite(c_self[i, k]):
+            if f == LABEL_COL or not np.isfinite(c_self[i, k]):
                 continue
             # A "sign flip" only means anything if there is a relation to flip:
             # +0.004 here and -0.001 there is noise, not a contradiction.
             flip = bool(np.isfinite(c_rest[i, k]) and c_self[i, k] * c_rest[i, k] < 0
-                        and min(abs(c_self[i, k]), abs(c_rest[i, k])) >= 0.05)
+                        and min(abs(c_self[i, k]),
+                                abs(c_rest[i, k])) >= th["rho_meaningful"])
             label_corr.append({"feature": f, "rho_self": r6(c_self[i, k]),
                                "rho_rest": r6(c_rest[i, k]), "flips_sign": flip})
         label_corr.sort(key=lambda d: -abs(d["rho_self"] or 0))
 
+    # ---- the rank-style (Spearman) matrices -------------------------------
+    rank = None
+    if has_rank_space(views_self["all"]) and (
+            views_rest["all"] and has_rank_space(views_rest["all"])):
+        g_self = rank_corr_matrix(views_self["all"], feats)
+        g_rest = rank_corr_matrix(views_rest["all"], feats)
+        g_delta = g_self - g_rest
+        g_drift = sorted(
+            ({"a": feats[i], "b": feats[j], "rho_self": r6(g_self[i, j]),
+              "rho_rest": r6(g_rest[i, j]), "delta": r6(g_delta[i, j])}
+             for i, j in zip(*iu) if np.isfinite(g_delta[i, j])),
+            key=lambda d: -abs(d["delta"]))
+        # Where Pearson and the rank matrix disagree inside one dataset, the
+        # Pearson value is being driven by the tail rather than by the bulk of
+        # the flows -- worth knowing before a linear model is fitted to it.
+        gap = sorted(({"a": feats[i], "b": feats[j], "pearson": r6(c_self[i, j]),
+                       "rank": r6(g_self[i, j]), "gap": r6(c_self[i, j] - g_self[i, j])}
+                      for i, j in zip(*iu)
+                      if np.isfinite(c_self[i, j]) and np.isfinite(g_self[i, j])),
+                     key=lambda d: -abs(d["gap"]))
+        rank = {"self": [[r6(v) for v in row] for row in g_self],
+                "rest": [[r6(v) for v in row] for row in g_rest],
+                "top_drift": g_drift[:25], "pearson_gap": gap[:15]}
+
+    # ---- one-vs-EACH, not just one-vs-pool --------------------------------
+    # The pool is flow-weighted, so a 2.1M-flow dataset is nearly invisible
+    # beside a 72M-flow one and "vs rest" quietly becomes "vs the biggest peer".
+    # The per-peer breakdown and the macro (equal-weight) average say what the
+    # pooled number cannot.
+    per_peer = []
+    for p in others:
+        pv = {w: class_view(p, w) for w in ("all", "benign", "attack")}
+        row = {"dataset": p["meta"]["dataset"], "flows": p["meta"]["rows"],
+               "share_of_rest": r6(p["meta"]["rows"] / n_rest if n_rest else None),
+               "features": {}}
+        dom, con = [], []
+        for f in [x for x in feats if x != LABEL_COL]:
+            jd = js_divergence(views_self["benign"]["numeric"][f]["hist"],
+                               pv["benign"]["numeric"][f]["hist"]) \
+                if pv["benign"]["numeric"].get(f, {}).get("hist") else None
+            jc = js_divergence(views_self["attack"]["numeric"][f]["hist"],
+                               pv["attack"]["numeric"][f]["hist"]) \
+                if pv["attack"]["numeric"].get(f, {}).get("hist") else None
+            row["features"][f] = {"js_domain": r6(jd), "js_concept": r6(jc)}
+            if jd is not None:
+                dom.append(jd)
+            if jc is not None:
+                con.append(jc)
+        row["domain_fingerprint"] = r6(np.mean(dom) if dom else None)
+        row["concept_shift"] = r6(np.mean(con) if con else None)
+        per_peer.append(row)
+    per_peer.sort(key=lambda r: -(r["domain_fingerprint"] or 0))
+
     js_domain_vals = [r["js_domain"] for r in numeric_rows if r["js_domain"] is not None]
     js_concept_vals = [r["js_concept"] for r in numeric_rows if r["js_concept"] is not None]
+    macro_domain = [r["domain_fingerprint"] for r in per_peer
+                    if r["domain_fingerprint"] is not None]
+    macro_concept = [r["concept_shift"] for r in per_peer if r["concept_shift"] is not None]
     benign_self = me["by_class"].get(me["benign_class"], {}).get("n", 0)
 
     return {
@@ -451,14 +620,28 @@ def compare_one(dataset, profiles, spec):
             # attack is involved. concept_shift is the same for attack traffic.
             "domain_fingerprint": r6(np.mean(js_domain_vals) if js_domain_vals else None),
             "concept_shift": r6(np.mean(js_concept_vals) if js_concept_vals else None),
+            # ...and the same two numbers with every peer counted once, whatever
+            # its flow count. Where these disagree, the pooled figure is really a
+            # statement about the largest peer.
+            "domain_fingerprint_macro": r6(np.mean(macro_domain) if macro_domain else None),
+            "concept_shift_macro": r6(np.mean(macro_concept) if macro_concept else None),
+            "rest_dominated_by": (per_peer and
+                                  max(per_peer, key=lambda r: r["flows"])["dataset"] or None),
+            "rest_dominance": r6(max((r["share_of_rest"] or 0) for r in per_peer)
+                                 if per_peer else None),
             "corr_delta_mean_abs": r6(np.mean(np.abs(delta[iu][finite])) if finite.any() else None),
             "corr_delta_max_abs": r6(np.max(np.abs(delta[iu][finite])) if finite.any() else None),
+            "n_features": len(numeric_rows),
             "n_domain_biased": sum(1 for r in numeric_rows if r["verdict"] == "domain-biased"),
             "n_transfers": sum(1 for r in numeric_rows if r["verdict"] == "transfers"),
+            "n_unusable": sum(1 for r in numeric_rows
+                              if r["verdict"] in ("dead", "mostly undefined")),
         },
         "class_distribution": class_rows,
         "numeric": sorted(numeric_rows, key=lambda r: -(r["js_domain"] or -1)),
         "categorical": sorted(cat_rows, key=lambda r: -(r["js_domain"] or -1)),
+        "per_peer": per_peer,
+        "rank_correlation": rank,
         "correlation": {
             "order": feats,
             "self": [[r6(v) for v in row] for row in c_self],

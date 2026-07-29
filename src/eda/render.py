@@ -21,8 +21,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.eda.compare import (class_view, corr_matrix, js_divergence,   # noqa: E402
-                             label_signal, moments, r6)
+from src.eda.compare import (class_view, corr_matrix, has_rank_space,     # noqa: E402
+                             js_divergence, label_signal, moments, r6,
+                             rank_corr_matrix)
 
 EDA_DIR = ROOT / "reports" / "eda"
 
@@ -182,6 +183,159 @@ def heatmap(order, matrix, title="", cell=15):
             f"<svg viewBox='0 0 {w} {h}' role=img>{''.join(out)}</svg>")
 
 
+def density(cells, xlabels, ylabels, xname, yname, flip=False):
+    """2-D joint density from the sparse bin counts, log-scaled.
+
+    Linear shading would show one black square and nothing else: flow features
+    are heavy-tailed enough that the modal cell routinely holds a thousand times
+    the traffic of an interesting one. Log shading is what makes the secondary
+    ridges -- the scan arm, the flood arm -- visible at all.
+    """
+    nx, ny = len(xlabels), len(ylabels)
+    grid = [[0] * ny for _ in range(nx)]
+    for cell, cnt in cells.items():
+        i, j = (int(v) for v in cell.split(","))
+        if flip:
+            i, j = j, i
+        if i < nx and j < ny:
+            grid[i][j] += cnt
+    top = max((max(r) for r in grid), default=0)
+    if not top:
+        return ""
+    import math
+    lt = math.log10(top + 1)
+    cell_px, pad = 13, 46
+    w, h = pad + nx * cell_px + 8, pad + ny * cell_px + 18
+    out = []
+    for i in range(nx):
+        for j in range(ny):
+            v = grid[i][j]
+            # y axis grows upward, so the last bin is drawn at the top
+            y = pad + (ny - 1 - j) * cell_px
+            a = 0.0 if not v else 0.10 + 0.88 * math.log10(v + 1) / lt
+            fill = "var(--card)" if not v else f"rgba(76,120,168,{a:.3f})"
+            out.append(f"<rect x='{pad + i * cell_px}' y='{y}' width='{cell_px - 1}' "
+                       f"height='{cell_px - 1}' fill='{fill}'><title>{e(xname)} "
+                       f"{e(xlabels[i])} × {e(yname)} {e(ylabels[j])}: {v:,}</title></rect>")
+    for j in range(ny):
+        out.append(f"<text x='{pad - 3}' y='{pad + (ny - 1 - j) * cell_px + cell_px - 4}' "
+                   f"font-size='6' text-anchor='end' fill='var(--mut)'>"
+                   f"{e(ylabels[j])}</text>")
+    for i in range(0, nx, 2):
+        out.append(f"<text x='{pad + i * cell_px + 5}' y='{pad + ny * cell_px + 10}' "
+                   f"font-size='6' text-anchor='middle' fill='var(--mut)'>"
+                   f"{e(xlabels[i])}</text>")
+    return (f"<svg viewBox='0 0 {w} {h}' role=img>{''.join(out)}"
+            f"<text x='4' y='{pad - 6}' font-size='7' fill='var(--mut)'>{e(yname)} ↑</text>"
+            f"<text x='{w - 4}' y='{h - 2}' font-size='7' text-anchor='end' "
+            f"fill='var(--mut)'>{e(xname)} →</text></svg>")
+
+
+def quantile_strip(rows):
+    """Every feature's spread on one shared log axis: p1–p99 whisker, p25–p75
+    box, p50 tick. One picture for "which features are wide, which are pinned to
+    zero, and which are so skewed that a mean is meaningless"."""
+    import math
+    if not rows:
+        return ""
+    def sc(v):
+        return math.log10(1 + max(v or 0, 0))
+    hi = max((sc(r[1][-1]) for r in rows), default=1) or 1
+    rh, w, lab = 16, 640, 150
+    h = len(rows) * rh + 24
+    out = []
+    for k, (name, qs) in enumerate(rows):
+        y = k * rh + 14
+        x = lambda v: lab + (w - lab - 14) * sc(v) / hi                   # noqa: E731
+        p1, p25, p50, p75, p99 = qs[0], qs[1], qs[2], qs[3], qs[4]
+        out.append(f"<text x='{lab - 6}' y='{y + 4}' font-size='8' text-anchor='end' "
+                   f"fill='var(--fg)'>{e(name)}</text>")
+        out.append(f"<line x1='{x(p1):.1f}' y1='{y}' x2='{x(p99):.1f}' y2='{y}' "
+                   f"stroke='var(--mut)' stroke-width='1'/>")
+        out.append(f"<rect x='{x(p25):.1f}' y='{y - 4}' "
+                   f"width='{max(1, x(p75) - x(p25)):.1f}' height='8' "
+                   f"fill='var(--benign)' opacity='.55'/>")
+        out.append(f"<line x1='{x(p50):.1f}' y1='{y - 5}' x2='{x(p50):.1f}' y2='{y + 5}' "
+                   f"stroke='var(--fg)' stroke-width='1.5'><title>{e(name)} median "
+                   f"{p50:,.3g}</title></line>")
+    for d in range(0, int(hi) + 1, max(1, int(hi) // 8)):
+        gx = lab + (w - lab - 14) * d / hi
+        out.append(f"<line x1='{gx:.1f}' y1='6' x2='{gx:.1f}' y2='{h - 18}' "
+                   f"stroke='var(--line)'/>"
+                   f"<text x='{gx:.1f}' y='{h - 6}' font-size='7' text-anchor='middle' "
+                   f"fill='var(--mut)'>1e{d}</text>")
+    return f"<svg viewBox='0 0 {w} {h}' role=img>{''.join(out)}</svg>"
+
+
+def matrix_heat(row_labels, col_labels, values, fmt="{:,.0f}", title=""):
+    """Generic labelled grid — capture × class, and anything else rectangular."""
+    if not row_labels or not col_labels:
+        return ""
+    top = max((max(r) for r in values), default=0) or 1
+    cw, ch, lab = 78, 17, 168
+    w, h = lab + len(col_labels) * cw + 6, 26 + len(row_labels) * ch
+    out = []
+    for j, c in enumerate(col_labels):
+        out.append(f"<text x='{lab + j * cw + cw / 2}' y='16' font-size='7.5' "
+                   f"text-anchor='middle' fill='var(--mut)'>{e(c)}</text>")
+    for i, r in enumerate(row_labels):
+        y = 22 + i * ch
+        out.append(f"<text x='{lab - 6}' y='{y + 11}' font-size='8' text-anchor='end' "
+                   f"fill='var(--fg)'>{e(r)}</text>")
+        for j, _ in enumerate(col_labels):
+            v = values[i][j]
+            a = 0.0 if not v else 0.08 + 0.85 * (v / top) ** 0.4
+            out.append(f"<rect x='{lab + j * cw}' y='{y}' width='{cw - 1}' height='{ch - 1}' "
+                       f"fill='rgba(76,120,168,{a:.3f})'/>"
+                       f"<text x='{lab + j * cw + cw / 2}' y='{y + 11}' font-size='7' "
+                       f"text-anchor='middle' fill='var(--fg)'>"
+                       f"{fmt.format(v) if v else ''}</text>")
+    return (f"{'<h3>' + e(title) + '</h3>' if title else ''}"
+            f"<svg viewBox='0 0 {w} {h}' role=img>{''.join(out)}</svg>")
+
+
+def hbar(items, total, color="var(--benign)", limit=12):
+    """Horizontal share bars for a categorical column."""
+    items = sorted(items.items(), key=lambda kv: -kv[1])[:limit]
+    if not items:
+        return ""
+    top = items[0][1] or 1
+    rh, w, lab = 15, 420, 128
+    out = []
+    for k, (name, v) in enumerate(items):
+        y = k * rh + 11
+        out.append(f"<text x='{lab - 5}' y='{y + 3}' font-size='8' text-anchor='end' "
+                   f"fill='var(--fg)'>{e(name[:22])}</text>"
+                   f"<rect x='{lab}' y='{y - 6}' width='{max(1, (w - lab - 46) * v / top):.1f}' "
+                   f"height='9' fill='{color}' opacity='.75'><title>{e(name)}: {v:,}</title></rect>"
+                   f"<text x='{w - 42}' y='{y + 3}' font-size='7.5' fill='var(--mut)'>"
+                   f"{100 * v / (total or 1):.2f}%</text>")
+    return f"<svg viewBox='0 0 {w} {len(items) * rh + 8}' role=img>{''.join(out)}</svg>"
+
+
+def diverging_bars(rows, limit=20):
+    """Per-feature domain JS as a ranked bar chart — the compare page's headline
+    table, as a shape you can read in one glance."""
+    rows = [r for r in rows if r[1] is not None][:limit]
+    if not rows:
+        return ""
+    rh, w, lab = 16, 560, 160
+    out = []
+    for k, (name, v, col) in enumerate(rows):
+        y = k * rh + 12
+        out.append(f"<text x='{lab - 6}' y='{y + 3}' font-size='8' text-anchor='end' "
+                   f"fill='var(--fg)'>{e(name)}</text>"
+                   f"<rect x='{lab}' y='{y - 6}' width='{max(1, (w - lab - 44) * v):.1f}' "
+                   f"height='9' fill='{col}' opacity='.8'/>"
+                   f"<text x='{w - 40}' y='{y + 3}' font-size='7.5' fill='var(--mut)'>"
+                   f"{v:.3f}</text>")
+    for f in (0.25, 0.5, 0.75, 1.0):
+        gx = lab + (w - lab - 44) * f
+        out.append(f"<line x1='{gx:.1f}' y1='4' x2='{gx:.1f}' y2='{len(rows) * rh + 8}' "
+                   f"stroke='var(--line)'/>")
+    return f"<svg viewBox='0 0 {w} {len(rows) * rh + 14}' role=img>{''.join(out)}</svg>"
+
+
 def scatter(points, xlab, ylab, xmax=1.0, ymax=1.0):
     """One dot per feature: how domain-specific it is vs how much it says."""
     w, h, pad = 520, 300, 40
@@ -291,11 +445,13 @@ def render_profile(profile):
     num_html = table(["feature", "space", "min", "p50*", "p99*", "max", "mean†", "sd†",
                       "zeros", "undef", "label signal"], frows)
 
-    # ---- per-feature benign vs attack shape
+    # ---- per-feature benign vs attack shape, most informative first
+    def _signal(f):
+        b, a = views["benign"]["numeric"][f]["hist"], views["attack"]["numeric"][f]["hist"]
+        return -(label_signal(b, a, balanced=True) or 0) if b and a else 0
+
     charts = []
-    for f in feats:
-        if f == "label_binary":
-            continue
+    for f in sorted([x for x in feats if x != "label_binary"], key=_signal):
         spec = profile["numeric_spec"][f]
         b, a = views["benign"]["numeric"][f]["hist"], views["attack"]["numeric"][f]["hist"]
         if not b or not a:
@@ -307,9 +463,74 @@ def render_profile(profile):
             f"{dual_hist(spec['bin_labels'], b, a, 'benign', 'attack')}</div>")
     shape_html = f"<div class=grid>{''.join(charts)}</div>"
 
-    # ---- correlation
+    # ---- correlation: linear and rank, overall and per class
     cm = corr_matrix(views["all"], feats)
-    corr_html = heatmap(feats, [[r6(v) for v in row] for row in cm])
+    corr_html = (f"<div class=grid style='grid-template-columns:1fr 1fr'>"
+                 f"<div class=chart><div class=t>Pearson (log1p space)</div>"
+                 f"<div class=s>linear association; sensitive to the tail</div>"
+                 f"{heatmap(feats, [[r6(v) for v in row] for row in cm])}</div>")
+    if has_rank_space(views["all"]):
+        rm = rank_corr_matrix(views["all"], feats)
+        corr_html += (f"<div class=chart><div class=t>Spearman (binned ranks)</div>"
+                      f"<div class=s>monotone association; unaffected by the tail</div>"
+                      f"{heatmap(feats, [[r6(v) for v in row] for row in rm])}</div>")
+    else:
+        corr_html += ("<div class=chart><div class=t>Spearman</div><div class=s>"
+                      "needs a profile from spec v2 or later — re-run <span class=mono>"
+                      "make eda-all</span></div></div>")
+    corr_html += "</div>"
+
+    # The same matrix computed on benign flows only and on attack flows only.
+    # Feature relationships that hold in one and not the other are the ones a
+    # model is actually keying on.
+    cb, ca = corr_matrix(views["benign"], feats), corr_matrix(views["attack"], feats)
+    cd = [[None if not (isinstance(x, float) and isinstance(y, float)) else x - y
+           for x, y in zip(rb, ra)]
+          for rb, ra in zip([[r6(v) for v in r] for r in cb],
+                            [[r6(v) for v in r] for r in ca])]
+    corr_html += (f"<h3>Correlation within each class</h3>"
+                  f"<div class=grid style='grid-template-columns:1fr 1fr 1fr'>"
+                  f"<div class=chart><div class=t>benign only</div>"
+                  f"{heatmap(feats, [[r6(v) for v in r] for r in cb])}</div>"
+                  f"<div class=chart><div class=t>attack only</div>"
+                  f"{heatmap(feats, [[r6(v) for v in r] for r in ca])}</div>"
+                  f"<div class=chart><div class=t>benign − attack</div>"
+                  f"{heatmap(feats, cd)}</div></div>")
+
+    # ---- 2-D joint densities for the featured pairs
+    dens = []
+    for a, b in profile.get("featured_pairs", []):
+        if a not in feats or b not in feats:
+            continue
+        la = profile["numeric_spec"][a]["bin_labels"]
+        lb = profile["numeric_spec"][b]["bin_labels"]
+        key = (a, b)
+        for which, colr in (("benign", None), ("attack", None)):
+            cells = views[which]["joint"].get(key) or views[which]["joint"].get((b, a))
+            if not cells:
+                continue
+            flip = key not in views[which]["joint"]
+            dens.append(f"<div class=chart><div class=t>{e(a)} × {e(b)}</div>"
+                        f"<div class=s>{which} flows, log-shaded</div>"
+                        f"{density(cells, la, lb, a, b, flip)}</div>")
+    dens_html = (f"<div class=grid>{''.join(dens)}</div>" if dens else
+                 "<p class=mut>joint densities need a profile from spec v2 or later</p>")
+
+    # ---- spread of every feature on one axis
+    qs_order = ["0.01", "0.25", "0.5", "0.75", "0.99"]
+    big_cls = max(profile["by_class"], key=lambda c: profile["by_class"][c]["n"])
+    strip = quantile_strip([
+        (f, [profile["by_class"][big_cls]["numeric"][f]["q"].get(k) or 0 for k in qs_order])
+        for f in feats if f != "label_binary"])
+
+    # ---- capture x class, as a grid
+    cap_names = sorted({c["capture"] for c in profile["captures"]})
+    cls_names = [c for c, _ in order]
+    grid_vals = [[0] * len(cls_names) for _ in cap_names]
+    for row in profile["captures"]:
+        if row["capture"] in cap_names and row["class"] in cls_names:
+            grid_vals[cap_names.index(row["capture"])][cls_names.index(row["class"])] += row["n"]
+    capgrid = matrix_heat(cap_names, cls_names, grid_vals)
 
     # ---- categorical
     cat_blocks = []
@@ -326,6 +547,10 @@ def render_profile(profile):
                  pct(blk_a["counts"].get(v, 0) / max(views["attack"]["n"], 1), 2),
                  bar(n, top_vals[0][1]))
                 for v, n in top_vals]
+        cat_blocks.append(
+            f"<div class=chart style='margin-top:.6rem'>"
+            f"<div class=t>{e(c)} — share of all flows</div>"
+            f"{hbar(blk_all['counts'], tot)}</div>")
         cat_blocks.append(
             f"<h3>{e(c)} <span class=mut>· {blk_all['n_distinct']:,} distinct"
             f"{', tail ' + pct(blk_all['n_other'] / tot, 2) if blk_all['n_other'] else ''}"
@@ -346,6 +571,14 @@ def render_profile(profile):
     d_rows = [(f"<span class=mono>{e(c)}</span>", fnum(n), "approx_count_distinct")
               for c, n in sorted(dist.items(), key=lambda kv: -kv[1])]
 
+    hours = sorted(views["all"]["categorical"].get("hour_utc", {}).get("counts", {}))
+    temporal = (dual_hist(hours,
+                          [views["benign"]["categorical"]["hour_utc"]["counts"].get(h, 0)
+                           for h in hours],
+                          [views["attack"]["categorical"]["hour_utc"]["counts"].get(h, 0)
+                           for h in hours], "benign", "attack")
+                if hours and "hour_utc" in views["benign"]["categorical"] else "")
+
     body = f"""{head}
 <h2>Class balance</h2>{cls_html}
 <h2>Capture sub-domains</h2>
@@ -364,10 +597,29 @@ the label on its own.</div>{num_html}
 two classes are comparable despite the imbalance. JS is the Jensen–Shannon divergence in
 bits between the two classes: high means this feature separates attack from benign
 <i>in this dataset</i>.</div>{shape_html}
+<h2>Feature spread</h2>
+<div class=note>Whisker p1–p99, box p25–p75, tick at the median, on a shared log axis,
+taken from the {e(big_cls)} class. A box pinned to the left edge is a feature that is
+almost always zero.</div><div class=chart>{strip}</div>
 <h2>Feature correlation</h2>
-<div class=note>Pearson r over all flows in the transformed space, computed exactly from
-summed moments. <span class=mono>label_binary</span> is included, so its row is the
-point-biserial correlation between each feature and the attack label.</div>{corr_html}
+<div class=note>Computed exactly from summed moments and joint bin counts.
+<span class=mono>label_binary</span> is included, so its row is the point-biserial
+correlation between each feature and the attack label. Where Pearson and Spearman
+disagree sharply, the linear figure is being driven by the tail rather than by the bulk
+of the flows.</div>{corr_html}
+<h2>Joint densities</h2>
+<div class=note>The full 2-D distribution for the spec's featured pairs, benign beside
+attack. These are where flood, scan and session traffic separate visibly — two marginal
+histograms cannot show a diagonal ridge.</div>{dens_html}
+<h2>Time of day</h2>
+<div class=note>Derived from the absolute epoch, so it is comparable across captures
+whatever local clock the testbed ran. A class confined to a few hours is a scheduled
+attack window, not a behaviour.</div>
+<div class=chart>{temporal or "<p class=mut>no ts column on this source</p>"}</div>
+<h2>Capture × class</h2>
+<div class=note>Which capture contributed which class. Empty columns are classes that
+exist in one capture only — they cannot be evaluated per-capture.</div>
+<div class=chart>{capgrid}</div>
 <h2>Categorical features</h2>{cat_html}
 <h2>Data quality</h2><h3>Nulls in the raw columns</h3>{table(['column', 'nulls', 'share'], q_rows)}
 <h3>Identity cardinality</h3>
@@ -400,14 +652,16 @@ def render_compare(doc):
 
     head = kpis([
         ("domain fingerprint", fnum(o["domain_fingerprint"]),
-         "mean benign-vs-benign JS"),
-        ("concept shift", fnum(o["concept_shift"]), "mean attack-vs-attack JS"),
+         f"benign-vs-benign JS · macro {fnum(o.get('domain_fingerprint_macro'))}"),
+        ("concept shift", fnum(o["concept_shift"]),
+         f"attack-vs-attack JS · macro {fnum(o.get('concept_shift_macro'))}"),
         ("class mix JS", fnum(o["class_js"]), "label distribution"),
         ("Δcorrelation", fnum(o["corr_delta_mean_abs"]),
          f"mean |Δr| · max {fnum(o['corr_delta_max_abs'])}"),
         ("domain-biased", str(o["n_domain_biased"]),
-         f"of {m['features_compared']} features"),
-        ("transferable", str(o["n_transfers"]), "stable and informative"),
+         f"of {o.get('n_features', m['features_compared'])} features"),
+        ("transferable", str(o["n_transfers"]),
+         f"{o.get('n_unusable', 0)} unusable here"),
     ])
 
     interp = ("<div class=note><b>How to read the headline.</b> "
@@ -462,6 +716,36 @@ def render_compare(doc):
     scat = scatter(pts, "domain fingerprint (benign-vs-benign JS)",
                    "label signal in this dataset")
 
+    # ---- self vs rest, distribution by distribution
+    hist_charts = []
+    for r in doc["numeric"][:18]:
+        f = r["feature"]
+        sh, rh_ = r.get("hist_self"), r.get("hist_rest")
+        if not sh or not rh_:
+            continue
+        hist_charts.append(
+            f"<div class=chart><div class=t>{e(f)}</div>"
+            f"<div class=s>benign here vs benign in the pool · JS "
+            f"{fnum(r['js_domain'])}</div>"
+            f"{dual_hist(r.get('bin_labels') or [], sh, rh_, ds, 'rest of pool', 'var(--benign)', 'var(--rest)')}"
+            f"</div>")
+    hist_html = (f"<div class=grid>{''.join(hist_charts)}</div>" if hist_charts else
+                 "<p class=mut>re-run <span class=mono>make eda-compare</span> to attach "
+                 "the histograms</p>")
+
+    js_bars = diverging_bars([
+        (r["feature"], r["js_domain"],
+         {"domain-biased": "var(--attack)", "transfers": "var(--ok)"}.get(
+             r["verdict"], "var(--rest)")) for r in doc["numeric"]])
+
+    # ---- per-peer: the pooled number, decomposed
+    peer_rows = doc.get("per_peer") or []
+    peer_html = table(
+        ["peer", "flows", "share of the pool", "domain fingerprint", "concept shift"],
+        [(f"<span class=mono>{e(pr['dataset'])}</span>", fnum(pr["flows"]),
+          pct(pr["share_of_rest"], 1), fnum(pr["domain_fingerprint"]),
+          fnum(pr["concept_shift"])) for pr in peer_rows]) if peer_rows else ""
+
     # ---- correlation
     order = doc["correlation"]["order"]
     delta = [[None if a is None or b is None else a - b
@@ -480,6 +764,35 @@ def render_compare(doc):
                          f"<span class={'bad' if abs(d['delta']) > .4 else ''}>"
                          f"{d['delta']:+.3f}</span>")
                         for d in doc["correlation"]["top_drift"]])
+
+    rank = doc.get("rank_correlation")
+    rank_html = ""
+    if rank:
+        r_delta = [[None if a is None or b is None else a - b for a, b in zip(ra, rb)]
+                   for ra, rb in zip(rank["self"], rank["rest"])]
+        rank_html = (f"<div class=grid style='grid-template-columns:1fr 1fr'>"
+                     f"<div class=chart><div class=t>{e(ds)} — Spearman</div>"
+                     f"{heatmap(order, rank['self'])}</div>"
+                     f"<div class=chart><div class=t>rest of pool — Spearman</div>"
+                     f"{heatmap(order, rank['rest'])}</div></div>"
+                     f"<h3>difference (this − rest), rank space</h3>"
+                     f"{heatmap(order, r_delta)}"
+                     + table(["feature A", "feature B", "ρ here", "ρ in rest", "Δ"],
+                             [(f"<span class=mono>{e(d['a'])}</span>",
+                               f"<span class=mono>{e(d['b'])}</span>",
+                               fnum(d["rho_self"]), fnum(d["rho_rest"]),
+                               f"{d['delta']:+.3f}") for d in rank["top_drift"][:12]])
+                     + "<h3>Where linear and monotone disagree, in this dataset</h3>"
+                     + "<div class=note>A large gap means the Pearson value is a "
+                       "statement about the extreme tail, not about typical flows.</div>"
+                     + table(["feature A", "feature B", "Pearson", "Spearman", "gap"],
+                             [(f"<span class=mono>{e(d['a'])}</span>",
+                               f"<span class=mono>{e(d['b'])}</span>",
+                               fnum(d["pearson"]), fnum(d["rank"]),
+                               f"{d['gap']:+.3f}") for d in rank["pearson_gap"][:10]]))
+    else:
+        rank_html = ("<p class=mut>rank correlations need profiles from spec v2 or later — "
+                     "re-run <span class=mono>make eda-all</span></p>")
 
     lc_html = table(["feature", "r with label here", "r with label in rest", ""],
                     [(f"<span class=mono>{e(r['feature'])}</span>",
@@ -516,11 +829,24 @@ information with the label — computed with a 50/50 prior so a 98%-attack captu
 <div class=note>The bottom-right corner is where cross-domain generalisation goes to die:
 features that identify the capture but say little about the label. The top-left is what you
 want to keep.</div><div class=chart>{scat}</div>
+<h2>Distribution shift, feature by feature</h2>
+<div class=note>Benign flows here against benign flows in the pool, on the spec's fixed
+bins and shown as shares. This is the picture behind the domain JS column above.</div>
+{hist_html}
+<h2>Domain shift, ranked</h2><div class=chart>{js_bars}</div>
+<h2>Who "the rest" actually is</h2>
+<div class=note>The pool is flow-weighted, so a large peer dominates it. These are the
+same two measures computed against each peer separately; the macro figures in the header
+weight every peer equally.</div>{peer_html}
 <h2>Correlation structure</h2>
 <div class=note>Two datasets can agree on every marginal distribution and still disagree on
 how features move together — that difference is what a model trained on one and tested on
 the other actually trips over.</div>{heat}
-<h3>Largest correlation shifts</h3>{drift_html}
+<h3>Largest correlation shifts (Pearson)</h3>{drift_html}
+<h3>Rank correlation (Spearman)</h3>
+<div class=note>The same structure measured on binned ranks: robust to the heavy tails
+that dominate byte and packet counts, and equal to Spearman's ρ up to the width of a
+bin.</div>{rank_html}
 <h3>Relation to the label</h3>
 <div class=note>Point-biserial correlation with the attack label. A sign flip means the
 feature argues for "attack" here and for "benign" in the rest of the pool.</div>{lc_html}
@@ -555,11 +881,33 @@ def render_index(profiles, compares):
             f"<a href='profile_{e(ds)}.html'>profile</a> · "
             f"<a href='compare_{e(ds)}.html'>vs rest</a>",
         ))
+    # Every comparison already measured this dataset against each peer
+    # separately, so the full domain-distance matrix falls out for free -- and
+    # it says in one picture what no single "vs rest" number can: which
+    # environments resemble each other, and which one stands apart.
+    names = sorted(profiles)
+    dist, ok = [], False
+    for a in names:
+        row = []
+        peers = {p["dataset"]: p for p in (compares.get(a) or {}).get("per_peer", [])}
+        for b in names:
+            v = 0.0 if a == b else (peers.get(b, {}).get("domain_fingerprint") or 0.0)
+            ok = ok or bool(v)
+            row.append(v)
+        dist.append(row)
+    note = ("Mean benign-vs-benign Jensen-Shannon divergence between each pair of "
+            "datasets, every peer counted once. Darker is further apart; the diagonal "
+            "is zero by definition.")
+    matrix = (f"<h2>Domain distance</h2><div class=note>{note}</div>"
+              f"<div class=chart>{matrix_heat(names, names, dist, fmt='{:.3f}')}</div>"
+              if ok else "")
+
     body = f"""<div class=note>Each dataset has an individual profile and a one-against-all
 comparison. The comparisons are derived from the profiles alone, so adding a dataset
 re-derives every comparison in seconds without re-reading the lake.</div>
 {table(['dataset', 'role', 'flows', 'attack', 'classes', 'domain fingerprint',
-        'concept shift', 'biased / transferable', 'reports'], rows)}"""
+        'concept shift', 'biased / transferable', 'reports'], rows)}
+{matrix}"""
     return page("Talos · EDA reports", body,
                 f"{len(profiles)} dataset(s) in the pool")
 

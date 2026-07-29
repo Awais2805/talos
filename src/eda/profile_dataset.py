@@ -42,7 +42,7 @@ from src.common.lake import Lake                              # noqa: E402
 from src.eda.spec import Spec, _q                             # noqa: E402
 
 EDA_DIR = ROOT / "reports" / "eda"
-PROFILE_VERSION = 1
+PROFILE_VERSION = 2
 
 
 def parse_args():
@@ -103,6 +103,7 @@ def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample, lim
     proj = ["%s AS grp" % group_expr]
     proj += [f"{f.raw} AS r{i}" for i, f in enumerate(num)]
     proj += [f"{f.trans} AS t{i}" for i, f in enumerate(num)]
+    proj += [f"{f.bin_index(f'r{i}')} AS g{i}" for i, f in enumerate(num)]
     proj += [f"{f.expr} AS k{j}" for j, f in enumerate(cat)]
     proj += [f"{_q(c)} AS id{k}" for k, c in enumerate(ident)]
     proj += [f"{_q(c)} AS nz{k}" for k, c in enumerate(nulls)]
@@ -120,6 +121,14 @@ def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample, lim
     pairs = Spec.pairs(num)
     agg.append("[" + ", ".join(f"sum(t{a} * t{b})::DOUBLE" for a, b in pairs) + "] AS xy"
                if pairs else "[]::DOUBLE[] AS xy")
+    # The joint bin histogram of EVERY pair, as one MAP per pair: both bin
+    # indices packed into a single integer key. This is what makes a rank
+    # correlation possible at all downstream -- true ranks depend on the whole
+    # dataset and could never be merged across datasets, but joint bin counts
+    # are plain counts, so they add exactly like everything else here. It also
+    # means any pair can be drawn as a 2-D density surface, not just a
+    # pre-chosen few. Sparse in practice: most cells of most pairs are empty.
+    agg += [f"histogram(g{a} * 1000 + g{b}) AS j{a}_{b}" for a, b in pairs]
     agg += [f"histogram(k{j}) AS c{j}" for j in range(len(cat))]
     if ident:
         # Identity columns are counted, never valued: 2019's spoofed sources
@@ -168,6 +177,13 @@ def parse_row(row, spec, num, cat, ident, nulls):
         }
     xy = [float(v) for v in (next(it) or [])]
 
+    # Unpack the packed 2-D keys back into sparse bins x bins surfaces, in the
+    # same pair order as pairs_xy.
+    joints = []
+    for _ in Spec.pairs(num):
+        joints.append({f"{int(k) // 1000},{int(k) % 1000}": int(v)
+                       for k, v in (next(it) or {}).items()})
+
     categorical = {}
     for f in cat:
         counts = {str(k): int(v) for k, v in (next(it) or {}).items()}
@@ -179,7 +195,7 @@ def parse_row(row, spec, num, cat, ident, nulls):
         }
     distinct = ({c: int(v) for c, v in zip(ident, next(it))} if ident else {})
     nullc = ({c: int(v) for c, v in zip(nulls, next(it))} if nulls else {})
-    return grp, {"n": n, "numeric": numeric, "pairs_xy": xy,
+    return grp, {"n": n, "numeric": numeric, "pairs_xy": xy, "pairs_joint": joints,
                  "categorical": categorical, "distinct": distinct, "nulls": nullc}
 
 
@@ -235,8 +251,11 @@ def main():
     # keeps this usable on `parquets` for a pre-labelling sanity check.
     group_expr = _q(spec.group_by) if spec.group_by in cols else "'(unlabelled)'"
 
+    idx = {f.name: i for i, f in enumerate(num)}
+    featured = [[a, b] for a, b in spec.joint_pairs if a in idx and b in idx]
+
     print(f"features  {len(num)} numeric, {len(cat)} categorical, "
-          f"{len(Spec.pairs(num))} feature pairs"
+          f"{len(Spec.pairs(num))} feature pairs, {len(Spec.pairs(num))} joint densities"
           f"{f', {len(skipped)} skipped' if skipped else ''}")
     print("\nscanning (one pass) ...", flush=True)
 
@@ -277,6 +296,7 @@ def main():
                          for f in num},
         "categorical_spec": {f.name: {"expr": f.expr} for f in cat},
         "pair_order": [[num[i].name, num[j].name] for i, j in Spec.pairs(num)],
+        "featured_pairs": featured,
         "quantiles": [str(q) for q in spec.quantiles],
         "identity_columns": ident,
         "by_class": by_class,
