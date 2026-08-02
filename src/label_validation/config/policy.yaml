@@ -1,0 +1,154 @@
+# Talos — label validation policy
+#
+# Every threshold that turns a measurement into a verdict lives here, not in the
+# check code, so a reader can disagree with a judgement without recompiling the
+# evidence. Checks always report the raw number as well as the verdict.
+#
+# Thresholds are deliberately loose where the underlying phenomenon is poorly
+# understood and tight where it is arithmetic. A row-count mismatch is a bug at
+# any magnitude; a "thin" attack rule is a judgement call.
+
+version: 1
+
+thresholds:
+  # ---- T0 integrity: arithmetic, so these are near-zero by construction ----
+  uid_duplicate_rate_max: 0.0        # Zeek uids are unique per capture; any dup means
+                                     # overlapping captures or a double-counted file
+  # orig_bytes > orig_ip_bytes is impossible at any count, so any occurrence is
+  # reported. This is the line above which a class stops having a corrupt maximum
+  # and starts having a corrupt distribution: one wrapped flow in a thousand is
+  # enough to move a class mean, and every moment and correlation built on it.
+  impossible_bytes_class_rate_critical: 0.001
+  # A capture is named for one day, so it should span well under one. Set at a
+  # full day rather than the ~12h a working capture takes, so only spans that
+  # cannot be a single recording are reported.
+  capture_max_span_hours: 24
+  # Share of a class whose feature is null before any coalescing. Not a fault --
+  # it records which features a claim about that class may rest on. 5% is where a
+  # null population stops being a tail and starts shaping the feature's histogram.
+  null_rate_notable: 0.05
+
+  # ---- T1 schedule ----
+  sweep_span_s: 600                  # how far either side of a boundary to sweep
+  sweep_bucket_s: 10                 # offset bucket width; 60 windows per side
+  # Offset calibration sweeps much wider, because a wrong UTC offset moves a
+  # window by whole hours, but only over short sharp rules -- a six-hour flood
+  # has no edge to align to, and widening the scan to cover it is expensive.
+  offset_span_s: 7200
+  offset_max_rule_seconds: 1800
+  offset_max_rules: 6
+  # A proposed shift is evidence only if it wins a materially bigger population.
+  # Without a floor the search reports "corrections" worth a single flow.
+  offset_gain_min_ratio: 2.0
+  offset_gain_min_flows: 500
+  # How many independent rules must agree on the same shift before it is called
+  # a dataset-wide clock error rather than one misplaced window.
+  offset_min_rules_for_global: 3
+  # A correct boundary separates two regimes. Below this ratio between the rate
+  # inside the window and the rate just outside it, the boundary is not a
+  # boundary -- the window either starts inside the flood or ends outside it.
+  edge_ratio_min: 5.0
+  # Flows in [t1, t1+span) as a fraction of the in-window rate. Above this, the
+  # attack was still running when the schedule said it stopped.
+  residue_ratio_max: 0.10
+  # An idle stretch inside a window: this long, at below this fraction of the
+  # window's own mean rate. Both must hold, so a brief lull is not a finding.
+  gap_min_seconds: 120
+  gap_rate_fraction: 0.05
+  # Share of flows whose label flips when matching by interval overlap instead
+  # of flow start. Slow-DoS is expected to move some; this much means the
+  # start-only rule is materially wrong for that attack.
+  overlap_flip_rate_warn: 0.01
+  # Share of in-window flows involving neither declared endpoint. High values
+  # mean a missing NAT alias or a wrong victim IP.
+  unexplained_peer_share_warn: 0.10
+  rule_thin_flows: 10                # a rule matching fewer than this is suspect
+  rule_thin_flows_per_minute: 1.0    # ...as is one this sparse over its window
+  # A flow's duration against the longest window its own class is scheduled for.
+  # 1.0 means any overrun at all is reported: matching is on flow start, so a flow
+  # that outlives its entire window cannot have been produced by it, and there is
+  # no tolerance band in which that stops being true.
+  duration_overrun_ratio: 1.0
+
+  # ---- T0 artefact probes ----
+  # CICFlowMeter injects artefacts into every dataset it generated (Rosay et al.,
+  # ICISSP 2022): ARP frames misparsed as IPv4 (8.0.6.4 / 8.6.0.1), and non-TCP/UDP
+  # traffic collapsed to protocol 0 port 0. We extracted with Zeek, so the expected
+  # rate is exactly zero and any occurrence means our pipeline has a defect too.
+  cicflowmeter_artefact_rate_max: 0.0
+
+  # ---- T1 date anchoring ----
+  # CIC-DDoS-2019's published calendar dates disagree with its capture clocks: the
+  # folders are DD-MM in 2018, the website reads them as MM-DD in 2019. A capture
+  # whose flows are dated further than this from what the manifest asserts is a
+  # transcription slip; a gap of a month is the website's error reintroduced, and
+  # would put every window outside the capture entirely.
+  date_anchor_max_delta_days: 0
+  date_anchor_blocker_delta_days: 28
+
+  # ---- T2 behaviour ----
+  # An expectation whose pass rate falls this far below its declared floor is a
+  # finding rather than noise.
+  expectation_slack: 0.05
+  # Share of a requires_payload attack's DECIDED flows carrying no payload. 2018's
+  # FTP-BruteForce is 192,294 of 192,300 — a class labelled attack that never
+  # attacked — so the critical bar is set where that lands.
+  unexecuted_share_warn: 0.25
+  unexecuted_share_critical: 0.90
+  unexecuted_min_flows: 20           # below this the ratio is not worth reporting
+
+  # ---- T3 corroboration ----
+  analyzer_presence_min_flows: 100   # below this, absence of a protocol log proves little
+  analyzer_records_per_flow_min: 0.01
+  # Reflection vectors: share of flows whose service port matches the vector the
+  # raw attack names, and the response:request byte ratio expected of an amplifier.
+  reflection_port_match_min: 0.5
+  amplification_ratio_min: 1.0
+
+  # ---- T3 external oracle ----
+  # The DistriNet CNS2022 corrected labels are the only source in this pipeline
+  # that did not derive from the CIC schedule, so they are the one thing that can
+  # catch an error we inherited rather than introduced. But flow construction
+  # differs (their 120s active timeout vs Zeek's inactivity timeouts), so these
+  # thresholds judge AGREEMENT on overlapping matches, never flow counts.
+  oracle_coverage_min: 0.60          # below this, the other oracle numbers mean little
+  oracle_coverage_critical: 0.25     # ...and below this they mean nothing at all
+  oracle_agreement_min_flows: 100    # a class thinner than this cannot be judged
+  oracle_class_agreement_min: 0.90
+  oracle_class_agreement_critical: 0.50
+  # We call it benign, the oracle calls it attack. Rare by construction, so the
+  # bar is low: this is the error mode we most want to catch, because it means we
+  # inherited a CIC schedule error rather than making our own.
+  oracle_missed_attack_rate_critical: 0.001
+  oracle_false_attack_rate_warn: 0.05
+  oracle_false_attack_rate_critical: 0.25
+  # Their second label axis, which we do not model. A large share here is a gap
+  # in our label vocabulary, not a disagreement about the traffic.
+  oracle_attempted_share_notable: 0.25
+  # Direction reversal is a property of the JOIN, not of the labels: CICFlowMeter
+  # fixes direction from the first packet it sees, Zeek from the SYN.
+  oracle_direction_reversal_warn: 0.20
+
+  # ---- T1 quarantine ----
+  quarantine_region_min_flows: 1     # a declared region matching nothing is stale
+  quarantine_class_share_warn: 0.5   # a class this heavily quarantined barely exists
+
+  # ---- T4 consistency ----
+  # The one contradiction the labels can be shown to contain without appealing to
+  # anything outside them: identical flows carrying different classes. There is no
+  # magnitude at which that is acceptable, so this bar is nominal -- it only
+  # decides whether the finding reads MAJOR or MINOR.
+  duplicate_conflict_rate_max: 0.001
+
+  # ---- T6 cross-dataset ----
+  class_support_min: 1000            # flows needed before a class can carry a claim
+  class_support_datasets_min: 2      # ...in at least this many datasets, for transfer
+
+# Severities at or above this block the gate (make `validate-gate` exit non-zero).
+gate:
+  block_at: CRITICAL
+  # Checks whose failure always blocks regardless of the severity they assign,
+  # because every later number is derived from them being true.
+  always_block:
+    - int.row_parity
+    - int.provenance_current

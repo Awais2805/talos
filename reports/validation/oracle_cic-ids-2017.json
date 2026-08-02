@@ -1,0 +1,325 @@
+{
+  "oracle_version": 1,
+  "meta": {
+    "dataset": "cic-ids-2017",
+    "generated_utc": "2026-07-31T19:46:30+00:00",
+    "labelled_glob": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2017/**/*.parquet",
+    "tolerance_seconds": 1.0,
+    "lookback_seconds": 3600.0,
+    "matched_only": false,
+    "uid_parquet": "reports/validation/oracle_cic-ids-2017_uid.parquet",
+    "uid_parquet_bytes": 79469367
+  },
+  "provenance": {
+    "registered": true,
+    "source": "CICIDS2017_improved.zip",
+    "url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
+    "bytes_expected": 343549013,
+    "bytes_on_disk": 343549013,
+    "bytes_match": true,
+    "retrieved_utc": "2026-07-31T19:27:18+00:00",
+    "licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
+    "citation": "L. D'hooge, mirror of: G. Engelen, V. Rimmer, W. Joosen, \"Troubleshooting an Intrusion Detection Dataset: the CICIDS2017 Case Study\" (IEEE S&P Workshops 2021) and M. Lanvin et al., \"Errors in the CICIDS2017 dataset and the resulting improved version\" (CNS 2022). DistriNet, KU Leuven.",
+    "entries_expected": [
+      "monday.csv",
+      "tuesday.csv",
+      "wednesday.csv",
+      "thursday.csv",
+      "friday.csv"
+    ],
+    "entries_staged": [
+      "friday",
+      "monday",
+      "thursday",
+      "tuesday",
+      "wednesday"
+    ],
+    "entries_missing": []
+  },
+  "method": {
+    "join_key": "unordered 5-tuple (endpoints sorted) + transport, ICMP keyed on addresses only",
+    "time_predicate": "closed-interval overlap of [ts, ts+duration] on both sides, padded by 1.0s",
+    "direction": "carried as a boolean, never required",
+    "unit": "one Zeek uid; oracle rows overlapping it are aggregated, never counted as separate agreements",
+    "not_comparable": "flow COUNTS. CICFlowMeter ran with a 120s active timeout and chops long connections; Zeek does not. A count difference is flow-construction semantics, not a labelling error."
+  },
+  "oracle": {
+    "rows_total": 2099976,
+    "artefact_rows": 1510,
+    "artefact_kinds": [
+      {
+        "artefact": "protocol_zero",
+        "rows": 1510
+      }
+    ],
+    "unparsed_timestamp_rows": 0,
+    "joinable_rows": 2098466,
+    "matched_rows": 2098462,
+    "unmatched_rows": 4,
+    "ts_min": 1499082958.598308,
+    "ts_max": 1499457761.169108,
+    "by_day": [
+      {
+        "day": "friday",
+        "rows": 547557,
+        "artefact_rows": 295,
+        "unparsed_timestamp": 0,
+        "icmp_rows": 175,
+        "ts_min": 1499428790.315195,
+        "ts_max": 1499457761.169108,
+        "joinable_rows": 547262,
+        "matched_oracle_rows": 547261
+      },
+      {
+        "day": "monday",
+        "rows": 371624,
+        "artefact_rows": 305,
+        "unparsed_timestamp": 0,
+        "icmp_rows": 92,
+        "ts_min": 1499082958.598308,
+        "ts_max": 1499112094.472889,
+        "joinable_rows": 371319,
+        "matched_oracle_rows": 371318
+      },
+      {
+        "day": "thursday",
+        "rows": 362076,
+        "artefact_rows": 281,
+        "unparsed_timestamp": 0,
+        "icmp_rows": 189,
+        "ts_min": 1499342340.49014,
+        "ts_max": 1499371484.356776,
+        "joinable_rows": 361795,
+        "matched_oracle_rows": 361793
+      },
+      {
+        "day": "tuesday",
+        "rows": 322078,
+        "artefact_rows": 311,
+        "unparsed_timestamp": 0,
+        "icmp_rows": 123,
+        "ts_min": 1499169224.398274,
+        "ts_max": 1499198431.076755,
+        "joinable_rows": 321767,
+        "matched_oracle_rows": 321767
+      },
+      {
+        "day": "wednesday",
+        "rows": 496641,
+        "artefact_rows": 318,
+        "unparsed_timestamp": 0,
+        "icmp_rows": 24,
+        "ts_min": 1499254962.084372,
+        "ts_max": 1499285414.560806,
+        "joinable_rows": 496323,
+        "matched_oracle_rows": 496323
+      }
+    ],
+    "by_label": [
+      {
+        "label": "BENIGN",
+        "canonical": "benign",
+        "rows": 1581058,
+        "attempted_rows": 0
+      },
+      {
+        "label": "Portscan",
+        "canonical": "portscan",
+        "rows": 159064,
+        "attempted_rows": 0
+      },
+      {
+        "label": "DoS Hulk",
+        "canonical": "dos",
+        "rows": 159049,
+        "attempted_rows": 581
+      },
+      {
+        "label": "DDoS",
+        "canonical": "ddos",
+        "rows": 95144,
+        "attempted_rows": 0
+      },
+      {
+        "label": "Infiltration - Portscan",
+        "canonical": "portscan",
+        "rows": 71767,
+        "attempted_rows": 0
+      },
+      {
+        "label": "DoS GoldenEye",
+        "canonical": "dos",
+        "rows": 7647,
+        "attempted_rows": 80
+      },
+      {
+        "label": "DoS Slowloris",
+        "canonical": "dos",
+        "rows": 5706,
+        "attempted_rows": 1847
+      },
+      {
+        "label": "DoS Slowhttptest",
+        "canonical": "dos",
+        "rows": 5108,
+        "attempted_rows": 3368
+      },
+      {
+        "label": "Botnet",
+        "canonical": "botnet",
+        "rows": 4803,
+        "attempted_rows": 4067
+      },
+      {
+        "label": "FTP-Patator",
+        "canonical": "brute_force",
+        "rows": 3984,
+        "attempted_rows": 12
+      },
+      {
+        "label": "SSH-Patator",
+        "canonical": "brute_force",
+        "rows": 2988,
+        "attempted_rows": 27
+      },
+      {
+        "label": "Web Attack - Brute Force",
+        "canonical": "web_attack",
+        "rows": 1365,
+        "attempted_rows": 1292
+      },
+      {
+        "label": "Web Attack - XSS",
+        "canonical": "web_attack",
+        "rows": 673,
+        "attempted_rows": 655
+      },
+      {
+        "label": "Infiltration",
+        "canonical": "infiltration",
+        "rows": 81,
+        "attempted_rows": 45
+      },
+      {
+        "label": "Web Attack - SQL Injection",
+        "canonical": "web_attack",
+        "rows": 18,
+        "attempted_rows": 5
+      },
+      {
+        "label": "Heartbleed",
+        "canonical": "heartbleed",
+        "rows": 11,
+        "attempted_rows": 0
+      }
+    ],
+    "unmapped_labels": []
+  },
+  "join": {
+    "zeek_flows_in_span": 2119182,
+    "zeek_flows_matched": 2114093,
+    "zeek_flows_dir_agree": 2107787,
+    "zeek_flows_class_agree": 2093830,
+    "coverage": 0.997598602,
+    "direction_reversal_rate": 0.002982839,
+    "covered_spans": [
+      [
+        1499428790.315195,
+        1499457761.169108
+      ],
+      [
+        1499082958.598308,
+        1499112094.472889
+      ],
+      [
+        1499342340.49014,
+        1499371484.356776
+      ],
+      [
+        1499169224.398274,
+        1499198431.076755
+      ],
+      [
+        1499254962.084372,
+        1499285414.560806
+      ]
+    ],
+    "zeek_ts_min": 1499082958.598308,
+    "zeek_ts_max": 1499457760.977798,
+    "clock_delta_seconds": 0.0,
+    "by_class": [
+      {
+        "label_class": "benign",
+        "flows": 1585846,
+        "matched": 1581783,
+        "matched_dir_agree": 1578474,
+        "agree": 1569904,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "portscan",
+        "flows": 238039,
+        "matched": 237054,
+        "matched_dir_agree": 234694,
+        "agree": 229309,
+        "mean_purity": 0.9993014913045
+      },
+      {
+        "label_class": "dos",
+        "flows": 190343,
+        "matched": 190302,
+        "matched_dir_agree": 190224,
+        "agree": 190222,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "ddos",
+        "flows": 95683,
+        "matched": 95683,
+        "matched_dir_agree": 95144,
+        "agree": 95144,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "brute_force",
+        "flows": 6462,
+        "matched": 6462,
+        "matched_dir_agree": 6444,
+        "agree": 6444,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "web_attack",
+        "flows": 2047,
+        "matched": 2047,
+        "matched_dir_agree": 2045,
+        "agree": 2045,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "botnet",
+        "flows": 736,
+        "matched": 736,
+        "matched_dir_agree": 736,
+        "agree": 736,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "infiltration",
+        "flows": 25,
+        "matched": 25,
+        "matched_dir_agree": 25,
+        "agree": 25,
+        "mean_purity": 1.0
+      },
+      {
+        "label_class": "heartbleed",
+        "flows": 1,
+        "matched": 1,
+        "matched_dir_agree": 1,
+        "agree": 1,
+        "mean_purity": 1.0
+      }
+    ]
+  }
+}

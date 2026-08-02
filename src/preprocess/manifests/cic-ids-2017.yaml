@@ -1,7 +1,16 @@
 # CIC-IDS-2017 — ground-truth label manifest
 # Transcribed 2026-07-26 from the official CIC dataset page (attack schedule,
-# victim/attacker network tables). Times below are LOCAL (Fredericton, ADT).
-# UTC = local + 3h. Labelling code must convert using utc_offset.
+# victim/attacker network tables). Times below are LOCAL wall-clock.
+#
+# !! utc_offset IS AN INFERENCE, NOT A TRANSCRIPTION. Verified 2026-07-30 against
+# the CIC page and the ICISSP 2018 paper: neither states a timezone anywhere --
+# no "UTC", no "ADT", no offset. -03:00 is inferred from CIC being in Fredericton
+# and the capture running in July (ADT), and it is consistent with the DistriNet
+# CNS2022 audit's UTC conversions, but no primary source supports it. Because
+# every label derives from a wall-clock -> epoch conversion, an offset error
+# moves every window in this dataset together while leaving the labelled output
+# looking complete. sch.offset_calibration exists to pin this empirically; treat
+# it as unconfirmed until that check has run against the lake.
 #
 # NAT note: external attacks traverse the firewall
 # (205.174.165.73 -> 205.174.165.80 -> 172.16.0.1 -> victim), so depending on
@@ -51,10 +60,27 @@ attacks:
      attacker_ips: *kali, victim_ips: *webserver}
 
   # ---- Thursday 2017-07-06 (afternoon: infiltration) ----
-  # CIC's detail line reads "(14:19 and 14:20-14:21) and (14:33-14:35)", but the
-  # real Vista<->Kali callback traffic (port 444) sits at ~14:28-14:30, in the
-  # gap between them, and the 14:33-14:35 window is empty. CIC's own page
-  # summarises this as a single 14:19-14:35 block, which is what we use.
+  # !! THIS WINDOW IS WIDER THAN ANYTHING CIC PUBLISHES — pending adjudication.
+  # CIC's detail line reads "(14:19 and 14:20-14:21) and (14:33-14:35)" and that
+  # is the ONLY form on the page. An earlier revision of this comment claimed the
+  # page also summarises it as a single 14:19-14:35 block; source verification on
+  # 2026-07-30 found no such summary line, and the ICISSP paper publishes no times
+  # at all ("the details of the attack timing will be published on the dataset
+  # document"). That justification was wrong and is withdrawn.
+  #
+  # What remains true is the traffic evidence: the Vista<->Kali callback (port
+  # 444) sits at ~14:28-14:30, inside the gap between CIC's two sub-windows, and
+  # the 14:33-14:35 window is empty. So the contiguous span is defended by the
+  # capture, not by the document -- but it currently labels 14:22-14:32 as attack
+  # on no published basis. sch.window_sweep over the three documented sub-windows
+  # is what should settle whether the span stays; until then this is a known
+  # over-reach, recorded rather than quietly kept.
+  #
+  # Note also that CIC's Thursday sub-times (14:20-14:21, 14:33, 14:35) appear
+  # byte-identical in Friday's PortScan list, including the degenerate
+  # "14:33 - 14:33" and "14:35 - 14:35" entries -- probable copy-paste
+  # contamination in CIC's own documentation. Treat both lists as low-confidence
+  # around these minutes.
   - {name: Infiltration, date: 2017-07-06, start: "14:19", end: "14:35",
      attacker_ips: *kali, victim_ips: [192.168.10.8], note: "metasploit Win Vista"}
   - {name: Infiltration, date: 2017-07-06, start: "14:53", end: "15:00",
@@ -64,11 +90,21 @@ attacks:
   # CIC calls this "Second Step (Portscan + Nmap)" of the Infiltration scenario:
   # the compromised Vista box scans "All other clients". The raw name keeps that
   # provenance; the taxonomy maps it to canonical `portscan` because the traffic
-  # IS scanning (12 hosts / 1,105 dst ports in 41 min) and because 2018's
-  # equivalent second step cannot be labelled at all — CIC never publishes the
-  # infected host's IP there. Classing this as `infiltration` would leave that
-  # class meaning "internal scanning" in 2017 and "external exploit" in 2018,
-  # which would make cross-domain evaluation of it meaningless.
+  # IS scanning (12 hosts / 1,105 dst ports in 41 min), and because 2018's
+  # equivalent second step is not labellable from its schedule. Classing this as
+  # `infiltration` would leave that class meaning "internal scanning" in 2017 and
+  # "external exploit" in 2018, which would make cross-domain evaluation of it
+  # meaningless.
+  #
+  # CORRECTED 2026-07-31. This comment previously said CIC "never publishes the
+  # infected host's IP" for 2018. That is wrong: CIC does publish it, in Table
+  # 2's Victim column (172.31.69.24 on 28-02, 172.31.69.13 on 01-03), and those
+  # hosts are the ones that go on to scan. What CIC withholds for 2018 is the
+  # scan TARGETS and a separate window for the phase, which is what actually
+  # makes it unlabellable. 2017 is the labellable case precisely because both
+  # halves are published — the scanner below and its /24 of targets. See
+  # docs/label_evidence.md A3; 2018's four quarantine regions cover those windows
+  # so the flows are label_quality='uncertain' rather than silently benign.
   - {name: Infiltration-PortScan, date: 2017-07-06, start: "15:04", end: "15:45",
      attacker_ips: [192.168.10.8], victim_subnet: "192.168.10.0/24",
      note: "second step: infected Vista portscans the LAN"}

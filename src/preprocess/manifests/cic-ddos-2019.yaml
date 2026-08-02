@@ -10,9 +10,49 @@
 #   folder 01-12  conn spans 2018-12-01 13:17 -> 21:16 UTC  (= 09:17 -> 17:16 AST)
 #                 paper day 2 runs 10:35 -> 17:15 local  -> fits exactly
 #
-# NOTE the offsets DIFFER: 2018-11-03 is before Atlantic DST ended (2018-11-04)
-# so it is ADT (-03:00); 2018-12-01 is AST (-04:00). Labelling must apply the
-# per-day offset below, not one dataset-wide value.
+# !! THE utc_offset VALUES BELOW ARE INFERENCES, NOT TRANSCRIPTIONS. Verified
+# 2026-07-30 against the CIC page: it states no timezone anywhere -- no "UTC",
+# no "ADT", no "AST", no "Atlantic", no numeric offset -- and the ICISSP 2018
+# paper states none for any of the three datasets either. An earlier revision of
+# this header presented the per-day values as fact ("NOTE the offsets DIFFER:
+# 2018-11-03 is before Atlantic DST ended so it is ADT"); that framing is
+# withdrawn. Both values are DERIVED, from CIC being in Fredericton plus the
+# Atlantic DST calendar: 2018-11-03 falls before DST ended on 2018-11-04, so ADT
+# (-03:00); 2018-12-01 falls a month after, so AST (-04:00). Labelling does apply
+# the per-day value rather than one dataset-wide one -- that part stands -- but
+# no primary source supports either number. Evidence: docs/label_evidence.md A1.
+#
+# THE DATE VALIDATION ABOVE DOES NOT SUPPORT THEM, and should not be read as if
+# it did. Each capture spans about eight hours inside a day; a one-hour error in
+# the offset still leaves it inside the same day. So that fit settles WHICH DAY
+# each folder holds -- which is the question it was run to answer, and it answers
+# it decisively -- and says nothing whatever about the offset within that day.
+#
+# AND THERE IS A SPECIFIC CONTRADICTION HERE, on top of the general one that
+# applies to all three datasets. An independent source's UTC conversions of this
+# dataset's local times imply UTC-3 on BOTH days. But 2018-12-01 is four weeks
+# after Atlantic DST ended, when the zone is AST (-04:00) -- which is what day 2
+# below applies. Both readings cannot be right:
+#   * either that source carried day 1's offset across to day 2 by hand and its
+#     day-2 conversions are an hour early, or
+#   * the capture clock was simply never moved off ADT when DST ended -- an
+#     entirely ordinary thing for a testbed host -- and our -04:00 places every
+#     day-2 window an hour late, mislabelling the whole of 01-12 while leaving
+#     twelve plausible-looking attack classes behind.
+# Nothing published decides between them, and neither reading is obviously the
+# careless one. Only the traffic can settle it: sch.offset_calibration slides
+# each short sharp rule against the flows it claims and reports the shift that
+# best fits, and a whole-hour shift agreed by several INDEPENDENT day-2 rules is
+# the signature of a clock error rather than a transcription error. That is the
+# measurement that would decide this against us. It has not been run against
+# this dataset yet.
+#
+# Stated plainly, because it is the highest-consequence line in the file: every
+# label here derives from a wall-clock -> epoch conversion, so an offset error
+# moves every window on the affected day together, in the same direction, by the
+# same amount -- while the labelled output still looks complete and every rule
+# still fires. Treat both values as unconfirmed until sch.offset_calibration has
+# run against the lake.
 #
 # Reflection note: these are reflected/spoofed-source attacks, so attacker
 # IPs are meaningless. Match on victim + window only.
@@ -20,15 +60,49 @@
 dataset: cic-ddos-2019
 match_default: [time, victim]
 
+# !! THE TRAINING/TESTING ROLES BELOW WERE INVERTED AND ARE NOW CORRECTED.
+# CIC's prose calls the 12-attack set the TRAINING day and the 7-attack set the
+# TESTING day. An earlier revision of these two comments simply followed it, and
+# it is backwards. Corrected here on the source verification of 2026-07-30;
+# evidence docs/label_evidence.md A5.
+#
+# No label changes, and none is possible: rules key on `day`, which resolves to a
+# date and a lake folder, never on a training/testing role — nothing in
+# load_rules() reads these words. This is documentation only. It still has to be
+# right, because a reader who took the roles from here and built a split on them
+# would train and test on the wrong halves of the dataset, and nothing in the
+# pipeline would object.
 days:
-  1:                              # paper "First Day" — 7 attacks (testing day)
+  1:                              # 03-11, FIRST day — 7 attacks (TRAINING day)
     lake_folder: "03-11"
     date: 2018-11-03
-    utc_offset: "-03:00"          # ADT — DST ended 2018-11-04
-  2:                              # paper "Second Day" — 12 attacks (training day)
+    utc_offset: "-03:00"          # INFERRED, not published: ADT, DST ended 2018-11-04
+  2:                              # 01-12, SECOND day — 12 attacks (TESTING day)
     lake_folder: "01-12"
     date: 2018-12-01
-    utc_offset: "-04:00"          # AST
+    utc_offset: "-04:00"          # INFERRED, not published: AST — and see the header,
+                                  # an independent source implies -03:00 here too
+
+# WHY THE PROSE DISAGREES, since a reader will hit CIC's page and find it saying
+# the opposite of this file. Three of CIC's own artefacts have to be read
+# together, and only the prose is out of line:
+#   * The TIMING TABLE lists the 7-attack schedule first and the 12-attack
+#     schedule second.
+#   * The CAPTURE CLOCKS, validated against our own lake above, date folder 03-11
+#     to 2018-11-03 and folder 01-12 to 2018-12-01 — so the 7-attack recording is
+#     the earlier one, by 28 days.
+#   * An INDEPENDENT SOURCE records 2018-11-03 as the training day.
+# All three agree: 03-11 is the first day and it is the training day.
+#
+# The folder names explain how the prose came to say otherwise. Read as MM-DD in
+# 2019 — which is how CIC's own page reads them — "01-12" is 12 January and
+# "03-11" is 11 March, so the 12-attack folder appears to come first, inherits
+# "First Day", and the prose then equates that with "training day". Read as DD-MM
+# in 2018, which is what the capture timestamps actually say, the order reverses
+# and the label goes with it. So the prose's day ORDER is not an independent
+# mistake: it is downstream of the same date-format collision that makes this
+# dataset look as though it were recorded in 2019, and which the validator
+# carries date_anchor_* thresholds to catch.
 
 # !! CIC's infrastructure table is WRONG here — it states "Server Ubuntu 16.04:
 # 192.168.50.1 (first day), 192.168.50.4 (second day)". The captures say the
@@ -48,7 +122,8 @@ victims:
   firewall: 205.174.165.81       # victim may appear behind this publicly
 
 attacks:
-  # ---- Day 1 ("testing day") ----
+  # ---- Day 1 — 2018-11-03, folder 03-11, the TRAINING day (see `days:` above;
+  #      CIC's prose calls this the testing day and is inverted) ----
   # CIC's prose lists this day's attacks as "PortScan, NetBIOS, LDAP, MSSQL,
   # UDP, UDP-Lag and SYN" while the timing table says PortMap. They are not the
   # same thing — PortMap is the RPC portmapper amplification vector, PortScan is
@@ -63,7 +138,8 @@ attacks:
   - {name: UDP-Lag, day: 1, start: "11:14", end: "11:24", victim_ips: *vd1}
   - {name: SYN,     day: 1, start: "11:28", end: "17:35", victim_ips: *vd1}
 
-  # ---- Day 2 ("training day") ----
+  # ---- Day 2 — 2018-12-01, folder 01-12, the TESTING day (see `days:` above;
+  #      CIC's prose calls this the training day and is inverted) ----
   - {name: NTP,     day: 2, start: "10:35", end: "10:45", victim_ips: *vd2}
   # CORRECTED from the documented 10:52-11:05. That window holds 15,743 flows
   # (effectively nothing) while a 4,981,469-flow reflection flood sits at
@@ -80,6 +156,117 @@ attacks:
   - {name: SSDP,    day: 2, start: "12:27", end: "12:37", victim_ips: *vd2}
   - {name: UDP,     day: 2, start: "12:45", end: "13:09", victim_ips: *vd2}
   - {name: UDP-Lag, day: 2, start: "13:11", end: "13:15", victim_ips: *vd2}
+  # !! BOUNDARY TIE-BREAK AT 13:29 — DECLARED HERE, not left to fall out of the
+  # loader. These two windows touch: WebDDoS ends at 13:29 and SYN starts at
+  # 13:29, the only such pair in this file. Schedules are minute-granular, so
+  # load_rules() extends every window through the end of its final minute (+60s)
+  # and clamps that extension at the next window's start. For every other rule
+  # here the clamp never binds and the extension is a full 60 seconds; here it
+  # binds exactly, so WebDDoS is extended by ZERO seconds while SYN keeps its
+  # own minute in full.
+  #
+  # THE MINUTE 13:29:00–13:29:59 THEREFORE BELONGS TO SYN. WebDDoS covers
+  # 13:18:00–13:28:59. Written down because until now that was decided by a
+  # clamp in the loader rather than by this file, and a reader comparing the two
+  # lines would reasonably expect the shared minute to go to the window whose END
+  # names it — the opposite of what happens.
+  #
+  # It goes to SYN for a reason, not by accident. A minute-granular "13:18–13:29"
+  # and "13:29–13:34" cannot both own 13:29, and the only reading that never
+  # double-claims a flow is that a window runs up to the START of its successor.
+  # Extending WebDDoS instead would put the two rules in overlap, and every flow
+  # in that minute would then be labelled by whichever rule appears first in this
+  # YAML — file order deciding a class, which is exactly what sch.rule_ambiguity
+  # exists to catch.
+  #
+  # Not a free choice either, and the asymmetry runs the unhelpful way. WebDDoS
+  # is 348 flows in total (docs/label_evidence.md B13) while SYN is a flood, so
+  # one minute of SYN traffic landing on WebDDoS would swamp the smaller class
+  # outright, whereas the same minute is negligible against SYN's volume. Losing
+  # the minute costs WebDDoS whatever L7 traffic ran in it; gaining it would cost
+  # WebDDoS its identity. sch.extension_audit reports this rule as clamped on
+  # every run so the zero-second extension stays visible rather than looking like
+  # the 60s every other rule receives.
+  #
+  # Times below are UNCHANGED by this note — it records who owns the boundary the
+  # existing times already produce.
   - {name: WebDDoS, day: 2, start: "13:18", end: "13:29", victim_ips: *vd2}
   - {name: SYN,     day: 2, start: "13:29", end: "13:34", victim_ips: *vd2}
   - {name: TFTP,    day: 2, start: "13:35", end: "17:15", victim_ips: *vd2}
+
+# ---------------------------------------------------------------------------
+# QUARANTINE — regions we decline to adjudicate
+#
+# Flows inside these regions keep the label the schedule gives them (benign, by
+# the closed-world assumption) but are marked label_quality = 'uncertain' and
+# excluded from training and evaluation pools. This is a declaration, not an
+# inference: the regions are written here, with their arithmetic, exactly as the
+# attack windows are, so nothing about them is derived from the traffic.
+quarantine_justifications:
+  inter_window_residue: &residue >
+    Reflection floods do not stop at the scheduled minute. In the gaps between
+    consecutive attack windows the traffic to the victim continues at flood
+    rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows — 81.6% of
+    every benign flow in the dataset — 99.8% of them touching the victim, at
+    roughly 139,000 flows/min against a genuine benign baseline near 70/min.
+    But no window covers them, so the schedule cannot say which vector any one
+    of those flows belongs to, and a flow that cannot be attributed to a class
+    is not thereby benign. Across both days these gaps hold roughly 613,000
+    flows — about 90% of everything the closed-world assumption currently calls
+    benign here. Calling that benign fabricates a class out of attack tail;
+    calling it ddos invents an attribution the source does not support.
+    Declining to answer is the only reading the evidence carries.
+    The genuine benign baseline is not touched: the stretches before the first
+    attack and after the last on each day stay adjudicated, and it is there
+    (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this
+    dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3.
+    Arithmetic: each region runs from one window's end plus one minute — the
+    end-of-minute extension labelling applies to every window — to the next
+    window's start exactly, so the regions tile the gaps and touch neither
+    neighbour.
+
+quarantine:
+  # ---- Day 1 gaps (local ADT) ----
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "09:52", end: "10:00", victim_ips: *vd1}   # PortMap 09:51 -> NetBIOS 10:00
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "10:10", end: "10:21", victim_ips: *vd1}   # NetBIOS 10:09 -> LDAP 10:21
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "10:31", end: "10:33", victim_ips: *vd1}   # LDAP 10:30 -> MSSQL 10:33
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "10:43", end: "10:53", victim_ips: *vd1}   # MSSQL 10:42 -> UDP 10:53
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "11:04", end: "11:14", victim_ips: *vd1}   # UDP 11:03 -> UDP-Lag 11:14
+  - {reason: inter-window-residue, justification: *residue, day: 1,
+     start: "11:25", end: "11:28", victim_ips: *vd1}   # UDP-Lag 11:24 -> SYN 11:28
+  # SYN runs 11:28-17:35, to the end of the day-1 capture: no gap follows it.
+
+  # ---- Day 2 gaps (local AST) ----
+  # This first one also spans the DOCUMENTED DNS window (10:52-11:05), which
+  # holds 15,743 flows against the 4,981,469-flow burst we moved the rule to.
+  # Quarantining it withdraws the one region where that correction could be
+  # wrong, rather than asserting it was right and calling the remainder benign.
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "10:46", end: "11:06", victim_ips: *vd2}   # NTP 10:45 -> DNS 11:06
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "11:17", end: "11:22", victim_ips: *vd2}   # DNS 11:16 -> LDAP 11:22
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "11:33", end: "11:36", victim_ips: *vd2}   # LDAP 11:32 -> MSSQL 11:36
+  # The measured worst case: 556,201 flows, 99.8% victim-directed, ~139k/min.
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "11:46", end: "11:50", victim_ips: *vd2}   # MSSQL 11:45 -> NetBIOS 11:50
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "12:01", end: "12:12", victim_ips: *vd2}   # NetBIOS 12:00 -> SNMP 12:12
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "12:24", end: "12:27", victim_ips: *vd2}   # SNMP 12:23 -> SSDP 12:27
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "12:38", end: "12:45", victim_ips: *vd2}   # SSDP 12:37 -> UDP 12:45
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "13:10", end: "13:11", victim_ips: *vd2}   # UDP 13:09 -> UDP-Lag 13:11
+  - {reason: inter-window-residue, justification: *residue, day: 2,
+     start: "13:16", end: "13:18", victim_ips: *vd2}   # UDP-Lag 13:15 -> WebDDoS 13:18
+  # WebDDoS -> SYN (13:29) and SYN -> TFTP (13:35) are back-to-back: no gap
+  # exists between them, and TFTP runs to the end of the day-2 capture. There is
+  # no residue region at 13:29 because there is no residue to declare — the two
+  # windows touch, and the tie-break note beside those rules records that the
+  # shared minute goes to SYN.

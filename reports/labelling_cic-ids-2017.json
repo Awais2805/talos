@@ -1,8 +1,8 @@
 {
   "dataset": "cic-ids-2017",
   "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2017/**/conn.parquet",
-  "started_utc": "2026-07-27T22:37:24+00:00",
-  "manifest_sha": "7333f89b97d1",
+  "started_utc": "2026-07-31T19:47:34+00:00",
+  "manifest_sha": "5c210d17e9b1",
   "taxonomy_sha": "c1730fc59e18",
   "rules_total": 18,
   "rules_fired": 18,
@@ -87,15 +87,20 @@
     }
   ],
   "qa_suspect_bursts": 0,
+  "quarantine_regions": 0,
+  "flows_quarantined": 0,
+  "quarantine_share": 0.0,
+  "label_coverage": 1.0,
+  "by_quarantine_region": [],
   "by_class": {
-    "brute_force": 6462,
-    "portscan": 238039,
-    "heartbleed": 1,
-    "ddos": 95683,
-    "web_attack": 2047,
     "dos": 190343,
-    "botnet": 736,
+    "web_attack": 2047,
+    "portscan": 238039,
+    "ddos": 95683,
+    "heartbleed": 1,
     "infiltration": 25,
+    "brute_force": 6462,
+    "botnet": 736,
     "benign": 1585846
   },
   "by_rule": [
