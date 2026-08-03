@@ -1,8 +1,8 @@
 {
   "dataset": "cic-ddos-2019",
   "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ddos-2019/**/conn.parquet",
-  "started_utc": "2026-07-27T22:41:28+00:00",
-  "manifest_sha": "e13850f182b9",
+  "started_utc": "2026-08-03T13:39:41+00:00",
+  "manifest_sha": "b95b939d549a",
   "taxonomy_sha": "c1730fc59e18",
   "rules_total": 19,
   "rules_fired": 19,
@@ -87,6 +87,162 @@
     }
   ],
   "qa_suspect_bursts": 1,
+  "quarantine_regions": 15,
+  "flows_quarantined": 611456,
+  "quarantine_share": 0.008429941230602726,
+  "label_coverage": 0.9915700587693973,
+  "by_quarantine_region": [
+    {
+      "region_id": 0,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "09:52",
+      "end": "10:00",
+      "flows": 56,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 1,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "10:10",
+      "end": "10:21",
+      "flows": 82,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 2,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "10:31",
+      "end": "10:33",
+      "flows": 144,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 3,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "10:43",
+      "end": "10:53",
+      "flows": 19369,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 4,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "11:04",
+      "end": "11:14",
+      "flows": 565,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 5,
+      "reason": "inter-window-residue",
+      "date": "2018-11-03",
+      "start": "11:25",
+      "end": "11:28",
+      "flows": 137,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 6,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "10:46",
+      "end": "11:06",
+      "flows": 20310,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 7,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "11:17",
+      "end": "11:22",
+      "flows": 121,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 8,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "11:33",
+      "end": "11:36",
+      "flows": 50,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 9,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "11:46",
+      "end": "11:50",
+      "flows": 555046,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 10,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "12:01",
+      "end": "12:12",
+      "flows": 438,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 11,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "12:24",
+      "end": "12:27",
+      "flows": 12406,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 12,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "12:38",
+      "end": "12:45",
+      "flows": 2058,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 13,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "13:10",
+      "end": "13:11",
+      "flows": 602,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    },
+    {
+      "region_id": 14,
+      "reason": "inter-window-residue",
+      "date": "2018-12-01",
+      "start": "13:16",
+      "end": "13:18",
+      "flows": 72,
+      "attack_labelled": 0,
+      "justification": "Reflection floods do not stop at the scheduled minute. In the gaps between consecutive attack windows the traffic to the victim continues at flood rate: the 11:46-11:50 gap on day 2 alone holds 556,201 flows \u2014 81.6% of every benign flow in the dataset \u2014 99.8% of them touching the victim, at roughly 139,000 flows/min against a genuine benign baseline near 70/min. But no window covers them, so the schedule cannot say which vector any one of those flows belongs to, and a flow that cannot be attributed to a class is not thereby benign. Across both days these gaps hold roughly 613,000 flows \u2014 about 90% of everything the closed-world assumption currently calls benign here. Calling that benign fabricates a class out of attack tail; calling it ddos invents an attribution the source does not support. Declining to answer is the only reading the evidence carries. The genuine benign baseline is not touched: the stretches before the first attack and after the last on each day stay adjudicated, and it is there (and in the ~65,600 flows with a measurable resp_bytes_per_pkt) that this dataset's real benign traffic lives. Evidence: docs/label_evidence.md B3. Arithmetic: each region runs from one window's end plus one minute \u2014 the end-of-minute extension labelling applies to every window \u2014 to the next window's start exactly, so the regions tile the gaps and touch neither neighbour.\n"
+    }
+  ],
   "by_class": {
     "ddos": 71851781,
     "benign": 682058

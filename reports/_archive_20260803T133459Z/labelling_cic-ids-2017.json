@@ -1,8 +1,8 @@
 {
   "dataset": "cic-ids-2017",
   "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2017/**/conn.parquet",
-  "started_utc": "2026-08-03T13:35:04+00:00",
-  "manifest_sha": "d65451d1dd2e",
+  "started_utc": "2026-07-31T19:47:34+00:00",
+  "manifest_sha": "5c210d17e9b1",
   "taxonomy_sha": "c1730fc59e18",
   "rules_total": 18,
   "rules_fired": 18,
@@ -95,12 +95,12 @@
   "by_class": {
     "dos": 190343,
     "web_attack": 2047,
-    "infiltration": 25,
-    "heartbleed": 1,
-    "ddos": 95683,
-    "botnet": 736,
     "portscan": 238039,
+    "ddos": 95683,
+    "heartbleed": 1,
+    "infiltration": 25,
     "brute_force": 6462,
+    "botnet": 736,
     "benign": 1585846
   },
   "by_rule": [
@@ -233,17 +233,17 @@
       "attempted": 4
     },
     {
-      "rule_id": 12,
-      "raw": "Infiltration",
-      "class": "infiltration",
+      "rule_id": 6,
+      "raw": "Heartbleed",
+      "class": "heartbleed",
       "flows": 1,
       "executed": 1,
       "attempted": 0
     },
     {
-      "rule_id": 6,
-      "raw": "Heartbleed",
-      "class": "heartbleed",
+      "rule_id": 12,
+      "raw": "Infiltration",
+      "class": "infiltration",
       "flows": 1,
       "executed": 1,
       "attempted": 0

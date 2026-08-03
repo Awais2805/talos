@@ -1,8 +1,8 @@
 {
   "dataset": "cic-ids-2018",
   "source": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/conn.parquet",
-  "started_utc": "2026-07-27T22:37:30+00:00",
-  "manifest_sha": "d0170ecfd267",
+  "started_utc": "2026-08-03T13:35:09+00:00",
+  "manifest_sha": "dbb041f7101b",
   "taxonomy_sha": "c1730fc59e18",
   "rules_total": 22,
   "rules_fired": 22,
@@ -87,13 +87,59 @@
     }
   ],
   "qa_suspect_bursts": 0,
+  "quarantine_regions": 4,
+  "flows_quarantined": 571648,
+  "quarantine_share": 0.009169581418893465,
+  "label_coverage": 0.9908304185811065,
+  "by_quarantine_region": [
+    {
+      "region_id": 0,
+      "reason": "unlabellable-second-stage",
+      "date": "2018-02-28",
+      "start": "10:50",
+      "end": "12:05",
+      "flows": 177155,
+      "attack_labelled": 1,
+      "justification": "CIC describes Infiltration as two stages \u2014 \"First level: Dropbox download in a windows machine. Second Level: Nmap and portscan\" \u2014 and Table 2 publishes only the first. It names the infected host in the Victim column (172.31.69.24 on 28-02, 172.31.69.13 on 01-03), but never the scan targets and never a separate window for the second stage. The internal scan is therefore unlabellable from the schedule: we cannot say which flows it produced, so every one of them falls to benign by the closed-world assumption. That default is not neutral here. The attack rules match 8 flows across roughly 4.5 scheduled hours, while these windows carry on the order of 175,000 unmatched flows per 10-minute bucket \u2014 a benign class certified by nothing but the absence of a published target list. The 8 matched flows are no better founded than the unmatched ones: none of them completed a connection (conn_state OTH 50% / S1 37.5% / RSTR 12.5%) and the longest runs 13,254.7 s against a 5,820 s window, a 2.28x overrun, so they are mid-stream traffic caught by a time window rather than an observed attack (B11). They sit inside these regions and are quarantined with everything else; `infiltration` therefore carries no adjudicable evidence in this dataset and must not be evaluated as a class (B10). DistriNet derives the two phases as running to 18:39 and 19:38, far past CIC's published 14:40 and 15:37, so even as declared these regions UNDER-cover the phase (A3). They are drawn at the published times because those are what the source states; the DistriNet finding is why the region cannot be read as an upper bound on the contamination. Widening them, or replacing them with real second-stage attack rules, is DEFERRED until sch.window_sweep has measured where this traffic actually stops in our own lake: the DistriNet end times are a third party's derivation and are recorded as the hypothesis that sweep should test, never as a transcribed fact. Scoped to the hosts CIC does name, so the rest of each day \u2014 which the schedule describes normally \u2014 stays adjudicated. These regions coincide with the four scheduled Infiltration windows by construction, so qtn.overlap_with_attack reports them: we are declining to adjudicate a span the schedule claims. That contradiction is real and this is its answer \u2014 the schedule's claim here amounts to 8 unfinished flows and accounts for none of the rest.\n"
+    },
+    {
+      "region_id": 1,
+      "reason": "unlabellable-second-stage",
+      "date": "2018-02-28",
+      "start": "13:42",
+      "end": "14:40",
+      "flows": 134578,
+      "attack_labelled": 3,
+      "justification": "CIC describes Infiltration as two stages \u2014 \"First level: Dropbox download in a windows machine. Second Level: Nmap and portscan\" \u2014 and Table 2 publishes only the first. It names the infected host in the Victim column (172.31.69.24 on 28-02, 172.31.69.13 on 01-03), but never the scan targets and never a separate window for the second stage. The internal scan is therefore unlabellable from the schedule: we cannot say which flows it produced, so every one of them falls to benign by the closed-world assumption. That default is not neutral here. The attack rules match 8 flows across roughly 4.5 scheduled hours, while these windows carry on the order of 175,000 unmatched flows per 10-minute bucket \u2014 a benign class certified by nothing but the absence of a published target list. The 8 matched flows are no better founded than the unmatched ones: none of them completed a connection (conn_state OTH 50% / S1 37.5% / RSTR 12.5%) and the longest runs 13,254.7 s against a 5,820 s window, a 2.28x overrun, so they are mid-stream traffic caught by a time window rather than an observed attack (B11). They sit inside these regions and are quarantined with everything else; `infiltration` therefore carries no adjudicable evidence in this dataset and must not be evaluated as a class (B10). DistriNet derives the two phases as running to 18:39 and 19:38, far past CIC's published 14:40 and 15:37, so even as declared these regions UNDER-cover the phase (A3). They are drawn at the published times because those are what the source states; the DistriNet finding is why the region cannot be read as an upper bound on the contamination. Widening them, or replacing them with real second-stage attack rules, is DEFERRED until sch.window_sweep has measured where this traffic actually stops in our own lake: the DistriNet end times are a third party's derivation and are recorded as the hypothesis that sweep should test, never as a transcribed fact. Scoped to the hosts CIC does name, so the rest of each day \u2014 which the schedule describes normally \u2014 stays adjudicated. These regions coincide with the four scheduled Infiltration windows by construction, so qtn.overlap_with_attack reports them: we are declining to adjudicate a span the schedule claims. That contradiction is real and this is its answer \u2014 the schedule's claim here amounts to 8 unfinished flows and accounts for none of the rest.\n"
+    },
+    {
+      "region_id": 2,
+      "reason": "unlabellable-second-stage",
+      "date": "2018-03-01",
+      "start": "09:57",
+      "end": "10:55",
+      "flows": 147631,
+      "attack_labelled": 3,
+      "justification": "CIC describes Infiltration as two stages \u2014 \"First level: Dropbox download in a windows machine. Second Level: Nmap and portscan\" \u2014 and Table 2 publishes only the first. It names the infected host in the Victim column (172.31.69.24 on 28-02, 172.31.69.13 on 01-03), but never the scan targets and never a separate window for the second stage. The internal scan is therefore unlabellable from the schedule: we cannot say which flows it produced, so every one of them falls to benign by the closed-world assumption. That default is not neutral here. The attack rules match 8 flows across roughly 4.5 scheduled hours, while these windows carry on the order of 175,000 unmatched flows per 10-minute bucket \u2014 a benign class certified by nothing but the absence of a published target list. The 8 matched flows are no better founded than the unmatched ones: none of them completed a connection (conn_state OTH 50% / S1 37.5% / RSTR 12.5%) and the longest runs 13,254.7 s against a 5,820 s window, a 2.28x overrun, so they are mid-stream traffic caught by a time window rather than an observed attack (B11). They sit inside these regions and are quarantined with everything else; `infiltration` therefore carries no adjudicable evidence in this dataset and must not be evaluated as a class (B10). DistriNet derives the two phases as running to 18:39 and 19:38, far past CIC's published 14:40 and 15:37, so even as declared these regions UNDER-cover the phase (A3). They are drawn at the published times because those are what the source states; the DistriNet finding is why the region cannot be read as an upper bound on the contamination. Widening them, or replacing them with real second-stage attack rules, is DEFERRED until sch.window_sweep has measured where this traffic actually stops in our own lake: the DistriNet end times are a third party's derivation and are recorded as the hypothesis that sweep should test, never as a transcribed fact. Scoped to the hosts CIC does name, so the rest of each day \u2014 which the schedule describes normally \u2014 stays adjudicated. These regions coincide with the four scheduled Infiltration windows by construction, so qtn.overlap_with_attack reports them: we are declining to adjudicate a span the schedule claims. That contradiction is real and this is its answer \u2014 the schedule's claim here amounts to 8 unfinished flows and accounts for none of the rest.\n"
+    },
+    {
+      "region_id": 3,
+      "reason": "unlabellable-second-stage",
+      "date": "2018-03-01",
+      "start": "14:00",
+      "end": "15:37",
+      "flows": 112284,
+      "attack_labelled": 1,
+      "justification": "CIC describes Infiltration as two stages \u2014 \"First level: Dropbox download in a windows machine. Second Level: Nmap and portscan\" \u2014 and Table 2 publishes only the first. It names the infected host in the Victim column (172.31.69.24 on 28-02, 172.31.69.13 on 01-03), but never the scan targets and never a separate window for the second stage. The internal scan is therefore unlabellable from the schedule: we cannot say which flows it produced, so every one of them falls to benign by the closed-world assumption. That default is not neutral here. The attack rules match 8 flows across roughly 4.5 scheduled hours, while these windows carry on the order of 175,000 unmatched flows per 10-minute bucket \u2014 a benign class certified by nothing but the absence of a published target list. The 8 matched flows are no better founded than the unmatched ones: none of them completed a connection (conn_state OTH 50% / S1 37.5% / RSTR 12.5%) and the longest runs 13,254.7 s against a 5,820 s window, a 2.28x overrun, so they are mid-stream traffic caught by a time window rather than an observed attack (B11). They sit inside these regions and are quarantined with everything else; `infiltration` therefore carries no adjudicable evidence in this dataset and must not be evaluated as a class (B10). DistriNet derives the two phases as running to 18:39 and 19:38, far past CIC's published 14:40 and 15:37, so even as declared these regions UNDER-cover the phase (A3). They are drawn at the published times because those are what the source states; the DistriNet finding is why the region cannot be read as an upper bound on the contamination. Widening them, or replacing them with real second-stage attack rules, is DEFERRED until sch.window_sweep has measured where this traffic actually stops in our own lake: the DistriNet end times are a third party's derivation and are recorded as the hypothesis that sweep should test, never as a transcribed fact. Scoped to the hosts CIC does name, so the rest of each day \u2014 which the schedule describes normally \u2014 stays adjudicated. These regions coincide with the four scheduled Infiltration windows by construction, so qtn.overlap_with_attack reports them: we are declining to adjudicate a span the schedule claims. That contradiction is real and this is its answer \u2014 the schedule's claim here amounts to 8 unfinished flows and accounts for none of the rest.\n"
+    }
+  ],
   "by_class": {
     "brute_force": 286006,
-    "web_attack": 427,
+    "infiltration": 8,
     "botnet": 97386,
     "ddos": 1373323,
     "dos": 1945058,
-    "infiltration": 8,
+    "web_attack": 427,
     "benign": 58639569
   },
   "by_rule": [

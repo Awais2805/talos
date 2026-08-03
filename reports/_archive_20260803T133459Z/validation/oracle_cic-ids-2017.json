@@ -2,13 +2,13 @@
   "oracle_version": 1,
   "meta": {
     "dataset": "cic-ids-2017",
-    "generated_utc": "2026-08-03T17:37:06+00:00",
+    "generated_utc": "2026-07-31T19:46:30+00:00",
     "labelled_glob": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2017/**/*.parquet",
     "tolerance_seconds": 1.0,
     "lookback_seconds": 3600.0,
     "matched_only": false,
     "uid_parquet": "reports/validation/oracle_cic-ids-2017_uid.parquet",
-    "uid_parquet_bytes": 79497474
+    "uid_parquet_bytes": 79469367
   },
   "provenance": {
     "registered": true,
@@ -17,7 +17,7 @@
     "bytes_expected": 343549013,
     "bytes_on_disk": 343549013,
     "bytes_match": true,
-    "retrieved_utc": "2026-08-03T06:57:20+00:00",
+    "retrieved_utc": "2026-07-31T19:27:18+00:00",
     "licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
     "citation": "L. D'hooge, mirror of: G. Engelen, V. Rimmer, W. Joosen, \"Troubleshooting an Intrusion Detection Dataset: the CICIDS2017 Case Study\" (IEEE S&P Workshops 2021) and M. Lanvin et al., \"Errors in the CICIDS2017 dataset and the resulting improved version\" (CNS 2022). DistriNet, KU Leuven.",
     "entries_expected": [
@@ -219,7 +219,7 @@
     "zeek_flows_in_span": 2119182,
     "zeek_flows_matched": 2114093,
     "zeek_flows_dir_agree": 2107787,
-    "zeek_flows_class_agree": 2093815,
+    "zeek_flows_class_agree": 2093830,
     "coverage": 0.997598602,
     "direction_reversal_rate": 0.002982839,
     "covered_spans": [
@@ -261,8 +261,8 @@
         "flows": 238039,
         "matched": 237054,
         "matched_dir_agree": 234694,
-        "agree": 229294,
-        "mean_purity": 0.9993014913045003
+        "agree": 229309,
+        "mean_purity": 0.9993014913045
       },
       {
         "label_class": "dos",

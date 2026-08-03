@@ -4,8 +4,8 @@
     "dataset": "cic-ids-2018",
     "role": "train",
     "root": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9",
-    "generated_utc": "2026-08-03T17:49:22+00:00",
-    "manifest_sha": "dbb041f7101b",
+    "generated_utc": "2026-07-31T20:52:12+00:00",
+    "manifest_sha": "6494c3c01b12",
     "taxonomy_sha": "c1730fc59e18",
     "policy_version": 1,
     "rules_total": 22,
@@ -15,7 +15,6 @@
       "files",
       "http",
       "labelled",
-      "oracle",
       "ssh",
       "ssl",
       "weird"
@@ -25,21 +24,21 @@
       1,
       2,
       3,
-      4,
       6
     ]
   },
   "summary": {
-    "n_findings": 90,
+    "n_findings": 82,
     "by_severity": {
-      "CRITICAL": 15,
-      "MAJOR": 57,
-      "MINOR": 9,
-      "INFO": 9
+      "BLOCKER": 1,
+      "CRITICAL": 14,
+      "MAJOR": 56,
+      "MINOR": 7,
+      "INFO": 4
     },
-    "checks_run": 44,
-    "checks_error": 0,
-    "checks_skipped": 2
+    "checks_run": 37,
+    "checks_error": 2,
+    "checks_skipped": 9
   },
   "runlog": [
     {
@@ -47,7 +46,7 @@
       "tier": 0,
       "title": "the published CICFlowMeter artefacts are absent from our extraction",
       "status": "ok",
-      "seconds": 17.96,
+      "seconds": 203.75,
       "n_findings": 1
     },
     {
@@ -55,7 +54,7 @@
       "tier": 0,
       "title": "payload bytes never exceed the bytes seen on the wire",
       "status": "ok",
-      "seconds": 4.96,
+      "seconds": 116.62,
       "n_findings": 1
     },
     {
@@ -63,7 +62,7 @@
       "tier": 0,
       "title": "captures do not overlap in wall-clock time",
       "status": "ok",
-      "seconds": 1.92,
+      "seconds": 15.51,
       "n_findings": 3
     },
     {
@@ -71,7 +70,7 @@
       "tier": 0,
       "title": "identity and timing columns are never null",
       "status": "ok",
-      "seconds": 0.72,
+      "seconds": 1.64,
       "n_findings": 0
     },
     {
@@ -79,7 +78,7 @@
       "tier": 0,
       "title": "label columns are mutually consistent",
       "status": "ok",
-      "seconds": 1.68,
+      "seconds": 15.15,
       "n_findings": 0
     },
     {
@@ -87,7 +86,7 @@
       "tier": 0,
       "title": "null features are reported separately from zero ones",
       "status": "ok",
-      "seconds": 2.19,
+      "seconds": 27.33,
       "n_findings": 4
     },
     {
@@ -95,23 +94,23 @@
       "tier": 0,
       "title": "labels were produced by the manifests currently on disk",
       "status": "ok",
-      "seconds": 0.26,
-      "n_findings": 0
+      "seconds": 13.12,
+      "n_findings": 1
     },
     {
       "check_id": "int.relabel_determinism",
       "tier": 0,
       "title": "re-running the labelling logic reproduces the labels in the lake",
       "status": "ok",
-      "seconds": 11.72,
-      "n_findings": 0
+      "seconds": 13.94,
+      "n_findings": 1
     },
     {
       "check_id": "int.row_parity",
       "tier": 0,
       "title": "labelled row count matches its source",
       "status": "ok",
-      "seconds": 48.9,
+      "seconds": 337.84,
       "n_findings": 0
     },
     {
@@ -127,7 +126,7 @@
       "tier": 0,
       "title": "flow timestamps fall inside their capture",
       "status": "ok",
-      "seconds": 5.56,
+      "seconds": 8.47,
       "n_findings": 1
     },
     {
@@ -135,7 +134,7 @@
       "tier": 0,
       "title": "Zeek uids are unique within the dataset",
       "status": "ok",
-      "seconds": 2.08,
+      "seconds": 12.66,
       "n_findings": 0
     },
     {
@@ -143,15 +142,15 @@
       "tier": 1,
       "title": "the share of flows quarantined, per dataset and per class",
       "status": "ok",
-      "seconds": 0.43,
-      "n_findings": 2
+      "seconds": 0.0,
+      "n_findings": 1
     },
     {
       "check_id": "qtn.declared_regions_fire",
       "tier": 1,
       "title": "every declared quarantine region matches traffic",
       "status": "ok",
-      "seconds": 0.37,
+      "seconds": 1.15,
       "n_findings": 0
     },
     {
@@ -167,7 +166,7 @@
       "tier": 1,
       "title": "attack traffic does not continue past the scheduled end",
       "status": "ok",
-      "seconds": 13.34,
+      "seconds": 8.78,
       "n_findings": 2
     },
     {
@@ -175,7 +174,7 @@
       "tier": 1,
       "title": "no class appears on a day that schedules none of it",
       "status": "ok",
-      "seconds": 0.13,
+      "seconds": 0.36,
       "n_findings": 0
     },
     {
@@ -183,7 +182,7 @@
       "tier": 1,
       "title": "no flow outlives the window that labelled it",
       "status": "ok",
-      "seconds": 0.19,
+      "seconds": 0.56,
       "n_findings": 1
     },
     {
@@ -191,7 +190,7 @@
       "tier": 1,
       "title": "in-window traffic involves the declared attacker and victim",
       "status": "ok",
-      "seconds": 17.61,
+      "seconds": 20.86,
       "n_findings": 22
     },
     {
@@ -207,7 +206,7 @@
       "tier": 1,
       "title": "long-lived flows straddling a window boundary are labelled correctly",
       "status": "ok",
-      "seconds": 17.06,
+      "seconds": 536.22,
       "n_findings": 1
     },
     {
@@ -215,7 +214,7 @@
       "tier": 1,
       "title": "scheduled windows are busy for their whole length",
       "status": "ok",
-      "seconds": 0.0,
+      "seconds": 0.01,
       "n_findings": 13
     },
     {
@@ -223,7 +222,7 @@
       "tier": 1,
       "title": "the assumed UTC offset is the one the capture was recorded at",
       "status": "ok",
-      "seconds": 0.54,
+      "seconds": 41.3,
       "n_findings": 0
     },
     {
@@ -239,7 +238,7 @@
       "tier": 1,
       "title": "every rule matches a plausible amount of traffic",
       "status": "ok",
-      "seconds": 0.13,
+      "seconds": 18.47,
       "n_findings": 4
     },
     {
@@ -247,7 +246,7 @@
       "tier": 1,
       "title": "attack windows line up with the traffic they claim to bound",
       "status": "ok",
-      "seconds": 0.0,
+      "seconds": 0.01,
       "n_findings": 6
     },
     {
@@ -255,7 +254,7 @@
       "tier": 2,
       "title": "benign traffic does not carry an attack's signature",
       "status": "ok",
-      "seconds": 9.18,
+      "seconds": 167.03,
       "n_findings": 0
     },
     {
@@ -263,7 +262,7 @@
       "tier": 2,
       "title": "each class behaves the way its label claims",
       "status": "ok",
-      "seconds": 0.0,
+      "seconds": 0.01,
       "n_findings": 3
     },
     {
@@ -279,87 +278,49 @@
       "tier": 2,
       "title": "each attack's modal destination port matches its class",
       "status": "ok",
-      "seconds": 0.16,
+      "seconds": 0.43,
       "n_findings": 1
     },
     {
       "check_id": "cor.analyzer_presence",
       "tier": 3,
       "title": "protocol-specific attacks left records in that protocol's log",
-      "status": "ok",
-      "seconds": 196.96,
-      "n_findings": 1
+      "status": "error",
+      "seconds": 88.37,
+      "error": "ParserException: Parser Error: SELECT clause without selection list",
+      "n_findings": 0
     },
     {
       "check_id": "cor.auth_evidence",
       "tier": 3,
       "title": "brute_force windows carry authentication attempts",
       "status": "ok",
-      "seconds": 7.64,
+      "seconds": 96.56,
       "n_findings": 1
+    },
+    {
+      "check_id": "cor.corroboration_rate",
+      "tier": 3,
+      "title": "share of each class's flows with independent supporting evidence",
+      "status": "error",
+      "seconds": 1594.08,
+      "error": "HTTPException: HTTP Error: HTTP GET error on 'https://ids-datalakec48eb2cab942494ba5059fac3b3527d9.s3.eu-north-1.amazonaws.com/parquets/cic-ids-2018/Friday-16-02-2018/pcap/pcap_capEC2AMAZ-O4EL3NG-172.31.64.110/dns.parquet' (HTTP 400)",
+      "n_findings": 0
     },
     {
       "check_id": "cor.http_payload",
       "tier": 3,
       "title": "web_attack windows carry SQLi/XSS payloads in http URIs",
       "status": "ok",
-      "seconds": 21.43,
-      "n_findings": 2
-    },
-    {
-      "check_id": "orc.attempted_axis",
-      "tier": 3,
-      "title": "attack flows the oracle marks `- Attempted`, by category",
-      "status": "ok",
-      "seconds": 0.44,
+      "seconds": 0.01,
       "n_findings": 1
     },
     {
-      "check_id": "orc.class_agreement",
+      "check_id": "cor.weird_concentration",
       "tier": 3,
-      "title": "per-class agreement with the external oracle on overlapping matches",
+      "title": "weird.log events concentrate inside scheduled windows",
       "status": "ok",
-      "seconds": 1.67,
-      "n_findings": 1
-    },
-    {
-      "check_id": "orc.coverage",
-      "tier": 3,
-      "title": "share of our flows the external oracle has anything to say about",
-      "status": "ok",
-      "seconds": 0.52,
-      "n_findings": 2
-    },
-    {
-      "check_id": "orc.direction_reversal",
-      "tier": 3,
-      "title": "share of oracle matches whose originator disagrees with ours",
-      "status": "ok",
-      "seconds": 0.55,
-      "n_findings": 1
-    },
-    {
-      "check_id": "orc.false_attacks",
-      "tier": 3,
-      "title": "flows we call an attack that the external oracle calls benign",
-      "status": "ok",
-      "seconds": 0.52,
-      "n_findings": 1
-    },
-    {
-      "check_id": "orc.missed_attacks",
-      "tier": 3,
-      "title": "flows we call benign that the external oracle calls an attack",
-      "status": "ok",
-      "seconds": 1.12,
-      "n_findings": 1
-    },
-    {
-      "check_id": "con.duplicate_conflict",
-      "tier": 4,
-      "title": "identical flows never carry different classes",
-      "status": "ok",
-      "seconds": 28.24,
+      "seconds": 66.88,
       "n_findings": 1
     },
     {
@@ -367,7 +328,7 @@
       "tier": 6,
       "title": "benign traffic is more alike across datasets than benign is to attack",
       "status": "ok",
-      "seconds": 0.02,
+      "seconds": 0.17,
       "n_findings": 1
     },
     {
@@ -375,7 +336,7 @@
       "tier": 6,
       "title": "a canonical class resembles itself across datasets more than it resembles other classes",
       "status": "ok",
-      "seconds": 0.03,
+      "seconds": 0.06,
       "n_findings": 8
     },
     {
@@ -383,7 +344,7 @@
       "tier": 6,
       "title": "every canonical class has enough evidence in enough datasets",
       "status": "ok",
-      "seconds": 0.01,
+      "seconds": 0.02,
       "n_findings": 1
     },
     {
@@ -391,7 +352,7 @@
       "tier": 6,
       "title": "the taxonomy maps every raw attack name and no canonical class is empty",
       "status": "ok",
-      "seconds": 0.01,
+      "seconds": 0.02,
       "n_findings": 1
     },
     {
@@ -403,15 +364,94 @@
       "n_findings": 0
     },
     {
+      "check_id": "cor.notice_agreement",
+      "tier": 3,
+      "title": "Zeek notices agree with the schedule's labels",
+      "status": "skipped",
+      "reason": "missing required input(s): notice",
+      "n_findings": 0
+    },
+    {
       "check_id": "cor.reflection_service",
       "tier": 3,
       "title": "2019 DDoS vectors are the protocol their name claims",
       "status": "skipped",
       "reason": "not applicable to cic-ids-2018",
       "n_findings": 0
+    },
+    {
+      "check_id": "orc.attempted_axis",
+      "tier": 3,
+      "title": "attack flows the oracle marks `- Attempted`, by category",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
+    },
+    {
+      "check_id": "orc.class_agreement",
+      "tier": 3,
+      "title": "per-class agreement with the external oracle on overlapping matches",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
+    },
+    {
+      "check_id": "orc.coverage",
+      "tier": 3,
+      "title": "share of our flows the external oracle has anything to say about",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
+    },
+    {
+      "check_id": "orc.direction_reversal",
+      "tier": 3,
+      "title": "share of oracle matches whose originator disagrees with ours",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
+    },
+    {
+      "check_id": "orc.false_attacks",
+      "tier": 3,
+      "title": "flows we call an attack that the external oracle calls benign",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
+    },
+    {
+      "check_id": "orc.missed_attacks",
+      "tier": 3,
+      "title": "flows we call benign that the external oracle calls an attack",
+      "status": "skipped",
+      "reason": "missing required input(s): oracle",
+      "n_findings": 0
     }
   ],
   "findings": [
+    {
+      "check_id": "int.provenance_current",
+      "dataset": "cic-ids-2018",
+      "severity": "BLOCKER",
+      "severity_rank": 50,
+      "title": "labels are stale: manifest/taxonomy on disk has changed since labelling",
+      "detail": "The labelled data records the manifest and taxonomy hashes it was built from, and they no longer match the files on disk. Re-run labelling before trusting anything derived from this zone.",
+      "metrics": {
+        "expected_manifest_sha": "6494c3c01b12",
+        "expected_taxonomy_sha": "c1730fc59e18",
+        "stale_flows": 62341777
+      },
+      "scope": {},
+      "evidence": [
+        {
+          "manifest_sha": "d0170ecfd267",
+          "taxonomy_sha": "c1730fc59e18",
+          "flows": 62341777
+        }
+      ],
+      "evidence_truncated": 0,
+      "repro": "SELECT DISTINCT manifest_sha, taxonomy_sha FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet')"
+    },
     {
       "check_id": "beh.class_conformance",
       "dataset": "cic-ids-2018",
@@ -547,40 +587,6 @@
       "repro": "SELECT \"id.resp_p\", count(*) AS flows\nFROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet', union_by_name=true)\nWHERE label_raw = 'DoS-SlowHTTPTest'\nGROUP BY 1 ORDER BY 2 DESC LIMIT 10"
     },
     {
-      "check_id": "cor.analyzer_presence",
-      "dataset": "cic-ids-2018",
-      "severity": "CRITICAL",
-      "severity_rank": 40,
-      "title": "1 attack window(s) require a log the lake does not have (ftp)",
-      "detail": "Zeek writes an application log only once it has parsed that application. These attacks are named for a protocol whose log was never produced anywhere in the dataset, so the traffic the schedule calls an attack contained none of the protocol the attack is made of. The flows are connection attempts, or the window is wrong.",
-      "metrics": {
-        "rules": 1,
-        "flows": 192300,
-        "missing_logs": "ftp"
-      },
-      "scope": {
-        "logs": [
-          "ftp"
-        ]
-      },
-      "evidence": [
-        {
-          "rule_id": 0,
-          "attack": "FTP-BruteForce",
-          "class": "brute_force",
-          "date": "2018-02-14",
-          "window": "10:32-12:09",
-          "flows": 192300,
-          "expected_log": "ftp",
-          "basis": "credential guessing over FTP",
-          "records": 0,
-          "records_per_flow": 0.0
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT count(*) FROM glob('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/ftp.parquet')"
-    },
-    {
       "check_id": "int.bytes_physically_possible",
       "dataset": "cic-ids-2018",
       "severity": "CRITICAL",
@@ -610,7 +616,7 @@
           "orig_payload_bytes_max": 13991682631,
           "orig_wire_bytes_max": 6337585,
           "orig_implied_bytes_per_packet": 3497920657.8,
-          "orig_worst_uid": "C3R3Gq3IEiVHFC3vGc",
+          "orig_worst_uid": "CvE83Z3wsaHHIIgr68",
           "resp_impossible": 1123953,
           "resp_payload_bytes_max": 12884901887,
           "resp_wire_bytes_max": 339055416,
@@ -648,18 +654,18 @@
         {
           "ts_min": 1519733906.348,
           "captures": [
-            "Wednesday-28-02-2018",
             "Friday-02-03-2018",
+            "Wednesday-28-02-2018",
             "Thursday-01-03-2018"
           ],
           "flows": [
-            6838022,
             6244668,
+            6838022,
             6662650
           ],
           "span_hours": [
-            36.79,
             84.36,
+            36.79,
             59.36
           ]
         }
@@ -692,13 +698,13 @@
           "identical_start": true
         },
         {
-          "capture_a": "Wednesday-28-02-2018",
-          "capture_b": "Friday-02-03-2018",
+          "capture_a": "Friday-02-03-2018",
+          "capture_b": "Wednesday-28-02-2018",
           "overlap_hours": 36.79,
-          "a_span_hours": 36.79,
-          "b_span_hours": 84.36,
-          "a_flows": 6838022,
-          "b_flows": 6244668,
+          "a_span_hours": 84.36,
+          "b_span_hours": 36.79,
+          "a_flows": 6244668,
+          "b_flows": 6838022,
           "identical_start": true
         },
         {
@@ -1171,49 +1177,384 @@
       "dataset": "cic-ids-2018",
       "severity": "MAJOR",
       "severity_rank": 30,
-      "title": "2 web_attack window(s) contain no injection payload in any URI",
-      "detail": "The window's HTTP traffic is mostly GET, so a URI-borne payload would have been logged, and none of it matches any SQLi or XSS signature. These flows are labelled as a web attack on the strength of the schedule alone, and the requests Zeek parsed do not support it.",
+      "title": "http.log carries no uri column",
+      "detail": "Without uri there is no payload to read, so web_attack labels cannot be corroborated from this dataset's http log.",
       "metrics": {
-        "rules": 2,
-        "flows": 260
+        "http_columns": 0
+      },
+      "scope": {},
+      "evidence": [],
+      "evidence_truncated": 0,
+      "repro": ""
+    },
+    {
+      "check_id": "cor.weird_concentration",
+      "dataset": "cic-ids-2018",
+      "severity": "MAJOR",
+      "severity_rank": 30,
+      "title": "116 unscheduled 10-minute bucket(s) spike in weird events",
+      "detail": "Each of these sits wholly outside every attack window and carries more than 10.0x its capture's median unscheduled bucket. That is the shape of an attack the schedule does not mention -- the same signal that found the 2019 DNS window misalignment.",
+      "metrics": {
+        "buckets": 116,
+        "spike_factor": 10.0,
+        "min_events": 50,
+        "worst_bucket_events": 576
       },
       "scope": {},
       "evidence": [
         {
-          "rule_id": 10,
-          "attack": "BruteForce-Web",
-          "date": "2018-02-22",
-          "window": "10:17-11:24",
-          "flows": 137,
-          "http_records": 6875,
-          "http_flows": 136,
-          "sqli_records": 0,
-          "xss_records": 0,
-          "flows_with_signature": 0,
-          "signature_share_of_flows": 0.0,
-          "get_records": 3442,
-          "post_records": 3433,
-          "signature_hits_2xx": 0
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519820400,
+          "events": 576,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
         },
         {
-          "rule_id": 13,
-          "attack": "BruteForce-Web",
-          "date": "2018-02-23",
-          "window": "10:03-11:03",
-          "flows": 123,
-          "http_records": 6244,
-          "http_flows": 122,
-          "sqli_records": 0,
-          "xss_records": 0,
-          "flows_with_signature": 0,
-          "signature_share_of_flows": 0.0,
-          "get_records": 3124,
-          "post_records": 3120,
-          "signature_hits_2xx": 0
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519821000,
+          "events": 502,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519846800,
+          "events": 480,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519828800,
+          "events": 479,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519822200,
+          "events": 438,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519908000,
+          "events": 403,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519908600,
+          "events": 399,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519907400,
+          "events": 394,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519906200,
+          "events": 383,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519917000,
+          "events": 363,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519919400,
+          "events": 360,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519828200,
+          "events": 345,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519824000,
+          "events": 343,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519909800,
+          "events": 340,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519821600,
+          "events": 337,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519917600,
+          "events": 334,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519822800,
+          "events": 334,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1519994400,
+          "events": 330,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519918800,
+          "events": 330,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1519998000,
+          "events": 328,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519916400,
+          "events": 323,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519827000,
+          "events": 321,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519906800,
+          "events": 320,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519834200,
+          "events": 320,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519911000,
+          "events": 314,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519845600,
+          "events": 314,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519909200,
+          "events": 312,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519845000,
+          "events": 312,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519824600,
+          "events": 311,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519926000,
+          "events": 308,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519847400,
+          "events": 308,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1520005800,
+          "events": 304,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519839000,
+          "events": 302,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1519995600,
+          "events": 296,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1520013000,
+          "events": 295,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519844400,
+          "events": 295,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519834800,
+          "events": 293,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1520005200,
+          "events": 291,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519823400,
+          "events": 291,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519827600,
+          "events": 291,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519925400,
+          "events": 290,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519843800,
+          "events": 289,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1520011800,
+          "events": 288,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519926600,
+          "events": 287,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519825200,
+          "events": 287,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Wednesday-28-02-2018",
+          "bucket_epoch": 1519848600,
+          "events": 285,
+          "capture_median_bucket": 6.5,
+          "threshold": 65.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1519995000,
+          "events": 284,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1519998600,
+          "events": 280,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
+        },
+        {
+          "capture": "Thursday-01-03-2018",
+          "bucket_epoch": 1519933800,
+          "events": 280,
+          "capture_median_bucket": 10,
+          "threshold": 100.0
+        },
+        {
+          "capture": "Friday-02-03-2018",
+          "bucket_epoch": 1520023800,
+          "events": 278,
+          "capture_median_bucket": 3.0,
+          "threshold": 50
         }
       ],
-      "evidence_truncated": 0,
-      "repro": "WITH rules AS (SELECT * FROM (VALUES\n        (10, 'BruteForce-Web', 'web_attack', 1519309020.0, 1519313100.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (11, 'BruteForce-XSS', 'web_attack', 1519321800.0, 1519324200.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (12, 'SQL-Injection', 'web_attack', 1519330500.0, 1519331400.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (13, 'BruteForce-Web', 'web_attack', 1519394580.0, 1519398240.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (14, 'BruteForce-XSS', 'web_attack', 1519405200.0, 1519409460.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (15, 'SQL-Injection', 'web_attack', 1519412700.0, 1519413540.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR))\n      ) AS t(rid, rname, rclass, t0, t1, eps, vpfx)),\n      ev AS (SELECT \"ts\", \"uid\", \"id.orig_h\", \"id.resp_h\", \"uri\", \"method\", \"status_code\" FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/http.parquet', union_by_name=true)\n        WHERE ts IS NOT NULL AND ts >= 1519309020.0 AND ts < 1519413540.0)\n      SELECT r.rid, r.rname, count(*) AS records,\n             count(DISTINCT e.\"uid\") AS uids,\n             sum(CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') THEN 1 ELSE 0 END) AS sqli,\n             sum(CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))') THEN 1 ELSE 0 END) AS xss,\n             count(DISTINCT CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') OR regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))') THEN e.\"uid\" END) AS uids_sig,\n             sum(CASE WHEN upper(coalesce(e.\"method\", '')) = 'GET' THEN 1 ELSE 0 END) AS gets,\n             sum(CASE WHEN upper(coalesce(e.\"method\", '')) = 'POST' THEN 1 ELSE 0 END) AS posts,\n             sum(CASE WHEN (regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') OR regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))')) AND e.\"status_code\" BETWEEN 200 AND 299\n                      THEN 1 ELSE 0 END) AS sig_2xx\n      FROM rules r JOIN ev e ON e.ts >= r.t0 AND e.ts < r.t1\n          AND (coalesce(list_contains(r.eps, e.\"id.orig_h\"), false)\n            OR coalesce(list_contains(r.eps, e.\"id.resp_h\"), false)\n            OR coalesce(starts_with(e.\"id.orig_h\", r.vpfx), false)\n            OR coalesce(starts_with(e.\"id.resp_h\", r.vpfx), false)\n            OR (r.eps IS NULL AND r.vpfx IS NULL))\n      GROUP BY r.rid, r.rname ORDER BY r.rid"
+      "evidence_truncated": 66,
+      "repro": "SELECT split_part(replace(filename, 's3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/', ''), '/', 1) AS capture,\n             CAST(floor(ts / 600) * 600 AS BIGINT) AS bucket,\n             CASE WHEN ((ts >= 1518618720.0 AND ts < 1518624600.0) OR (ts >= 1518631260.0 AND ts < 1518636720.0) OR (ts >= 1518701160.0 AND ts < 1518703800.0) OR (ts >= 1518706740.0 AND ts < 1518709260.0) OR (ts >= 1518790320.0 AND ts < 1518793740.0) OR (ts >= 1518803100.0 AND ts < 1518805200.0) OR (ts >= 1519135920.0 AND ts < 1519139880.0) OR (ts >= 1519146780.0 AND ts < 1519147980.0) OR (ts >= 1519222140.0 AND ts < 1519224240.0) OR (ts >= 1519236300.0 AND ts < 1519239960.0) OR (ts >= 1519309020.0 AND ts < 1519313100.0) OR (ts >= 1519321800.0 AND ts < 1519324200.0) OR (ts >= 1519330500.0 AND ts < 1519331400.0) OR (ts >= 1519394580.0 AND ts < 1519398240.0) OR (ts >= 1519405200.0 AND ts < 1519409460.0) OR (ts >= 1519412700.0 AND ts < 1519413540.0) OR (ts >= 1519829400.0 AND ts < 1519833960.0) OR (ts >= 1519839720.0 AND ts < 1519843260.0) OR (ts >= 1519912620.0 AND ts < 1519916160.0) OR (ts >= 1519927200.0 AND ts < 1519933080.0) OR (ts >= 1519999860.0 AND ts < 1520004900.0) OR (ts >= 1520015040.0 AND ts < 1520020560.0)) THEN 1 ELSE 0 END AS in_window,\n             count(*) AS n, min(ts) AS lo, max(ts) AS hi\n      FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/weird.parquet', union_by_name=true, filename=true)\n      WHERE ts IS NOT NULL\n      GROUP BY 1, 2, 3"
     },
     {
       "check_id": "int.capture_spans_disjoint",
@@ -1475,201 +1816,6 @@
       ],
       "evidence_truncated": 0,
       "repro": ""
-    },
-    {
-      "check_id": "orc.coverage",
-      "dataset": "cic-ids-2018",
-      "severity": "MAJOR",
-      "severity_rank": 30,
-      "title": "3 oracle label(s) have no mapping into our taxonomy",
-      "detail": "The oracle labelled these flows as something, and we could not say what. They are carried as class `unmapped` and excluded from every agreement denominator rather than counted as agreement or as disagreement -- but until they are mapped in src/label_validation/oracle/stage.py's ORACLE_TO_CANONICAL, this tier is not reading the whole of what the oracle said.",
-      "metrics": {
-        "unmapped_labels": 3,
-        "flows_with_unmapped_top_class": 94539
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "oracle_label": "Infiltration - NMAP Portscan"
-        },
-        {
-          "oracle_label": "Infiltration - Communication Victim Attacker"
-        },
-        {
-          "oracle_label": "Web Attack - SQL"
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT DISTINCT oracle_top_label FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE oracle_top_class = 'unmapped'"
-    },
-    {
-      "check_id": "orc.missed_attacks",
-      "dataset": "cic-ids-2018",
-      "severity": "MAJOR",
-      "severity_rank": 30,
-      "title": "46,455 benign flow(s) are attacks according to the external oracle",
-      "detail": "These flows carry no rule match, so they are benign only because the published schedule does not mention them -- and an independent manual re-labelling of the same packets says an attack was running. Every one is currently training data for the benign class. A further 1,084 flow(s) match only `- Attempted` oracle rows and are excluded from the count above: an attempt that delivered nothing is a defensible thing to call benign.",
-      "metrics": {
-        "benign_flows": 58583730,
-        "missed_genuine": 46455,
-        "missed_attempted_only": 1084,
-        "missed_total": 47539,
-        "missed_rate_of_benign": 0.000792968,
-        "missed_rate_critical": 0.001,
-        "flows_in_known_wrong_windows": 0,
-        "known_wrong_windows_hit": [],
-        "known_wrong_windows_tested": 3,
-        "oracle_classes": [
-          "botnet",
-          "brute_force",
-          "ddos",
-          "dos",
-          "infiltration",
-          "web_attack"
-        ],
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
-      },
-      "scope": {
-        "known_wrong_windows": []
-      },
-      "evidence": [
-        {
-          "oracle_label": "Botnet Ares",
-          "oracle_class": "botnet",
-          "known_wrong_window": null,
-          "capture": "Friday-02-03-2018",
-          "flows": 45797,
-          "attempted_only": 0,
-          "genuine": 45797,
-          "window_utc": "2018-03-02 15:35:00Z - 2018-03-02 18:23:59Z",
-          "mean_purity": 1.0,
-          "example_uid": "C006xnbsTJMAZ9UX9",
-          "distinct_victims": 1,
-          "example_victim": "18.219.211.138"
-        },
-        {
-          "oracle_label": "FTP-BruteForce",
-          "oracle_class": "brute_force",
-          "known_wrong_window": null,
-          "capture": "Wednesday-14-02-2018",
-          "flows": 1030,
-          "attempted_only": 1030,
-          "genuine": 0,
-          "window_utc": "2018-02-14 16:10:00Z - 2018-02-14 16:10:30Z",
-          "mean_purity": 1.0,
-          "example_uid": "C04CDN2sX7ovdOeHZ6",
-          "distinct_victims": 1,
-          "example_victim": "172.31.69.25"
-        },
-        {
-          "oracle_label": "SSH-BruteForce",
-          "oracle_class": "brute_force",
-          "known_wrong_window": null,
-          "capture": "Wednesday-14-02-2018",
-          "flows": 521,
-          "attempted_only": 0,
-          "genuine": 521,
-          "window_utc": "2018-02-14 19:32:00Z - 2018-02-14 19:32:29Z",
-          "mean_purity": 1.0,
-          "example_uid": "C04ePA3sTPX9a7clb2",
-          "distinct_victims": 1,
-          "example_victim": "172.31.69.25"
-        },
-        {
-          "oracle_label": "DoS Slowloris",
-          "oracle_class": "dos",
-          "known_wrong_window": null,
-          "capture": "Thursday-15-02-2018",
-          "flows": 85,
-          "attempted_only": 20,
-          "genuine": 65,
-          "window_utc": "2018-02-15 15:41:00Z - 2018-02-15 15:41:34Z",
-          "mean_purity": 1.0,
-          "example_uid": "C0TJEo1qwQqbHcioR9",
-          "distinct_victims": 1,
-          "example_victim": "172.31.69.25"
-        },
-        {
-          "oracle_label": "Infiltration - Dropbox Download",
-          "oracle_class": "infiltration",
-          "known_wrong_window": null,
-          "capture": "Wednesday-28-02-2018",
-          "flows": 53,
-          "attempted_only": 13,
-          "genuine": 40,
-          "window_utc": "2018-02-28 14:33:24Z - 2018-02-28 17:43:26Z",
-          "mean_purity": 1.0,
-          "example_uid": "C02GK312TB8Yn19uOa",
-          "distinct_victims": 11,
-          "example_victim": "104.16.100.29"
-        },
-        {
-          "oracle_label": "Infiltration - Dropbox Download",
-          "oracle_class": "infiltration",
-          "known_wrong_window": null,
-          "capture": "Thursday-01-03-2018",
-          "flows": 26,
-          "attempted_only": 10,
-          "genuine": 16,
-          "window_utc": "2018-03-01 13:53:10Z - 2018-03-01 14:24:59Z",
-          "mean_purity": 1.0,
-          "example_uid": "C1EOKN18TuT5TLXCR3",
-          "distinct_victims": 7,
-          "example_victim": "104.16.100.29"
-        },
-        {
-          "oracle_label": "DDoS-LOIC-UDP",
-          "oracle_class": "ddos",
-          "known_wrong_window": null,
-          "capture": "Wednesday-21-02-2018",
-          "flows": 19,
-          "attempted_only": 3,
-          "genuine": 16,
-          "window_utc": "2018-02-21 14:08:51Z - 2018-02-21 14:08:59Z",
-          "mean_purity": 1.0,
-          "example_uid": "C3pYDPKg0l4I17Ja4",
-          "distinct_victims": 4,
-          "example_victim": "172.31.69.28"
-        },
-        {
-          "oracle_label": "Web Attack - Brute Force",
-          "oracle_class": "web_attack",
-          "known_wrong_window": null,
-          "capture": "Thursday-22-02-2018",
-          "flows": 8,
-          "attempted_only": 8,
-          "genuine": 0,
-          "window_utc": "2018-02-22 14:13:44Z - 2018-02-22 14:15:42Z",
-          "mean_purity": 1.0,
-          "example_uid": "C3Zc5g3NpAajeq1P29",
-          "distinct_victims": 1,
-          "example_victim": "172.31.69.28"
-        },
-        {
-          "region": "Infiltration second stage 28-02",
-          "window_utc": "2018-02-28 18:41:00Z - 2018-02-28 22:41:00Z",
-          "prediction": "missed",
-          "note": "the infiltration runs hours past CIC's published finish; 44 flows across 28-02 and 01-03 are genuine infiltration CIC called benign."
-        },
-        {
-          "region": "Infiltration second stage 01-03",
-          "window_utc": "2018-03-01 19:38:00Z - 2018-03-01 23:38:00Z",
-          "prediction": "missed",
-          "note": "as 28-02: the second stage continues past the published finish."
-        },
-        {
-          "region": "DDoS-LOIC-HTTP mislabelled 20-02",
-          "window_utc": "2018-02-20 14:12:00Z - 2018-02-20 15:18:00Z",
-          "prediction": "label",
-          "note": "every flow here is mislabelled at the raw level: the traffic is a UDP flood recorded as an HTTP one. Both map to ddos, so the class agrees while the mechanism does not."
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT oracle_top_label, count(*) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE label_class = 'benign' AND oracle_rows_dir_agree > 0 AND oracle_top_class NOT IN ('benign', 'unmapped') GROUP BY 1"
     },
     {
       "check_id": "qtn.overlap_with_attack",
@@ -3354,13 +3500,13 @@
           "labelled": "benign"
         },
         {
-          "orig": "172.31.65.13",
+          "orig": "172.31.66.9",
           "resp": "172.31.0.2",
           "flows": 1463,
           "labelled": "benign"
         },
         {
-          "orig": "172.31.66.9",
+          "orig": "172.31.65.13",
           "resp": "172.31.0.2",
           "flows": 1463,
           "labelled": "benign"
@@ -3821,13 +3967,13 @@
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.12",
+          "resp": "172.31.69.9",
           "flows": 14360,
           "labelled": "benign"
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.9",
+          "resp": "172.31.69.12",
           "flows": 14360,
           "labelled": "benign"
         },
@@ -3851,7 +3997,7 @@
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.23",
+          "resp": "172.31.69.6",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -3863,7 +4009,7 @@
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.6",
+          "resp": "172.31.69.23",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -3948,7 +4094,13 @@
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.10",
+          "resp": "172.31.69.9",
+          "flows": 8236,
+          "labelled": "benign"
+        },
+        {
+          "orig": "172.31.69.24",
+          "resp": "172.31.69.13",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -3966,19 +4118,13 @@
         },
         {
           "orig": "172.31.69.24",
-          "resp": "172.31.69.13",
+          "resp": "172.31.69.10",
           "flows": 8236,
           "labelled": "benign"
         },
         {
           "orig": "172.31.69.24",
           "resp": "172.31.69.17",
-          "flows": 8236,
-          "labelled": "benign"
-        },
-        {
-          "orig": "172.31.69.24",
-          "resp": "172.31.69.9",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -4045,13 +4191,13 @@
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.16",
+          "resp": "172.31.69.9",
           "flows": 10242,
           "labelled": "benign"
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.9",
+          "resp": "172.31.69.16",
           "flows": 10242,
           "labelled": "benign"
         },
@@ -4069,13 +4215,13 @@
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.10",
+          "resp": "172.31.69.14",
           "flows": 8236,
           "labelled": "benign"
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.14",
+          "resp": "172.31.69.6",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -4087,7 +4233,7 @@
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.6",
+          "resp": "172.31.69.10",
           "flows": 8236,
           "labelled": "benign"
         },
@@ -4214,13 +4360,13 @@
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.11",
+          "resp": "172.31.69.17",
           "flows": 4120,
           "labelled": "benign"
         },
         {
           "orig": "172.31.69.13",
-          "resp": "172.31.69.17",
+          "resp": "172.31.69.11",
           "flows": 4120,
           "labelled": "benign"
         },
@@ -4576,7 +4722,7 @@
           "labelled": "benign"
         },
         {
-          "orig": "172.31.64.34",
+          "orig": "172.31.67.99",
           "resp": "172.31.0.2",
           "flows": 2039,
           "labelled": "benign"
@@ -6278,520 +6424,6 @@
       "repro": ""
     },
     {
-      "check_id": "con.duplicate_conflict",
-      "dataset": "cic-ids-2018",
-      "severity": "MINOR",
-      "severity_rank": 20,
-      "title": "50,675 flow(s) are provably mislabelled (0.0813%): identical flows carrying different classes",
-      "detail": "32,347 distinct feature vectors appear in the labelled zone under more than one class. The vectors are built from every observable conn column with identity and timing removed, so the flows in a group are indistinguishable to any model. Taking the majority label of each group as correct, 50,675 flows are labelled wrongly -- a lower bound, since a whole group could be wrong together. Empty and near-empty flows dominate these groups in practice, which is the signature of a time-window label catching connection attempts that carry no attack.",
-      "metrics": {
-        "rows": 62341777,
-        "conflicting_groups": 32347,
-        "flows_in_conflicting_groups": 148513,
-        "minority_flows": 50675,
-        "minority_rate": 0.000812858,
-        "threshold": 0.001,
-        "classes_involved": 5,
-        "key_columns": 18,
-        "minority_dos": 40604,
-        "minority_brute_force": 9332,
-        "minority_benign": 724,
-        "minority_botnet": 11,
-        "minority_ddos": 4,
-        "in_conflict_dos": 59491,
-        "in_conflict_brute_force": 87994,
-        "in_conflict_benign": 1013,
-        "in_conflict_botnet": 11,
-        "in_conflict_ddos": 4
-      },
-      "scope": {
-        "key_columns": [
-          "id.orig_p",
-          "id.resp_p",
-          "proto",
-          "duration",
-          "orig_bytes",
-          "resp_bytes",
-          "conn_state",
-          "local_orig",
-          "local_resp",
-          "missed_bytes",
-          "history",
-          "orig_pkts",
-          "orig_ip_bytes",
-          "resp_pkts",
-          "resp_ip_bytes",
-          "ip_proto",
-          "service",
-          "tunnel_parents"
-        ]
-      },
-      "evidence": [
-        {
-          "id.orig_p": 50064,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 6,
-          "split": "brute_force x6, dos x6"
-        },
-        {
-          "id.orig_p": 55782,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 6,
-          "split": "brute_force x6, dos x6"
-        },
-        {
-          "id.orig_p": 59228,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 6,
-          "split": "brute_force x6, dos x5, benign x1"
-        },
-        {
-          "id.orig_p": 45108,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 6,
-          "split": "brute_force x6, dos x6"
-        },
-        {
-          "id.orig_p": 41516,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 41700,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 48832,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 60774,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 41020,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 49970,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 48606,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 43996,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 55408,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 13,
-          "minority_flows": 5,
-          "split": "brute_force x8, dos x5"
-        },
-        {
-          "id.orig_p": 43006,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 50462,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 38748,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 33076,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 53038,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 53760,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        },
-        {
-          "id.orig_p": 39164,
-          "id.resp_p": 21,
-          "proto": "tcp",
-          "duration": 1.9073486328125e-06,
-          "orig_bytes": 0,
-          "resp_bytes": 0,
-          "conn_state": "REJ",
-          "local_orig": false,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "Sr",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 1,
-          "resp_ip_bytes": 40,
-          "ip_proto": 6,
-          "service": null,
-          "tunnel_parents": null,
-          "flows": 12,
-          "minority_flows": 5,
-          "split": "brute_force x7, dos x5"
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "WITH vec AS (\n    SELECT \"id.orig_p\" AS k0, \"id.resp_p\" AS k1, \"proto\" AS k2, \"duration\" AS k3, \"orig_bytes\" AS k4, \"resp_bytes\" AS k5, \"conn_state\" AS k6, \"local_orig\" AS k7, \"local_resp\" AS k8, \"missed_bytes\" AS k9, \"history\" AS k10, \"orig_pkts\" AS k11, \"orig_ip_bytes\" AS k12, \"resp_pkts\" AS k13, \"resp_ip_bytes\" AS k14, \"ip_proto\" AS k15, \"service\" AS k16, \"tunnel_parents\" AS k17, label_class, count(*) AS n\n    FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet', union_by_name=true)\n    GROUP BY ALL\n), grp AS (\n    SELECT *,\n           sum(n)   OVER w AS grp_flows,\n           count(*) OVER w AS grp_classes,\n           row_number() OVER (PARTITION BY k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14, k15, k16, k17\n                              ORDER BY n DESC, label_class) AS rk\n    FROM vec WINDOW w AS (PARTITION BY k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14, k15, k16, k17)\n)\nSELECT * FROM grp WHERE grp_classes > 1"
-    },
-    {
       "check_id": "int.null_not_zero",
       "dataset": "cic-ids-2018",
       "severity": "MINOR",
@@ -6867,382 +6499,19 @@
       "repro": "SELECT label_class, count(*), sum(CASE WHEN \"service\" IS NULL THEN 1 ELSE 0 END) FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet') GROUP BY 1"
     },
     {
-      "check_id": "orc.attempted_axis",
-      "dataset": "cic-ids-2018",
-      "severity": "MINOR",
-      "severity_rank": 20,
-      "title": "304,857 of 3,698,919 matched attack flow(s) (8.24%) are `- Attempted` in the external oracle",
-      "detail": "The oracle records, per flow, whether an attack actually executed and why not. Our labels have no such axis, so this is a gap in our label model rather than an error in it -- nothing here says a label is wrong, and no disagreement involving this axis is counted against us anywhere in this tier. What it constrains is what an attack class may be quoted as evidence OF: a class whose matched flows are largely attempts is a class of connection attempts, and a flow count taken from it is not a count of executed attacks. 2 class(es) are above 25%.",
-      "metrics": {
-        "attack_flows_matched": 3698919,
-        "flows_entirely_attempted": 304857,
-        "attempted_share_of_matched": 0.082417863,
-        "attempted_share_notable": 0.25,
-        "classes_over_notable": [
-          "brute_force",
-          "web_attack"
-        ],
-        "cat_0_rows": 2958,
-        "cat_1_rows": 297814,
-        "cat_2_rows": 11,
-        "cat_3_rows": 1,
-        "cat_4_rows": 4278,
-        "cat_5_rows": 126,
-        "cat_6_rows": 173,
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "label_class": "dos",
-          "flows": 1945058,
-          "matched": 1943337,
-          "any_attempted": 112168,
-          "all_attempted": 112120,
-          "attempted_share_of_matched": 0.057694574
-        },
-        {
-          "label_class": "ddos",
-          "flows": 1373323,
-          "matched": 1371761,
-          "any_attempted": 7,
-          "all_attempted": 7,
-          "attempted_share_of_matched": 5.103e-06
-        },
-        {
-          "label_class": "brute_force",
-          "flows": 286006,
-          "matched": 286000,
-          "any_attempted": 192324,
-          "all_attempted": 192324,
-          "attempted_share_of_matched": 0.672461538
-        },
-        {
-          "label_class": "botnet",
-          "flows": 97386,
-          "matched": 97386,
-          "any_attempted": 262,
-          "all_attempted": 262,
-          "attempted_share_of_matched": 0.002690325
-        },
-        {
-          "label_class": "web_attack",
-          "flows": 427,
-          "matched": 427,
-          "any_attempted": 144,
-          "all_attempted": 144,
-          "attempted_share_of_matched": 0.337236534
-        },
-        {
-          "label_class": "infiltration",
-          "flows": 8,
-          "matched": 8,
-          "any_attempted": 0,
-          "all_attempted": 0,
-          "attempted_share_of_matched": 0.0
-        },
-        {
-          "attempted_category": 0,
-          "meaning": "no payload sent",
-          "oracle_rows": 2958
-        },
-        {
-          "attempted_category": 1,
-          "meaning": "port or system closed",
-          "oracle_rows": 297814
-        },
-        {
-          "attempted_category": 2,
-          "meaning": "attack startup or teardown artefact",
-          "oracle_rows": 11
-        },
-        {
-          "attempted_category": 3,
-          "meaning": "no malicious payload",
-          "oracle_rows": 1
-        },
-        {
-          "attempted_category": 4,
-          "meaning": "attack artefact",
-          "oracle_rows": 4278
-        },
-        {
-          "attempted_category": 5,
-          "meaning": "attack implemented incorrectly",
-          "oracle_rows": 126
-        },
-        {
-          "attempted_category": 6,
-          "meaning": "target system unresponsive",
-          "oracle_rows": 173
-        },
-        {
-          "label_class": "dos",
-          "attack": "DoS-Hulk",
-          "flows": 1803685,
-          "matched": 1803552,
-          "flows_with_attempted_row": 86,
-          "flows_entirely_attempted": 86,
-          "attempted_share_of_matched": 4.7684e-05,
-          "cat_0": 86,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "ddos",
-          "attack": "DDoS-HOIC",
-          "flows": 1082322,
-          "matched": 1082322,
-          "flows_with_attempted_row": 0,
-          "flows_entirely_attempted": 0,
-          "attempted_share_of_matched": 0.0,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "ddos",
-          "attack": "DDoS-LOIC-HTTP",
-          "flows": 289527,
-          "matched": 289328,
-          "flows_with_attempted_row": 0,
-          "flows_entirely_attempted": 0,
-          "attempted_share_of_matched": 0.0,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "brute_force",
-          "attack": "FTP-BruteForce",
-          "flows": 192300,
-          "matched": 192294,
-          "flows_with_attempted_row": 192294,
-          "flows_entirely_attempted": 192294,
-          "attempted_share_of_matched": 1.0,
-          "cat_0": 0,
-          "cat_1": 192294,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "dos",
-          "attack": "DoS-SlowHTTPTest",
-          "flows": 105550,
-          "matched": 105550,
-          "flows_with_attempted_row": 105520,
-          "flows_entirely_attempted": 105520,
-          "attempted_share_of_matched": 0.999715775,
-          "cat_0": 0,
-          "cat_1": 105520,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "botnet",
-          "attack": "Bot",
-          "flows": 97386,
-          "matched": 97386,
-          "flows_with_attempted_row": 262,
-          "flows_entirely_attempted": 262,
-          "attempted_share_of_matched": 0.002690325,
-          "cat_0": 602,
-          "cat_1": 0,
-          "cat_2": 4,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "brute_force",
-          "attack": "SSH-Bruteforce",
-          "flows": 93706,
-          "matched": 93706,
-          "flows_with_attempted_row": 30,
-          "flows_entirely_attempted": 30,
-          "attempted_share_of_matched": 0.00032015,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 30,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "dos",
-          "attack": "DoS-GoldenEye",
-          "flows": 28661,
-          "matched": 27073,
-          "flows_with_attempted_row": 4302,
-          "flows_entirely_attempted": 4302,
-          "attempted_share_of_matched": 0.158903705,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 4248,
-          "cat_5": 0,
-          "cat_6": 54,
-          "cat_other": 0
-        },
-        {
-          "label_class": "dos",
-          "attack": "DoS-Slowloris",
-          "flows": 7162,
-          "matched": 7162,
-          "flows_with_attempted_row": 2260,
-          "flows_entirely_attempted": 2212,
-          "attempted_share_of_matched": 0.308852276,
-          "cat_0": 2260,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "ddos",
-          "attack": "DDoS-LOIC-UDP",
-          "flows": 1474,
-          "matched": 111,
-          "flows_with_attempted_row": 7,
-          "flows_entirely_attempted": 7,
-          "attempted_share_of_matched": 0.063063063,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 119,
-          "cat_other": 0
-        },
-        {
-          "label_class": "web_attack",
-          "attack": "BruteForce-Web",
-          "flows": 260,
-          "matched": 260,
-          "flows_with_attempted_row": 129,
-          "flows_entirely_attempted": 129,
-          "attempted_share_of_matched": 0.496153846,
-          "cat_0": 3,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 126,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "web_attack",
-          "attack": "BruteForce-XSS",
-          "flows": 117,
-          "matched": 117,
-          "flows_with_attempted_row": 4,
-          "flows_entirely_attempted": 4,
-          "attempted_share_of_matched": 0.034188034,
-          "cat_0": 1,
-          "cat_1": 0,
-          "cat_2": 2,
-          "cat_3": 1,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "web_attack",
-          "attack": "SQL-Injection",
-          "flows": 50,
-          "matched": 50,
-          "flows_with_attempted_row": 11,
-          "flows_entirely_attempted": 11,
-          "attempted_share_of_matched": 0.22,
-          "cat_0": 6,
-          "cat_1": 0,
-          "cat_2": 5,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        },
-        {
-          "label_class": "infiltration",
-          "attack": "Infiltration",
-          "flows": 8,
-          "matched": 8,
-          "flows_with_attempted_row": 0,
-          "flows_entirely_attempted": 0,
-          "attempted_share_of_matched": 0.0,
-          "cat_0": 0,
-          "cat_1": 0,
-          "cat_2": 0,
-          "cat_3": 0,
-          "cat_4": 0,
-          "cat_5": 0,
-          "cat_6": 0,
-          "cat_other": 0
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT label_class, count(*) FILTER (WHERE oracle_attempted_rows >= oracle_rows AND oracle_rows > 0), count(*) FILTER (WHERE oracle_rows > 0) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE label_class <> 'benign' GROUP BY 1"
-    },
-    {
       "check_id": "qtn.coverage",
       "dataset": "cic-ids-2018",
       "severity": "MINOR",
       "severity_rank": 20,
-      "title": "infiltration: 100.0% of the class is quarantined, leaving 0 adjudicable flow(s)",
-      "detail": "Most of this class sits inside a declared region, so what is left is not a sample of the class -- it is the part the quarantine did not reach. Any per-class figure computed from the remainder describes that residue and nothing wider. There is no adjudicable evidence left at all, so the class cannot be evaluated and should be dropped rather than reported.",
+      "title": "labelled zone carries no label_quality column \u2014 coverage is unknown",
+      "detail": "Quarantine marks unadjudicable flows with label_quality and quarantine_reason. This zone has neither, so it was written by a labelling run that predates them and there is no way to tell from the data which flows the schedule could actually speak for. Any accuracy figure derived from it is quoted without a denominator.",
       "metrics": {
-        "class": "infiltration",
-        "flows": 8,
-        "quarantined": 8,
-        "quarantined_share": 1.0,
-        "adjudicable": 0,
-        "quarantine_class_share_warn": 0.5
+        "label_quality_present": false
       },
-      "scope": {
-        "class": "infiltration"
-      },
+      "scope": {},
       "evidence": [],
       "evidence_truncated": 0,
-      "repro": "SELECT label_class, label_quality, quarantine_reason, count(*) AS n\n    FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet', union_by_name = true)\n    GROUP BY 1, 2, 3 ORDER BY 4 DESC"
+      "repro": "DESCRIBE SELECT * FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet', union_by_name=true)"
     },
     {
       "check_id": "sch.interval_overlap_delta",
@@ -7539,892 +6808,26 @@
       "repro": "WITH rules AS (SELECT * FROM (VALUES\n        (1, 'SSH-Bruteforce', 'brute_force', 1518631260.0, 1518636720.0, ['172.31.70.6', '13.58.98.64', '172.31.69.25', '18.217.21.148'], CAST(NULL AS VARCHAR))\n      ) AS t(rid, rname, rclass, t0, t1, eps, vpfx)),\n          ev AS (SELECT \"ts\", \"uid\", \"id.orig_h\", \"id.resp_h\", \"auth_attempts\", \"auth_success\", \"client\" FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/ssh.parquet', union_by_name=true)\n        WHERE ts IS NOT NULL AND ts >= 1518631260.0 AND ts < 1518636720.0)\n          SELECT r.rid, count(*) AS records,\n                 count(DISTINCT e.\"uid\") AS uids,\n                 sum(coalesce(e.\"auth_attempts\", 0)) AS attempts,\n                 max(e.\"auth_attempts\") AS max_attempts, sum(CASE WHEN e.\"auth_success\" THEN 1 ELSE 0 END) AS successes,\n                 count(DISTINCT e.\"id.orig_h\") AS sources\n          FROM rules r JOIN ev e ON e.ts >= r.t0 AND e.ts < r.t1\n          AND (coalesce(list_contains(r.eps, e.\"id.orig_h\"), false)\n            OR coalesce(list_contains(r.eps, e.\"id.resp_h\"), false)\n            OR coalesce(starts_with(e.\"id.orig_h\", r.vpfx), false)\n            OR coalesce(starts_with(e.\"id.resp_h\", r.vpfx), false)\n            OR (r.eps IS NULL AND r.vpfx IS NULL))\n          GROUP BY r.rid ORDER BY r.rid"
     },
     {
-      "check_id": "cor.http_payload",
+      "check_id": "int.relabel_determinism",
       "dataset": "cic-ids-2018",
       "severity": "INFO",
       "severity_rank": 10,
-      "title": "149 web_attack flow(s) carry an injection signature in their URI across 6 window(s)",
-      "detail": "Independent confirmation of the web_attack class: these URIs were parsed off the wire by Zeek and match SQLi or XSS syntax that has no ordinary meaning in a web request.",
+      "title": "determinism not assessed: the labels were written by a different manifest than the one on disk",
+      "detail": "This check re-applies the CURRENT rules and compares the result against the stored labels, which is only a test of determinism when both sides derive from the same manifest and taxonomy. They do not here, so any difference would be the edit, not the stage. Re-run labelling and this check becomes meaningful again; until then see int.provenance_current, which is the finding that matters.",
       "metrics": {
-        "rules": 6,
-        "flows": 427,
-        "flows_with_signature": 149,
-        "sqli_records": 38,
-        "xss_records": 5563,
-        "corroborated_share": 0.348946
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "rule_id": 10,
-          "attack": "BruteForce-Web",
-          "date": "2018-02-22",
-          "window": "10:17-11:24",
-          "flows": 137,
-          "http_records": 6875,
-          "http_flows": 136,
-          "sqli_records": 0,
-          "xss_records": 0,
-          "flows_with_signature": 0,
-          "signature_share_of_flows": 0.0,
-          "get_records": 3442,
-          "post_records": 3433,
-          "signature_hits_2xx": 0
-        },
-        {
-          "rule_id": 11,
-          "attack": "BruteForce-XSS",
-          "date": "2018-02-22",
-          "window": "13:50-14:29",
-          "flows": 43,
-          "http_records": 3861,
-          "http_flows": 42,
-          "sqli_records": 0,
-          "xss_records": 1912,
-          "flows_with_signature": 40,
-          "signature_share_of_flows": 0.930233,
-          "get_records": 3857,
-          "post_records": 4,
-          "signature_hits_2xx": 1912
-        },
-        {
-          "rule_id": 12,
-          "attack": "SQL-Injection",
-          "date": "2018-02-22",
-          "window": "16:15-16:29",
-          "flows": 17,
-          "http_records": 17,
-          "http_flows": 16,
-          "sqli_records": 16,
-          "xss_records": 0,
-          "flows_with_signature": 15,
-          "signature_share_of_flows": 0.882353,
-          "get_records": 17,
-          "post_records": 0,
-          "signature_hits_2xx": 16
-        },
-        {
-          "rule_id": 13,
-          "attack": "BruteForce-Web",
-          "date": "2018-02-23",
-          "window": "10:03-11:03",
-          "flows": 123,
-          "http_records": 6244,
-          "http_flows": 122,
-          "sqli_records": 0,
-          "xss_records": 0,
-          "flows_with_signature": 0,
-          "signature_share_of_flows": 0.0,
-          "get_records": 3124,
-          "post_records": 3120,
-          "signature_hits_2xx": 0
-        },
-        {
-          "rule_id": 14,
-          "attack": "BruteForce-XSS",
-          "date": "2018-02-23",
-          "window": "13:00-14:10",
-          "flows": 74,
-          "http_records": 7313,
-          "http_flows": 74,
-          "sqli_records": 0,
-          "xss_records": 3651,
-          "flows_with_signature": 73,
-          "signature_share_of_flows": 0.986486,
-          "get_records": 7312,
-          "post_records": 1,
-          "signature_hits_2xx": 3651
-        },
-        {
-          "rule_id": 15,
-          "attack": "SQL-Injection",
-          "date": "2018-02-23",
-          "window": "15:05-15:18",
-          "flows": 33,
-          "http_records": 34,
-          "http_flows": 28,
-          "sqli_records": 22,
-          "xss_records": 0,
-          "flows_with_signature": 21,
-          "signature_share_of_flows": 0.636364,
-          "get_records": 32,
-          "post_records": 2,
-          "signature_hits_2xx": 22
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+union+select+null,+table_name+from+information_schema.columns+where+table_nam",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 6
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+order+by+3+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 4
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+union+select+null,+table_name+from+information_schema.tables+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 4
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=0+union+select+null,+concat(first_name,0x0a,password)+from+users+#&Submit=Submi",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 3
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+order+by+2+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 3
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+union+select+null,database()+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 2
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+union+select+1,2+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 2
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/sqli/?id=3+'+and+1=1+union+select+1,version()+#&Submit=Submit",
-          "attack": "SQL-Injection",
-          "method": "GET",
-          "status_code": 200,
-          "records": 2
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('R2NXETT67KHMRPHO6LR829T9FZH38RTZNPPO5YWGQLDKCTVBMQ');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('6F6KR7YMCJCGCP6OH45UHT9W6TO6DX9Y19PG71J9JKA4K0V9OS');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('ABAH76GN0XLWZYRBOZSSHMUZ7KYN644M9A4Z90QOIG73V0QG8A');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('PDG1UW6HI3QXPGX6X55BOUYVLUC224RWYJ4EQ0GLRFEZDKHX1U');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('6X4QXME3FMZ93XSU1SYTWS1V2NOCPV1KLWMWELGI7UMN4BSP0S');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('EX7C4NWT62BXRHELA6QNULIOF3Z4CPIITBKVFY9MDHBYJQCS7O');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('8YDWQ7W80G18J916U77QR18E81YCRSB74ADKBYLLMJCPX241MU');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('MQGXN3M3OWZOPT3XZK2P4VQFHQKTQ4KREYCHECEBK3WNK6MIZ2');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('MD7WA3ACGI8TI2VE9OW7EHSD9T0TSE6QAE4621SS4UCO6QK1UT');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('DVCWNM4GEWAW8HDLQ7WQNMC2UY0OP0XVVB67QXR0NSWTEG2PVS');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('SBHG01O9ESIMS4MOG2PA0XYR7FJ96UVLAEB29YSMHUQ20JSFC0');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        },
-        {
-          "sample_uri": "/DVWA/vulnerabilities/xss_r/?name=<script>console.log('MWHTI6AV2TY7DTVBNSUZOZ8XHWH0B0WMQ5YDU0AWMAH82L0FLH');console.log(",
-          "attack": "BruteForce-XSS",
-          "method": "GET",
-          "status_code": 200,
-          "records": 1
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "WITH rules AS (SELECT * FROM (VALUES\n        (10, 'BruteForce-Web', 'web_attack', 1519309020.0, 1519313100.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (11, 'BruteForce-XSS', 'web_attack', 1519321800.0, 1519324200.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (12, 'SQL-Injection', 'web_attack', 1519330500.0, 1519331400.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (13, 'BruteForce-Web', 'web_attack', 1519394580.0, 1519398240.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (14, 'BruteForce-XSS', 'web_attack', 1519405200.0, 1519409460.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR)),\n        (15, 'SQL-Injection', 'web_attack', 1519412700.0, 1519413540.0, ['18.218.115.60', '172.31.69.28', '18.218.83.150'], CAST(NULL AS VARCHAR))\n      ) AS t(rid, rname, rclass, t0, t1, eps, vpfx)),\n      ev AS (SELECT \"ts\", \"uid\", \"id.orig_h\", \"id.resp_h\", \"uri\", \"method\", \"status_code\" FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/parquets/cic-ids-2018/**/http.parquet', union_by_name=true)\n        WHERE ts IS NOT NULL AND ts >= 1519309020.0 AND ts < 1519413540.0)\n      SELECT r.rid, r.rname, count(*) AS records,\n             count(DISTINCT e.\"uid\") AS uids,\n             sum(CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') THEN 1 ELSE 0 END) AS sqli,\n             sum(CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))') THEN 1 ELSE 0 END) AS xss,\n             count(DISTINCT CASE WHEN regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') OR regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))') THEN e.\"uid\" END) AS uids_sig,\n             sum(CASE WHEN upper(coalesce(e.\"method\", '')) = 'GET' THEN 1 ELSE 0 END) AS gets,\n             sum(CASE WHEN upper(coalesce(e.\"method\", '')) = 'POST' THEN 1 ELSE 0 END) AS posts,\n             sum(CASE WHEN (regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:union[^a-z0-9]{1,12}select)|(?:select[^;]{1,80}from)|(?:(?:''|%27)[^a-z0-9]{0,8}(?:or|and)[^a-z0-9]{1,8}(?:''|%27)?[0-9]{1,3}[^a-z0-9]{0,4}=)|(?:\\bor[^a-z0-9]{1,4}1[^a-z0-9]{0,4}=[^a-z0-9]{0,4}1)|(?:information_schema|table_schema)|(?:(?:sleep|benchmark|waitfor[^a-z]{1,6}delay)[^a-z]{0,4}\\()|(?:group_concat|concat_ws|xp_cmdshell|load_file)') OR regexp_matches(lower(coalesce(e.\"uri\", '')), '(?:<script|%3cscript|&lt;script)|(?:</script|%3c%2fscript)|(?:javascript[:%])|(?:on(?:error|load|mouseover|focus|click)[^a-z]{0,6}=)|(?:(?:alert|prompt|confirm)[^a-z]{0,4}\\()|(?:document[^a-z]{0,4}\\.[^a-z]{0,4}cookie)|(?:<(?:img|svg|iframe|body)[^a-z]|%3c(?:img|svg|iframe|body))')) AND e.\"status_code\" BETWEEN 200 AND 299\n                      THEN 1 ELSE 0 END) AS sig_2xx\n      FROM rules r JOIN ev e ON e.ts >= r.t0 AND e.ts < r.t1\n          AND (coalesce(list_contains(r.eps, e.\"id.orig_h\"), false)\n            OR coalesce(list_contains(r.eps, e.\"id.resp_h\"), false)\n            OR coalesce(starts_with(e.\"id.orig_h\", r.vpfx), false)\n            OR coalesce(starts_with(e.\"id.resp_h\", r.vpfx), false)\n            OR (r.eps IS NULL AND r.vpfx IS NULL))\n      GROUP BY r.rid, r.rname ORDER BY r.rid"
-    },
-    {
-      "check_id": "orc.class_agreement",
-      "dataset": "cic-ids-2018",
-      "severity": "INFO",
-      "severity_rank": 10,
-      "title": "external agreement 99.74% over 58,084,941 direction-agreeing matches",
-      "detail": "Per canonical class, the share of time-overlapping matches on which an independent manual re-labelling assigns the same class we do. Restricted to matches where both sides agree which end originated the connection, so the comparison is of two readings of the same traffic rather than of two flow-construction conventions. Oracle labels with no mapping into our taxonomy are excluded from the denominator, never counted as agreement.",
-      "metrics": {
-        "flows_compared": 58084941,
-        "flows_agreeing": 57931852,
-        "agreement_rate": 0.997364394,
-        "agreement_min": 0.9,
-        "agreement_critical": 0.5,
-        "min_flows_for_verdict": 100,
-        "classes_compared": 6,
-        "classes_below_floor": 0,
-        "excluded_unmapped": 94460,
-        "rate_benign": 0.999125898,
-        "rate_dos": 0.945686209,
-        "rate_ddos": 1.0,
-        "rate_brute_force": 1.0,
-        "rate_botnet": 1.0,
-        "rate_web_attack": 1.0,
-        "rate_infiltration": null,
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "label_class": "benign",
-          "decided": 54386080,
-          "agree": 54338541,
-          "unmapped": 94405,
-          "unanimous": 54386080,
-          "agreement_rate": 0.999125898,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "dos",
-          "decided": 1943337,
-          "agree": 1837787,
-          "unmapped": 0,
-          "unanimous": 1943337,
-          "agreement_rate": 0.945686209,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "ddos",
-          "decided": 1371761,
-          "agree": 1371761,
-          "unmapped": 0,
-          "unanimous": 1371761,
-          "agreement_rate": 1.0,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "brute_force",
-          "decided": 286000,
-          "agree": 286000,
-          "unmapped": 0,
-          "unanimous": 286000,
-          "agreement_rate": 1.0,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "botnet",
-          "decided": 97386,
-          "agree": 97386,
-          "unmapped": 0,
-          "unanimous": 97386,
-          "agreement_rate": 1.0,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "web_attack",
-          "decided": 377,
-          "agree": 377,
-          "unmapped": 50,
-          "unanimous": 377,
-          "agreement_rate": 1.0,
-          "unanimous_share": 1.0
-        },
-        {
-          "label_class": "infiltration",
-          "decided": 0,
-          "agree": 0,
-          "unmapped": 5,
-          "unanimous": 0,
-          "agreement_rate": null,
-          "unanimous_share": null
-        },
-        {
-          "ours": "benign",
-          "oracle": "benign",
-          "flows": 54338541,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "dos",
-          "oracle": "dos",
-          "flows": 1837787,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "ddos",
-          "oracle": "ddos",
-          "flows": 1371761,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "brute_force",
-          "oracle": "brute_force",
-          "flows": 286000,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "dos",
-          "oracle": "brute_force",
-          "flows": 105520,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "botnet",
-          "oracle": "botnet",
-          "flows": 97386,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "unmapped",
-          "flows": 94405,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "botnet",
-          "flows": 45797,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "brute_force",
-          "flows": 1551,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "web_attack",
-          "oracle": "web_attack",
-          "flows": 377,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "dos",
-          "flows": 85,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "infiltration",
-          "flows": 79,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "web_attack",
-          "oracle": "unmapped",
-          "flows": 50,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "dos",
-          "oracle": "benign",
-          "flows": 30,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "ddos",
-          "flows": 19,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "benign",
-          "oracle": "web_attack",
-          "flows": 8,
-          "mean_purity": 1.0
-        },
-        {
-          "ours": "infiltration",
-          "oracle": "unmapped",
-          "flows": 5,
-          "mean_purity": 1.0
-        },
-        {
-          "region": "Infiltration second stage 28-02",
-          "prediction": "missed",
-          "window_utc": "2018-02-28 18:41:00Z - 2018-02-28 22:41:00Z",
-          "note": "the infiltration runs hours past CIC's published finish; 44 flows across 28-02 and 01-03 are genuine infiltration CIC called benign.",
-          "flows": 1823336,
-          "our_classes": [
-            "benign"
-          ],
-          "oracle_classes": [
-            "benign"
-          ],
-          "agree": 1823336,
-          "agreement_rate": 1.0
-        },
-        {
-          "region": "Infiltration second stage 01-03",
-          "prediction": "missed",
-          "window_utc": "2018-03-01 19:38:00Z - 2018-03-01 23:38:00Z",
-          "note": "as 28-02: the second stage continues past the published finish.",
-          "flows": 1147077,
-          "our_classes": [
-            "benign"
-          ],
-          "oracle_classes": [
-            "benign",
-            "unmapped"
-          ],
-          "agree": 1147076,
-          "agreement_rate": 0.999999128
-        },
-        {
-          "region": "DDoS-LOIC-HTTP mislabelled 20-02",
-          "prediction": "label",
-          "window_utc": "2018-02-20 14:12:00Z - 2018-02-20 15:18:00Z",
-          "note": "every flow here is mislabelled at the raw level: the traffic is a UDP flood recorded as an HTTP one. Both map to ddos, so the class agrees while the mechanism does not.",
-          "flows": 1001674,
-          "our_classes": [
-            "benign",
-            "ddos"
-          ],
-          "oracle_classes": [
-            "benign",
-            "ddos"
-          ],
-          "agree": 1001674,
-          "agreement_rate": 1.0
-        },
-        {
-          "region": "DoS Slowhttptest absent 16-02",
-          "prediction": "false",
-          "window_utc": "2018-02-16 14:12:00Z - 2018-02-16 15:09:00Z",
-          "note": "the attack is not in the capture at all; the window holds failed FTP-Patator connections, which our labels call an executed DoS.",
-          "flows": 648643,
-          "our_classes": [
-            "benign",
-            "dos"
-          ],
-          "oracle_classes": [
-            "benign",
-            "brute_force"
-          ],
-          "agree": 543093,
-          "agreement_rate": 0.837275666
-        },
-        {
-          "region": "DDoS-HOIC late start 21-02",
-          "prediction": "false",
-          "window_utc": "2018-02-21 18:05:00Z - 2018-02-21 18:11:00Z",
-          "note": "the attack starts six minutes later than documented, so the first six minutes of our window are ordinary traffic labelled ddos.",
-          "flows": 59122,
-          "our_classes": [
-            "benign"
-          ],
-          "oracle_classes": [
-            "benign"
-          ],
-          "agree": 59122,
-          "agreement_rate": 1.0
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT label_class, oracle_top_class, count(*) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE oracle_rows_dir_agree > 0 GROUP BY 1, 2 ORDER BY 3 DESC"
-    },
-    {
-      "check_id": "orc.coverage",
-      "dataset": "cic-ids-2018",
-      "severity": "INFO",
-      "severity_rank": 10,
-      "title": "external oracle matches 93.44% of our flows (58,198,175 of 62,285,938)",
-      "detail": "Share of our flows for which some manually-forensicated oracle row overlaps in time on the same unordered 5-tuple. This number gates every other figure in this tier: an agreement rate computed over a small unrepresentative match set describes the match set, not the labels. Flow COUNTS are deliberately not compared -- CICFlowMeter's 120-second active timeout splits one Zeek connection into many oracle rows, which is what the fan-out columns show.",
-      "metrics": {
-        "flows_in_oracle_span": 62285938,
-        "flows_matched": 58198175,
-        "coverage": 0.934371013,
-        "coverage_min": 0.6,
-        "coverage_critical": 0.25,
-        "flows_direction_agrees": 58179401,
-        "oracle_rows_total": 63195145,
-        "oracle_artefact_rows": 77810,
-        "oracle_rows_matched": 61175411,
-        "oracle_rows_unmatched": 1941924,
-        "clock_delta_seconds": 0.038,
-        "classes_below_floor": 0,
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "label_class": "benign",
-          "flows": 58583730,
-          "matched": 54499256,
-          "coverage": 0.930279721,
-          "matched_direction_agrees": 54480485,
-          "oracle_rows": 58837859,
-          "max_oracle_rows_per_flow": 359,
-          "mean_oracle_rows_per_flow": 1.08
-        },
-        {
-          "label_class": "dos",
-          "flows": 1945058,
-          "matched": 1943337,
-          "coverage": 0.999115193,
-          "matched_direction_agrees": 1943337,
-          "oracle_rows": 1948122,
-          "max_oracle_rows_per_flow": 16,
-          "mean_oracle_rows_per_flow": 1.002
-        },
-        {
-          "label_class": "ddos",
-          "flows": 1373323,
-          "matched": 1371761,
-          "coverage": 0.998862613,
-          "matched_direction_agrees": 1371761,
-          "oracle_rows": 1373221,
-          "max_oracle_rows_per_flow": 18,
-          "mean_oracle_rows_per_flow": 1.001
-        },
-        {
-          "label_class": "brute_force",
-          "flows": 286006,
-          "matched": 286000,
-          "coverage": 0.999979021,
-          "matched_direction_agrees": 286000,
-          "oracle_rows": 286000,
-          "max_oracle_rows_per_flow": 1,
-          "mean_oracle_rows_per_flow": 1.0
-        },
-        {
-          "label_class": "botnet",
-          "flows": 97386,
-          "matched": 97386,
-          "coverage": 1.0,
-          "matched_direction_agrees": 97386,
-          "oracle_rows": 97730,
-          "max_oracle_rows_per_flow": 3,
-          "mean_oracle_rows_per_flow": 1.004
-        },
-        {
-          "label_class": "web_attack",
-          "flows": 427,
-          "matched": 427,
-          "coverage": 1.0,
-          "matched_direction_agrees": 427,
-          "oracle_rows": 427,
-          "max_oracle_rows_per_flow": 1,
-          "mean_oracle_rows_per_flow": 1.0
-        },
-        {
-          "label_class": "infiltration",
-          "flows": 8,
-          "matched": 8,
-          "coverage": 1.0,
-          "matched_direction_agrees": 5,
-          "oracle_rows": 186,
-          "max_oracle_rows_per_flow": 110,
-          "mean_oracle_rows_per_flow": 23.25
-        },
-        {
-          "artefact_kind": "protocol_zero",
-          "rows": 77810
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT label_class, count(*), count(*) FILTER (WHERE oracle_rows > 0) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') GROUP BY 1"
-    },
-    {
-      "check_id": "orc.direction_reversal",
-      "dataset": "cic-ids-2018",
-      "severity": "INFO",
-      "severity_rank": 10,
-      "title": "18,774 of 58,198,175 oracle matches (0.03%) have the originator reversed",
-      "detail": "CICFlowMeter fixes direction from the first packet it sees and Zeek from the SYN, so the two disagree wherever a handshake is absent. The join keys on the unordered 5-tuple precisely so these flows are matched instead of lost, and this is the measurement that would otherwise be invisible. It indicts neither labelling. It does bound the rest of the tier -- agreement is computed over direction-agreeing matches only -- and it means any orig/resp-relative feature is not describing the same endpoint on both sides.",
-      "metrics": {
-        "flows_matched": 58198175,
-        "flows_direction_agrees": 58179401,
-        "flows_reversed": 18774,
-        "reversal_rate": 0.000322587,
-        "oracle_rows_matched": 62543545,
-        "oracle_rows_direction_agrees": 62520557,
-        "oracle_row_reversal_rate": 0.000367552,
-        "reversal_warn": 0.2,
-        "groups_over_warn": 1,
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "proto": "tcp",
-          "label_class": "infiltration",
-          "matched": 8,
-          "direction_agrees": 5,
-          "reversed": 3,
-          "reversal_rate": 0.375
-        },
-        {
-          "proto": "icmp",
-          "label_class": "benign",
-          "matched": 69914,
-          "direction_agrees": 69620,
-          "reversed": 294,
-          "reversal_rate": 0.004205166
-        },
-        {
-          "proto": "tcp",
-          "label_class": "benign",
-          "matched": 30231535,
-          "direction_agrees": 30213708,
-          "reversed": 17827,
-          "reversal_rate": 0.000589682
-        },
-        {
-          "proto": "udp",
-          "label_class": "benign",
-          "matched": 24197807,
-          "direction_agrees": 24197157,
-          "reversed": 650,
-          "reversal_rate": 2.6862e-05
-        },
-        {
-          "proto": "tcp",
-          "label_class": "dos",
-          "matched": 1943337,
-          "direction_agrees": 1943337,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "tcp",
-          "label_class": "ddos",
-          "matched": 1371650,
-          "direction_agrees": 1371650,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "tcp",
-          "label_class": "brute_force",
-          "matched": 286000,
-          "direction_agrees": 286000,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "tcp",
-          "label_class": "botnet",
-          "matched": 97386,
-          "direction_agrees": 97386,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "tcp",
-          "label_class": "web_attack",
-          "matched": 427,
-          "direction_agrees": 427,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "udp",
-          "label_class": "ddos",
-          "matched": 104,
-          "direction_agrees": 104,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        },
-        {
-          "proto": "icmp",
-          "label_class": "ddos",
-          "matched": 7,
-          "direction_agrees": 7,
-          "reversed": 0,
-          "reversal_rate": 0.0
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT count(*) FILTER (WHERE oracle_rows_dir_agree > 0)::DOUBLE / count(*) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE oracle_rows > 0"
-    },
-    {
-      "check_id": "orc.false_attacks",
-      "dataset": "cic-ids-2018",
-      "severity": "INFO",
-      "severity_rank": 10,
-      "title": "30 attack flow(s) are benign according to the external oracle (0.00% of matched attack flows)",
-      "detail": "Our labels are a time window and a pair of addresses, so a window wider than the attack collects whatever else those hosts were doing. These flows are in an attack class and the independent re-labelling reads them as ordinary traffic. They inflate the class and credit any detector evaluated on them with finding something that was not there. 30 of these fall in windows CIC is known to have got wrong (DoS Slowhttptest absent 16-02), where the correction belongs in the manifest.",
-      "metrics": {
-        "attack_flows": 3702208,
-        "attack_flows_matched": 3698916,
-        "called_benign_pure": 30,
-        "called_benign_with_attempted_rows": 0,
-        "false_rate_of_matched": 8.11e-06,
-        "false_rate_warn": 0.05,
-        "false_rate_critical": 0.25,
-        "classes_over_warn": [],
-        "flows_in_known_wrong_windows": 30,
-        "oracle_source": "CSECICIDS2018_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CSECICIDS2018_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T13:45:24+00:00",
-        "oracle_bytes_match": true
+        "capture": "Thursday-15-02-2018",
+        "capture_flows": 5107815,
+        "labelled_manifest_sha": "d0170ecfd267",
+        "labelled_taxonomy_sha": "c1730fc59e18",
+        "manifest_sha_on_disk": "6494c3c01b12",
+        "taxonomy_sha_on_disk": "c1730fc59e18"
       },
       "scope": {
-        "known_wrong_windows": [
-          "DoS Slowhttptest absent 16-02"
-        ]
+        "capture": "Thursday-15-02-2018"
       },
-      "evidence": [
-        {
-          "label_class": "dos",
-          "flows": 1945058,
-          "matched": 1943337,
-          "called_benign": 30,
-          "with_attempted_rows": 0,
-          "false_rate_of_matched": 1.5437e-05
-        },
-        {
-          "label_class": "dos",
-          "attack": "DoS-SlowHTTPTest",
-          "capture": "Friday-16-02-2018",
-          "flows": 30,
-          "with_attempted_oracle_rows": 0,
-          "pure_benign": 30,
-          "window_utc": "2018-02-16 15:05:13Z - 2018-02-16 15:05:13Z",
-          "mean_purity": 1.0,
-          "example_uid": "C2xMjv1nIR4cTa3o25"
-        }
-      ],
+      "evidence": [],
       "evidence_truncated": 0,
-      "repro": "SELECT label_class, label_raw, count(*) FROM read_parquet('/home/ubuntu/talos/reports/validation/oracle_cic-ids-2018_uid.parquet') WHERE label_class <> 'benign' AND oracle_rows_dir_agree > 0 AND oracle_top_class = 'benign' GROUP BY 1, 2"
-    },
-    {
-      "check_id": "qtn.coverage",
-      "dataset": "cic-ids-2018",
-      "severity": "INFO",
-      "severity_rank": 10,
-      "title": "labels cover 99.08% of flows; 571,648 (0.92%) are quarantined as unadjudicable",
-      "detail": "4 declared region(s) withdraw 571,648 of 62,341,777 flows from the training and evaluation pools. Every result from this dataset is a statement about the remaining 99.08% and must be reported that way; the withdrawn flows keep their closed-world label so nothing is hidden, but nothing about them is being claimed either. Reasons: unlabellable-second-stage 571,648",
-      "metrics": {
-        "flows_total": 62341777,
-        "flows_quarantined": 571648,
-        "quarantine_share": 0.00917,
-        "label_coverage": 0.99083,
-        "regions_declared": 4,
-        "reasons": {
-          "unlabellable-second-stage": 571648
-        },
-        "classes_wholly_quarantined": [
-          "infiltration"
-        ]
-      },
-      "scope": {},
-      "evidence": [
-        {
-          "class": "infiltration",
-          "flows": 8,
-          "quarantined": 8,
-          "quarantined_share": 1.0,
-          "adjudicable": 0
-        },
-        {
-          "class": "benign",
-          "flows": 58639569,
-          "quarantined": 571640,
-          "quarantined_share": 0.009748,
-          "adjudicable": 58067929
-        },
-        {
-          "class": "dos",
-          "flows": 1945058,
-          "quarantined": 0,
-          "quarantined_share": 0.0,
-          "adjudicable": 1945058
-        },
-        {
-          "class": "ddos",
-          "flows": 1373323,
-          "quarantined": 0,
-          "quarantined_share": 0.0,
-          "adjudicable": 1373323
-        },
-        {
-          "class": "brute_force",
-          "flows": 286006,
-          "quarantined": 0,
-          "quarantined_share": 0.0,
-          "adjudicable": 286006
-        },
-        {
-          "class": "botnet",
-          "flows": 97386,
-          "quarantined": 0,
-          "quarantined_share": 0.0,
-          "adjudicable": 97386
-        },
-        {
-          "class": "web_attack",
-          "flows": 427,
-          "quarantined": 0,
-          "quarantined_share": 0.0,
-          "adjudicable": 427
-        }
-      ],
-      "evidence_truncated": 0,
-      "repro": "SELECT label_class, label_quality, quarantine_reason, count(*) AS n\n    FROM read_parquet('s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9/labelled/cic-ids-2018/**/*.parquet', union_by_name = true)\n    GROUP BY 1, 2, 3 ORDER BY 4 DESC"
+      "repro": ""
     },
     {
       "check_id": "xds.taxonomy_audit",

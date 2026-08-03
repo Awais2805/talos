@@ -4,7 +4,7 @@
     "dataset": "cic-ids-2017",
     "role": "train",
     "root": "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9",
-    "generated_utc": "2026-08-03T17:41:17+00:00",
+    "generated_utc": "2026-08-03T13:51:39+00:00",
     "manifest_sha": "d65451d1dd2e",
     "taxonomy_sha": "c1730fc59e18",
     "policy_version": 1,
@@ -48,7 +48,7 @@
       "tier": 0,
       "title": "the published CICFlowMeter artefacts are absent from our extraction",
       "status": "ok",
-      "seconds": 0.95,
+      "seconds": 0.96,
       "n_findings": 1
     },
     {
@@ -56,7 +56,7 @@
       "tier": 0,
       "title": "payload bytes never exceed the bytes seen on the wire",
       "status": "ok",
-      "seconds": 0.27,
+      "seconds": 0.28,
       "n_findings": 1
     },
     {
@@ -64,7 +64,7 @@
       "tier": 0,
       "title": "captures do not overlap in wall-clock time",
       "status": "ok",
-      "seconds": 0.12,
+      "seconds": 0.11,
       "n_findings": 0
     },
     {
@@ -72,7 +72,7 @@
       "tier": 0,
       "title": "identity and timing columns are never null",
       "status": "ok",
-      "seconds": 0.05,
+      "seconds": 0.06,
       "n_findings": 0
     },
     {
@@ -88,7 +88,7 @@
       "tier": 0,
       "title": "null features are reported separately from zero ones",
       "status": "ok",
-      "seconds": 0.15,
+      "seconds": 0.14,
       "n_findings": 4
     },
     {
@@ -104,7 +104,7 @@
       "tier": 0,
       "title": "re-running the labelling logic reproduces the labels in the lake",
       "status": "ok",
-      "seconds": 0.47,
+      "seconds": 0.48,
       "n_findings": 0
     },
     {
@@ -112,7 +112,7 @@
       "tier": 0,
       "title": "labelled row count matches its source",
       "status": "ok",
-      "seconds": 0.16,
+      "seconds": 0.17,
       "n_findings": 0
     },
     {
@@ -136,7 +136,7 @@
       "tier": 0,
       "title": "Zeek uids are unique within the dataset",
       "status": "ok",
-      "seconds": 0.11,
+      "seconds": 0.1,
       "n_findings": 0
     },
     {
@@ -168,7 +168,7 @@
       "tier": 1,
       "title": "attack traffic does not continue past the scheduled end",
       "status": "ok",
-      "seconds": 0.37,
+      "seconds": 0.4,
       "n_findings": 6
     },
     {
@@ -192,7 +192,7 @@
       "tier": 1,
       "title": "in-window traffic involves the declared attacker and victim",
       "status": "ok",
-      "seconds": 1.17,
+      "seconds": 1.22,
       "n_findings": 17
     },
     {
@@ -208,7 +208,7 @@
       "tier": 1,
       "title": "long-lived flows straddling a window boundary are labelled correctly",
       "status": "ok",
-      "seconds": 0.59,
+      "seconds": 0.62,
       "n_findings": 1
     },
     {
@@ -280,7 +280,7 @@
       "tier": 2,
       "title": "each attack's modal destination port matches its class",
       "status": "ok",
-      "seconds": 0.12,
+      "seconds": 0.06,
       "n_findings": 0
     },
     {
@@ -288,7 +288,7 @@
       "tier": 3,
       "title": "protocol-specific attacks left records in that protocol's log",
       "status": "ok",
-      "seconds": 1.35,
+      "seconds": 1.46,
       "n_findings": 0
     },
     {
@@ -296,7 +296,7 @@
       "tier": 3,
       "title": "brute_force windows carry authentication attempts",
       "status": "ok",
-      "seconds": 0.15,
+      "seconds": 0.17,
       "n_findings": 1
     },
     {
@@ -304,7 +304,7 @@
       "tier": 3,
       "title": "web_attack windows carry SQLi/XSS payloads in http URIs",
       "status": "ok",
-      "seconds": 0.35,
+      "seconds": 0.28,
       "n_findings": 2
     },
     {
@@ -312,7 +312,7 @@
       "tier": 3,
       "title": "attack flows the oracle marks `- Attempted`, by category",
       "status": "ok",
-      "seconds": 0.07,
+      "seconds": 0.03,
       "n_findings": 1
     },
     {
@@ -320,7 +320,7 @@
       "tier": 3,
       "title": "per-class agreement with the external oracle on overlapping matches",
       "status": "ok",
-      "seconds": 0.27,
+      "seconds": 0.12,
       "n_findings": 1
     },
     {
@@ -336,7 +336,7 @@
       "tier": 3,
       "title": "share of oracle matches whose originator disagrees with ours",
       "status": "ok",
-      "seconds": 0.04,
+      "seconds": 0.03,
       "n_findings": 1
     },
     {
@@ -344,7 +344,7 @@
       "tier": 3,
       "title": "flows we call an attack that the external oracle calls benign",
       "status": "ok",
-      "seconds": 0.26,
+      "seconds": 0.05,
       "n_findings": 1
     },
     {
@@ -360,7 +360,7 @@
       "tier": 4,
       "title": "identical flows never carry different classes",
       "status": "ok",
-      "seconds": 0.83,
+      "seconds": 0.9,
       "n_findings": 1
     },
     {
@@ -368,7 +368,7 @@
       "tier": 6,
       "title": "benign traffic is more alike across datasets than benign is to attack",
       "status": "ok",
-      "seconds": 0.03,
+      "seconds": 0.08,
       "n_findings": 1
     },
     {
@@ -543,11 +543,11 @@
           "portscan",
           "web_attack"
         ],
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {
         "known_wrong_windows": [
@@ -2799,8 +2799,8 @@
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.8",
-          "resp": "23.15.155.27",
+          "orig": "192.168.10.51",
+          "resp": "162.213.33.48",
           "flows": 30,
           "labelled": "benign"
         }
@@ -2872,13 +2872,13 @@
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.17",
+          "orig": "192.168.10.50",
           "resp": "192.168.10.3",
           "flows": 253,
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.50",
+          "orig": "192.168.10.17",
           "resp": "192.168.10.3",
           "flows": 253,
           "labelled": "benign"
@@ -3816,13 +3816,13 @@
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.8",
+          "orig": "192.168.10.15",
           "resp": "205.174.165.73",
           "flows": 149,
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.15",
+          "orig": "192.168.10.8",
           "resp": "205.174.165.73",
           "flows": 149,
           "labelled": "benign"
@@ -3937,13 +3937,13 @@
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.15",
+          "orig": "192.168.10.8",
           "resp": "205.174.165.73",
           "flows": 138,
           "labelled": "benign"
         },
         {
-          "orig": "192.168.10.8",
+          "orig": "192.168.10.15",
           "resp": "205.174.165.73",
           "flows": 138,
           "labelled": "benign"
@@ -4398,13 +4398,13 @@
         },
         {
           "orig": "192.168.10.51",
-          "resp": "192.229.163.97",
+          "resp": "162.213.33.50",
           "flows": 40,
           "labelled": "benign"
         },
         {
           "orig": "192.168.10.51",
-          "resp": "162.213.33.50",
+          "resp": "192.229.163.97",
           "flows": 40,
           "labelled": "benign"
         },
@@ -6746,28 +6746,6 @@
           "split": "dos x4, benign x2"
         },
         {
-          "id.orig_p": 58662,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 6,
-          "minority_flows": 2,
-          "split": "dos x4, benign x2"
-        },
-        {
           "id.orig_p": 58640,
           "id.resp_p": 80,
           "proto": "tcp",
@@ -6790,7 +6768,7 @@
           "split": "dos x4, benign x2"
         },
         {
-          "id.orig_p": 58512,
+          "id.orig_p": 58662,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -6807,9 +6785,9 @@
           "resp_pkts": 0,
           "resp_ip_bytes": 0,
           "ip_proto": 6,
-          "flows": 5,
+          "flows": 6,
           "minority_flows": 2,
-          "split": "dos x3, benign x2"
+          "split": "dos x4, benign x2"
         },
         {
           "id.orig_p": 58418,
@@ -6834,7 +6812,7 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58646,
+          "id.orig_p": 58618,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -6856,7 +6834,51 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58620,
+          "id.orig_p": 58650,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58496,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58450,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -6900,139 +6922,7 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58666,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58420,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58452,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58616,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58652,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58644,
-          "id.resp_p": 80,
-          "proto": "tcp",
-          "service": null,
-          "duration": null,
-          "orig_bytes": null,
-          "resp_bytes": null,
-          "conn_state": "S0",
-          "local_orig": true,
-          "local_resp": true,
-          "missed_bytes": 0,
-          "history": "S",
-          "orig_pkts": 1,
-          "orig_ip_bytes": 60,
-          "resp_pkts": 0,
-          "resp_ip_bytes": 0,
-          "ip_proto": 6,
-          "flows": 5,
-          "minority_flows": 2,
-          "split": "dos x3, benign x2"
-        },
-        {
-          "id.orig_p": 58664,
+          "id.orig_p": 58454,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -7076,7 +6966,7 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58454,
+          "id.orig_p": 58664,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -7098,7 +6988,95 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58622,
+          "id.orig_p": 58620,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58442,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58512,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58652,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58646,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -7142,7 +7120,29 @@
           "split": "dos x3, benign x2"
         },
         {
-          "id.orig_p": 58450,
+          "id.orig_p": 58616,
+          "id.resp_p": 80,
+          "proto": "tcp",
+          "service": null,
+          "duration": null,
+          "orig_bytes": null,
+          "resp_bytes": null,
+          "conn_state": "S0",
+          "local_orig": true,
+          "local_resp": true,
+          "missed_bytes": 0,
+          "history": "S",
+          "orig_pkts": 1,
+          "orig_ip_bytes": 60,
+          "resp_pkts": 0,
+          "resp_ip_bytes": 0,
+          "ip_proto": 6,
+          "flows": 5,
+          "minority_flows": 2,
+          "split": "dos x3, benign x2"
+        },
+        {
+          "id.orig_p": 58644,
           "id.resp_p": 80,
           "proto": "tcp",
           "service": null,
@@ -7265,11 +7265,11 @@
         "cat_4_rows": 75,
         "cat_5_rows": 138,
         "cat_6_rows": 13952,
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {},
       "evidence": [
@@ -7934,112 +7934,112 @@
           "records": 2
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('3FAV4J4Q4J8ATJT7KOP2F99OVOGGT0V3ZZMYEOEZPAUJE49OYE');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('4IX6WF7YU8XE4XV7F78KR868GYBVZ8SLVEBA2WMLHD1NKP7ZVK');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('120502QR88FTCNKDPZY67ZDCHL380K01YSAJGZFIQFD92RGDLF');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('2PVB2IUCZ3QPH7ZOSQV3H9S6Z6U292NH9569T3LT7WWEUGBF6Z');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('WNRON60D3UVZGDRBQ9AP9IYXRAHGNR87XNEOS1TUC437UAW3ZX');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('C68CQEEJGR90P7FOGIW5UNLNAY5VUFY5HJ4H7HF044FEIYW1NL');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('2QSW4M9XQEEOYEUD3VYRP48GO6PHFIIT8RIFN918AMWU860GCU');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('IM5P8ZBU13AX6LYH55GTDSW39ARPDUMODWYL3W41N9LQALMZFR');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('37YAZFQCOJXQ6HTVN3WMDYOJ797I1T9F870ZVDH7VMX8S30SUH');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('SJBLOE5DZ6NAIQS6XZV5VXPATIQKSKUNWJYUHQEY7SZ3MGIK1T');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('NPDCLLYPJA38RPBBQRXVV1AC1I1D3V2Q3LLE66OB7AG46XLQNR');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('BCQJGHIING9PC5BAUYQGOE1I84ICAGPV7OEA54ZL0GQ2KFP1WC');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('8EWH0960C13F1WU9IRJPRD3B0AP69YTF3E0B5RBMNGAFLK9RWB');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('AENPT32Z8RRSHAI1CJ1I3CH2EOSCM04KKL0LL49C6ML79RT606');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('PU43E637KCMVZVDPMXDMO3ZXQZVOGKR3QA9MBAGA5TB45NG1BM');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('9PRBGN0KXTIRDJWTY9DKY8IVZKIUDMTHH8PCBZ6PM37OLPFVG4');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('KPSC1EDEBOSD0SPO5ENV83IL4JF3WVIXMU6APA32NDKIYPIVO2');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('NSBTKU2T7B7N77J81BLE9B7W8RNRCTNUXALOU8C68CHBQDKP8U');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('43JI30CAUN165JB8RDWN404VACGB5P7IJTU24KK6NWBIH4WIDC');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('3KWWDW4B44544NIEAWFCYFTHVISQDKHHVREVU9TPMOX3UJ61DI');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('N2M8V1DGIVQE0OGMV822N72NKYV4EOUN6L0X1KTFUWYE01Q77P');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('7OZM52KKW693OLFH23KGTENQIDT7FKNTEPYC0XTQ6JG2ATC93X');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('O0STHX3FO9L4SWMBWLLLY3E7TQL98V4YDHUWR821WMN5EQ0022');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('N1ELG1BL6E288XWJZ5A6XNQDE80H2BOSYXJKAMG4S658BPGU1P');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('EDJGU460DWXQ7ZYW18N1O42PWYK3TGJD5JUGHNXCXFEX34WMHE');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('W0JAYWI3RBSOIVX82EOK1WGOWJ31NZWER006I5PYJU1B1TILPQ');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('21SOX00WTT5QMZF77MSQTRUQEZKY4E9LFS8PC2M9KFEAOAXHSR');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('HQT3YZOYOOT5KF7XZQWL4RIRM2W04A5ILWCXE38P3FRUVSNVMD');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('WDFO6A9LFMN1DSRDJIYN1FWAXYOPCRHO896TKSV4WONVLL65R1');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('APCXYANGU0BQA9K7NBQHVK1TXM48YZ50IWK3P85XL0T0WDWY12');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
           "records": 1
         },
         {
-          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('HRHHVOGGRDBRO0EZYM9BVAST5YZ2VLB1AXY05AGHIFOVLB3ZRL');console.log(do",
+          "sample_uri": "/dv/vulnerabilities/xss_r/?name=<script>console.log('1ADWZDFFR3O34XHMIZ0WSXVT4AHU2QUBQVNY118FEQIESFDMTI');console.log(do",
           "attack": "WebAttack-XSS",
           "method": "GET",
           "status_code": 200,
@@ -8058,8 +8058,8 @@
       "detail": "Per canonical class, the share of time-overlapping matches on which an independent manual re-labelling assigns the same class we do. Restricted to matches where both sides agree which end originated the connection, so the comparison is of two readings of the same traffic rather than of two flow-construction conventions. Oracle labels with no mapping into our taxonomy are excluded from the denominator, never counted as agreement.",
       "metrics": {
         "flows_compared": 2107787,
-        "flows_agreeing": 2093815,
-        "agreement_rate": 0.993371247,
+        "flows_agreeing": 2093832,
+        "agreement_rate": 0.993379312,
         "agreement_min": 0.9,
         "agreement_critical": 0.5,
         "min_flows_for_verdict": 100,
@@ -8067,7 +8067,7 @@
         "classes_below_floor": 0,
         "excluded_unmapped": 0,
         "rate_benign": 0.994570706,
-        "rate_portscan": 0.976991316,
+        "rate_portscan": 0.977063751,
         "rate_dos": 0.999989486,
         "rate_ddos": 1.0,
         "rate_brute_force": 1.0,
@@ -8075,11 +8075,11 @@
         "rate_botnet": 1.0,
         "rate_infiltration": 1.0,
         "rate_heartbleed": 1.0,
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {},
       "evidence": [
@@ -8095,10 +8095,10 @@
         {
           "label_class": "portscan",
           "decided": 234694,
-          "agree": 229294,
+          "agree": 229311,
           "unmapped": 0,
           "unanimous": 234340,
-          "agreement_rate": 0.976991316,
+          "agreement_rate": 0.977063751,
           "unanimous_share": 0.998491653
         },
         {
@@ -8173,7 +8173,7 @@
         {
           "ours": "portscan",
           "oracle": "portscan",
-          "flows": 229294,
+          "flows": 229311,
           "mean_purity": 0.9997
         },
         {
@@ -8197,8 +8197,8 @@
         {
           "ours": "portscan",
           "oracle": "benign",
-          "flows": 5400,
-          "mean_purity": 0.9819
+          "flows": 5383,
+          "mean_purity": 0.9835
         },
         {
           "ours": "benign",
@@ -8301,8 +8301,8 @@
             "benign",
             "portscan"
           ],
-          "agree": 64173,
-          "agreement_rate": 0.936367351
+          "agree": 64176,
+          "agreement_rate": 0.936411124
         },
         {
           "region": "Infiltration Cool Disk - MAC",
@@ -8320,8 +8320,8 @@
             "infiltration",
             "portscan"
           ],
-          "agree": 11424,
-          "agreement_rate": 0.963400236
+          "agree": 11438,
+          "agreement_rate": 0.964580874
         },
         {
           "region": "SQL Injection early start",
@@ -8374,17 +8374,17 @@
         "coverage_min": 0.6,
         "coverage_critical": 0.25,
         "flows_direction_agrees": 2107787,
-        "oracle_rows_total": 2099976,
-        "oracle_artefact_rows": 1510,
-        "oracle_rows_matched": 2098462,
-        "oracle_rows_unmatched": 4,
-        "clock_delta_seconds": 0.0,
+        "oracle_rows_total": null,
+        "oracle_artefact_rows": null,
+        "oracle_rows_matched": null,
+        "oracle_rows_unmatched": null,
+        "clock_delta_seconds": null,
         "classes_below_floor": 0,
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {},
       "evidence": [
@@ -8477,10 +8477,6 @@
           "oracle_rows": 11,
           "max_oracle_rows_per_flow": 11,
           "mean_oracle_rows_per_flow": 11.0
-        },
-        {
-          "artefact_kind": "protocol_zero",
-          "rows": 1510
         }
       ],
       "evidence_truncated": 0,
@@ -8503,11 +8499,11 @@
         "oracle_row_reversal_rate": 0.003078212,
         "reversal_warn": 0.2,
         "groups_over_warn": 0,
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {},
       "evidence": [
@@ -8632,23 +8628,23 @@
       "dataset": "cic-ids-2017",
       "severity": "INFO",
       "severity_rank": 10,
-      "title": "5,402 attack flow(s) are benign according to the external oracle (1.02% of matched attack flows)",
+      "title": "5,385 attack flow(s) are benign according to the external oracle (1.02% of matched attack flows)",
       "detail": "Our labels are a time window and a pair of addresses, so a window wider than the attack collects whatever else those hosts were doing. These flows are in an attack class and the independent re-labelling reads them as ordinary traffic. They inflate the class and credit any detector evaluated on them with finding something that was not there.",
       "metrics": {
         "attack_flows": 533336,
         "attack_flows_matched": 529313,
-        "called_benign_pure": 5402,
+        "called_benign_pure": 5385,
         "called_benign_with_attempted_rows": 0,
-        "false_rate_of_matched": 0.010205682,
+        "false_rate_of_matched": 0.010173565,
         "false_rate_warn": 0.05,
         "false_rate_critical": 0.25,
         "classes_over_warn": [],
         "flows_in_known_wrong_windows": 0,
-        "oracle_source": "CICIDS2017_improved.zip",
-        "oracle_url": "https://intrusion-detection.distrinet-research.be/CNS2022/Datasets/CICIDS2017_improved.zip",
-        "oracle_licence": "not stated -- the source publishes no licence, no terms of use and no redistribution clause; treat as all rights reserved",
-        "oracle_retrieved_utc": "2026-08-03T06:57:20+00:00",
-        "oracle_bytes_match": true
+        "oracle_source": null,
+        "oracle_url": null,
+        "oracle_licence": null,
+        "oracle_retrieved_utc": null,
+        "oracle_bytes_match": null
       },
       "scope": {
         "known_wrong_windows": []
@@ -8658,9 +8654,9 @@
           "label_class": "portscan",
           "flows": 238039,
           "matched": 234694,
-          "called_benign": 5400,
+          "called_benign": 5383,
           "with_attempted_rows": 0,
-          "false_rate_of_matched": 0.023008684
+          "false_rate_of_matched": 0.022936249
         },
         {
           "label_class": "dos",
@@ -8674,11 +8670,11 @@
           "label_class": "portscan",
           "attack": "Infiltration-PortScan",
           "capture": "Thursday-WorkingHours",
-          "flows": 4787,
+          "flows": 4770,
           "with_attempted_oracle_rows": 0,
-          "pure_benign": 4787,
+          "pure_benign": 4770,
           "window_utc": "2017-07-06 18:04:20Z - 2017-07-06 18:45:50Z",
-          "mean_purity": 0.9796,
+          "mean_purity": 0.9813,
           "example_uid": "C01dQH1YRJIEYKRZOj"
         },
         {
