@@ -114,9 +114,12 @@ ARCHIVE="$ROOT/reports/_archive_$STAMP"
 bold "▶ 01_clean — moving stale artefacts to ${ARCHIVE#$ROOT/}"
 mkdir -p "$ARCHIVE"
 moved=0
-for f in reports/labelling_*.json \
-         reports/validation/*.json reports/validation/*.html \
-         reports/validation/*.parquet; do
+# Only archive the labelling reports if this run is going to regenerate them.
+# Otherwise a SKIP_LABEL=1 resume moves aside evidence it will never rebuild,
+# and the final summary reports labels it cannot see as missing.
+CLEAN_TARGETS="reports/validation/*.json reports/validation/*.html reports/validation/*.parquet"
+[ "${SKIP_LABEL:-0}" != "1" ] && CLEAN_TARGETS="reports/labelling_*.json $CLEAN_TARGETS"
+for f in $CLEAN_TARGETS; do
     [ -e "$f" ] || continue
     mkdir -p "$ARCHIVE/$(dirname "${f#reports/}")"
     mv "$f" "$ARCHIVE/${f#reports/}" && moved=$((moved+1))

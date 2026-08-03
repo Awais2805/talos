@@ -80,6 +80,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.common.lake import Lake                          # noqa: E402
+from src.label_validation.core.paths import portable      # noqa: E402
 
 REPORTS = ROOT / "reports" / "validation"
 CACHE = ROOT / "data" / "oracle"
@@ -741,7 +742,7 @@ def _report(lake, dataset, cache, staged, glob, days, spans, tol, lookback,
             "dataset": dataset, "generated_utc": _now(), "labelled_glob": glob,
             "tolerance_seconds": tol, "lookback_seconds": lookback,
             "matched_only": matched_only,
-            "uid_parquet": _paths.portable(out_parquet),
+            "uid_parquet": portable(out_parquet),
             "uid_parquet_bytes": out_parquet.stat().st_size
             if out_parquet.exists() else None,
         },
