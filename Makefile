@@ -16,7 +16,7 @@ EDA_FLAGS ?= --temp-dir $(DUCK_TMP) --threads 4 --memory-limit 8GB
 # diverge — the deep tiers need more temp than a profile pass ever does.
 VAL_FLAGS ?= --temp-dir $(DUCK_TMP) --threads 4 --memory-limit 8GB
 
-.PHONY: help extract convert discover label label-all \
+.PHONY: help extract convert discover label label-all run-all \
         eda eda-all eda-smoke eda-compare eda-render \
         validate validate-all validate-deep validate-cross validate-render validate-gate \
         validate-sample validate-score oracle-fetch oracle-stage oracle-join
@@ -83,10 +83,17 @@ validate-all:    ## validate every dataset, then rebuild all reports once at the
 	$(PY) src/label_validation/report/render.py
 	@echo "reports -> reports/validation/index.html — now decide: make validate-gate"
 
-validate-deep:   ## tier 4: contradictions provable from the labels alone (DATASET=…)
+# runner.py rewrites <dataset>.json wholesale — it does not merge tiers. A
+# tier-4-only run therefore does not *add* tier 4 to the report, it replaces a
+# 44-check report with a 1-check one. So the deep target runs every tier in a
+# single invocation; there is no safe way to bolt one on afterwards.
+validate-deep:   ## every tier (0-4, 6) in one report — tier 4 + cross-dataset (DATASET=…)
 	@mkdir -p $(DUCK_TMP)
-	@$(PY) src/label_validation/runner.py --dataset $(DATASET) --tier 4 $(VAL_FLAGS); s=$$?; \
+	@$(PY) src/label_validation/runner.py --dataset $(DATASET) --tier 0,1,2,3,4,6 $(VAL_FLAGS); s=$$?; \
 		$(PY) src/label_validation/report/render.py; exit $$s
+
+run-all:         ## clean end-to-end: label + oracle + every tier + gate, all logged
+	bash scripts/run_label_validation.sh
 
 validate-cross:  ## tier 6: cross-dataset class semantics from existing JSON (no lake access)
 	@$(PY) src/label_validation/runner.py --dataset $(DATASET) --tier 6; s=$$?; \
