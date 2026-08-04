@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Shared DuckDB-over-S3 connection for anything that reads the lake.
 
-Lifted out of label_flows.py so the EDA stage does not carry a third copy of
-the credential dance. Behaviour is unchanged: a scan of the 2019 conn zone
-outlives a one-hour STS session, so the S3 secret is re-minted from the AWS
-CLI before every statement rather than once at connect time.
+Extracted from the original labelling stage (since removed) so that no reader
+of the lake carries its own copy of the credential dance. The behaviour that
+matters: a scan of the 2019 conn zone outlives a one-hour STS session, so the
+S3 secret is re-minted from the AWS CLI before every statement rather than
+once at connect time.
 """
 
 import subprocess
