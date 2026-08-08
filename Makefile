@@ -20,8 +20,10 @@ EDA_FLAGS ?= --temp-dir $(DUCK_TMP) --threads 4 --memory-limit 8GB
 # rebuilt from scratch. The post-mortem on what was removed and why is in
 # docs/label_pipeline_audit.md -- read it before re-adding targets here.
 #
-# Nothing downstream of `discover` exists yet. The lake still holds raw,
-# extracted and parquet zones; the labelled zone was cleared with them.
+# The EDA targets below are the only stage downstream of `discover`. Nothing
+# downstream of EDA (map/merge/clean/encode/split/train) exists yet. The lake
+# still holds the raw, extracted and parquet zones; the labelled zone was
+# cleared when the labelling module was removed.
 # ---------------------------------------------------------------------------
 
 .PHONY: help extract convert discover \

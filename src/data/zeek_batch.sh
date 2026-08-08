@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Talos — Zeek feature extraction (batch)
 # Reads raw pcap archives from S3, runs Zeek per split (in parallel),
-# uploads JSON logs to processed/zeek/. Resumable via _DONE markers; disk-flat.
+# uploads JSON logs to the lake's extracted zone ($PROC, default "extracted")
+# as $PROC/<dataset>/<capture>/. Resumable via _DONE markers; disk-flat.
 #
 # Usage:  PARALLEL=6 ./zeek_batch.sh 2>&1 | tee ~/zeek_batch.log
 set -uo pipefail

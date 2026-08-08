@@ -1,6 +1,7 @@
 # Talos — central configuration
-# Values consolidated from the pipeline scripts; scripts still carry their own
-# defaults until they are wired to read this file.
+# Values consolidated from the pipeline scripts. The EDA stage reads this file
+# (src/eda/profile_dataset.py --config); extraction, conversion and discovery
+# still carry their own hardcoded defaults.
 
 aws:
   region: eu-north-1
