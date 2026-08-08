@@ -82,7 +82,6 @@ Layer 2 is designed, not built. It is gated behind a defensible level-2 result.
 Five subsystems, left to right, with a feedback loop from deployment back into data engineering and three cross-cutting services alongside.
 
 ```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 20, 'rankSpacing': 80, 'padding': 4, 'subGraphTitleMargin': {'top': 0, 'bottom': 0}}, 'themeVariables': {'fontSize': '12px'}}}%%
 flowchart LR
   subgraph DS["Data Sources"]
     A1[Public IDS datasets]
