@@ -81,15 +81,18 @@ Layer 2 is designed, not built. It is gated behind a defensible level-2 result.
 
 Five subsystems, left to right, with a feedback loop from deployment back into data engineering and three cross-cutting services alongside.
 
+<!-- [8] was flowchart LR with node-level cross-subgraph edges, which forced a very wide, short diagram that GitHub shrank to fit. Now TB with `direction LR` per subgraph (swimlanes). Edges are subgraph-to-subgraph on purpose: node-level edges crossing a boundary make mermaid ignore the inner `direction`. -->
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph DS["Data Sources"]
+    direction LR
     A1[Public IDS datasets]
     A2[Network emulator captures]
     A3[Honeypot captures]
   end
 
   subgraph DE["Data Engineering"]
+    direction LR
     B1[Ingestion] --> B2[Zeek extraction]
     B2 --> B3[Schema discovery]
     B3 --> B4[Labelling]
@@ -98,6 +101,7 @@ flowchart LR
   end
 
   subgraph ML["ML Pipeline"]
+    direction LR
     C1[Multi-domain<br/>dataset construction] --> C2[Training]
     C2 --> C3[Cross-domain evaluation]
     C3 --> C4[Explainability<br/>& feature analysis]
@@ -105,30 +109,29 @@ flowchart LR
   end
 
   subgraph DET["Detection Engine"]
+    direction LR
     D1[Flow classification<br/><i>layer 1</i>] --> D3[Decision fusion]
     D2[Unknown behaviour<br/><i>layer 2</i>] --> D3
     D3 --> D4[Alerting]
   end
 
   subgraph DEP["Deployment & Continual Learning"]
+    direction LR
     E1[Live monitoring] --> E2[Analyst feedback]
     E2 --> E3[Domain-specific collection]
     E3 --> E4[Retraining]
   end
 
-  A1 --> B1
-  A2 --> B1
-  A3 --> B1
-  B6 --> C1
-  C5 --> D1
-  C5 --> D2
-  D4 --> E1
-  E3 -. domain captures + feedback .-> B1
+  DS --> DE
+  DE --> ML
+  ML --> DET
+  DET --> DEP
+  DEP -. domain captures + feedback .-> DE
 
-  X["Cross-cutting: configuration + <br/>experiment tracking + reporting"]
-  X -.-> B1
-  X -.-> C1
-  X -.-> D1
+  X["Cross-cutting: configuration +<br/>experiment tracking + reporting"]
+  X -.-> DE
+  X -.-> ML
+  X -.-> DET
 ```
 
 Source XML diagrams live in [`docs/diagrams/`](docs/diagrams)
