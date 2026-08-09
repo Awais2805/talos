@@ -1,13 +1,13 @@
 # Talos
 
-**A research platform for cross-domain network intrusion detection.**
+**A research project for cross-domain network intrusion detection.**
 
 Talos exists to answer one question: _does training a model on domain diverse network flows increase and reinforce cross-domain generalisation given consistent features format across datasets?_
 
 **Premise**
-A gradient-boosted tree fitted to CIC-IDS 2018 will report near-perfect precision and recall on a held-out split of CIC-IDS 2018, and that number says almost nothing about what happens when the same model is pointed at a different network environment. Talos is built to measure and reinforce a NIDS detection engine for cross-domain network flow classification.
+A gradient-boosted tree fitted to CIC-IDS 2018 will report near-perfect precision and recall on a held-out split of CIC-IDS 2018, and that number says almost nothing about what happens when the same model is pointed at a different network environment. Talos is built to measure and reinforce a NIDS's detection engine for cross-domain network flow classification.
 
-> **Status:** [Here](#status)
+> **Status:** [here](#status)
 
 ---
 
@@ -39,43 +39,43 @@ Network traffic is domain-unique. Host counts, topology, service mix, background
 
 Two results from the predecessor work (IPS-XGBoost) motivated this repository:
 
-1. A model trained on CIC-IDS 2018 **collapsed entirely** when evaluated against traffic captured from a Docker/netem local emulator — despite both sides being extracted with CICFlowMeter into a matching schema with matching encoding. Identical features, identical pipeline, unusable transfer.
+1. A model trained on CIC-IDS 2018 **collapsed entirely** when evaluated against traffic captured from a Docker/netem local emulator — despite both sides being extracted with CICFlowMeter into a matching schema with matching encoding. Identical features, identical pipeline but ultimately resulted in an unusable transfer.
 2. A model trained on CIC-IDS 2017 **and** 2018 together held ROC 0.78–0.89 against unseen CIC-DDoS 2019. Degraded, but not collapsed.
 
 The difference between those two outcomes is what this project sets out to test: **that domain diversity during the training phase reinforces domain-shift resilience at inference time.** Talos is built to measure how much, under what conditions, and with what features.
 
-There is no free lunch here. A model that survives domain shift is not a model that can classify any network flow after training alone (pre-training and fine tuning is required for deployment success). It is a model that is able to learn the underlying attack behaviours and classify network flows where the features are extracted consistently (same methods and tools) across training datasets and mean the same thing in every network.
+There is no free lunch here. A model that survives domain shift is not a model that can classify any network flow after training alone (pre-training and fine tuning is required for deployment success). It is a model that is able to learn the underlying attack behaviours and classify network flows where the features are extracted consistently (same methods and tools) across training datasets.
 
 ## The detection ladder
 
 A useful NIDS has to clear four levels, in increasing order of difficulty.
 
-| Levels | Attack    | Environment | Approach                                                                     |
-| ------ | --------- | ----------- | ---------------------------------------------------------------------------- |
-| 1      | Known     | Known       | Supervised tree model, in-domain. Solved - provides a baseline.              |
-| 2      | Known     | **Novel**   | Multi-domain training + domain-invariant feature selection. **We are here.** |
-| 3      | **Novel** | Known       | Layer-2 anomaly model over flows + layer-1 probabilities.                    |
-| 4      | **Novel** | **Novel**   | The real golden goal. Lower levels need to work first.                       |
+| Levels | Attack    | Environment | Approach                                                                         |
+| ------ | --------- | ----------- | -------------------------------------------------------------------------------- |
+| 1      | Known     | Known       | Supervised tree model, in-domain. Solved - provides a baseline.                  |
+| 2      | Known     | **Novel**   | Multi-domain training + domain-invariant feature selection. **We are here.**     |
+| 3      | **Novel** | Known       | Layer-2 NN anomaly model that inspects flows + passing it layer-1 probabilities. |
+| 4      | **Novel** | **Novel**   | The real golden goal. Lower levels need to work first.                           |
 
-Levels 1 and 2 will use XGBoost. Levels 3 and 4 belong to a second-layer NN that consumes both the raw flow features **and** the layer-1 classifier's output probabilities, so it can reason about _"layer 1 reports a benign flow but nothing in this network has ever looked like this..."_
+Levels 1 and 2 will use XGBoost. Levels 3 and 4 belong to a second-layer NN that consumes both the raw flow features **and** the layer-1 classifier's output probabilities, so it can reason about things such as:_"layer 1 reports a benign flow but nothing in this network has ever looked like this..."_
 
 Layer 2 is designed, not built. It is gated behind a defensible level-2 result.
 
 ## Status
 
-| Stage                                            | State                    | Notes                                                    |
-| ------------------------------------------------ | ------------------------ | -------------------------------------------------------- |
-| Raw pcap ingestion → S3                          | ✅ Working                | 3 public datasets archived immutably                     |
-| Zeek extraction (batch, resumable)               | ✅ Working                | `src/data/zeek_batch.sh`, Dockerised Zeek 8.2.1          |
-| Zeek logs → Parquet (1:1 tree mirror)            | ✅ Working                | `src/data/to_parquet.py`, streaming, memory-safe         |
-| Lake schema discovery / drift check              | ✅ Working                | `src/preprocess/lake_feature_discovery.py`, footers only |
-| Statistical profiling + cross-dataset comparison | ✅ Working                | `src/eda/`, reports committed; reads the labelled zone   |
-| **Ground-truth labelling**                       | ❌ **Removed 2026-08-04** | v1 was not trustworthy; being rebuilt (see below)        |
-| Canonical `mapped` zone                          | ⬜ Not started            | Blocked on labelling                                     |
-| Feature registry / schema lock                   | ⬜ Designed only          | Methodology settled, no code                             |
-| Training + cross-domain evaluation               | ⬜ Not started            | Blocked on canonical zone                                |
-| Layer-2 anomaly model                            | ⬜ Designed only          | Gated behind level 2                                     |
-| Detection engine / deployment                    | ⬜ Not started            | —                                                        |
+| Stage                                            | State           | Notes                                                    |
+| ------------------------------------------------ | --------------- | -------------------------------------------------------- |
+| Raw pcap ingestion → S3                         | ✅ Working       | 3 public datasets archived immutably                     |
+| Zeek extraction (batch, resumable)               | ✅ Working       | `src/data/zeek_batch.sh`, Dockerised Zeek 8.2.1          |
+| Zeek logs → Parquet (1:1 tree mirror)            | ✅ Working       | `src/data/to_parquet.py`, streaming, memory-safe         |
+| Lake schema discovery / drift check              | ✅ Working       | `src/preprocess/lake_feature_discovery.py`, footers only |
+| Statistical profiling + cross-dataset comparison | ✅ Working       | `src/eda/`, reports committed; reads the labelled zone   |
+| **Labelling module**                             | ⏳ In Progress   | v1 was not trustworthy - being rebuilt (see below)      |
+| Canonical `mapped` zone                          | ⬜ Not started   | Blocked on labelling                                     |
+| Feature registry / schema lock                   | ⬜ Designed only | Methodology settled, no code                             |
+| Training + cross-domain evaluation               | ⬜ Not started   | Blocked on canonical zone                                |
+| Layer-2 anomaly model                            | ⬜ Designed only | Gated behind level 2                                     |
+| Detection engine / deployment                    | ⬜ Not started   | —                                                        |
 
 ## Architecture
 
@@ -131,8 +131,6 @@ flowchart LR
   X -.-> D1
 ```
 
-Schema discovery runs on the parquet zone before labels exist; statistical profiling runs after labelling, because every statistic it produces is grouped by label class.
-
 Source XML diagrams live in [`docs/diagrams/`](docs/diagrams)
 
 Note: **every stage reads zone _n_ and writes zone _n+1_, and never mutates its input.** Raw pcap archives are immutable. That is what makes a provenance achievable.
@@ -146,12 +144,12 @@ Amazon S3, five zones. Configured centrally in [`config.yml`](config.yml).
 | ① Raw       | `{dataset}/pcaps` | Original pcap archives, immutable                       |
 | ② Extracted | `extracted/`      | Zeek NDJSON logs, per dataset, dated tree preserved     |
 | ③ Parquet   | `parquets/`       | One parquet per source `.log`, same tree, no flattening |
-| ④ Labelled  | `labelled/`       | conn flows + ground truth — _cleared 2026-08-04, being rebuilt_ |
+| ④ Labelled  | `labelled/`       | conn flows + ground truth                               |
 | ⑤ Canonical | `mapped/`         | Registry-governed, train-ready                          |
 
 ## Data sources and dataset roles
 
-Every dataset carries a **role** in `config.yml`, and the role is enforced, not advisory.
+Every dataset carries a **role** in `config.yml` which is enforced
 
 | Dataset       | Role      | conn flows | Classes present                                                                        |
 | ------------- | --------- | ---------: | -------------------------------------------------------------------------------------- |
@@ -159,25 +157,26 @@ Every dataset carries a **role** in `config.yml`, and the role is enforced, not 
 | CIC-IDS 2018  | `train`   | 62,341,777 | benign, dos, ddos, brute_force, botnet, web_attack, infiltration                       |
 | CIC-DDoS 2019 | `holdout` | 72,533,839 | ddos, benign                                                                           |
 
-2019's benign class is roughly 98% unlabelled attack traffic — only about 110k flows are genuinely benign — which is why false-positive rate is only ever measured on 2017/2018.
+(2019's benign class is roughly 98% unlabelled attack traffic — only about 110k flows are genuinely benign — which is why it is used as a hold-out test set)
 
 ### Planned sources
 
 - **Network Emulator** - hosted on an EC2, similar to the CIC-IDS 2018 approach. Planned build post success on existing datasets.
-- **Honeypot** - live internet-facing capture. Real adversary behaviour, no synthetic scheduling artefacts, but labelling is a genuinely open problem.
+- **Honeypot** - live internet-facing capture. Real adversary behaviour, no synthetic scheduling artefacts,.
 
 ## The EDA contract
 
 The EDA process creates profiles for each dataset that record stats like feature expressions, transforms, and fixed histogram bin edges and more.
-`compare.py` **refuses to compare profiles measured on a different ruler** — it checks the per-feature transform, bin edges and expression that each profile carries, and names the offending feature. It deliberately does not gate on the spec file's hash, because a hash also moves when a comment changes and would force a needless re-scan.
 
-The profiler stores a **vast array of statistics:** counts, sums, sums of squares, pairwise sums of products, and fixed-grid histograms, all grouped by `label_class`. Because those are additive, `compare.py` reconstructs the exact pooled mean, variance and correlation matrix of _every other dataset in the pool_ from the JSON alone. The practical consequence is that **adding a fourth dataset costs one scan, not four.** Regenerating every comparison report is fast.
+`compare.py` **refuses to compare profiles measured on a different ruler** — it checks the per-feature transform, bin edges and expression that each profile carries, and names the offending feature. Histograms built on different bin edges are not comparable, so it errors instead of guessing.
+
+The profiler stores a **vast array of statistics:** counts, sums, sums of squares, pairwise sums of products, and fixed-grid histograms, all grouped by `label_class`. Because these are additive, `compare.py` reconstructs the exact pooled mean, variance and correlation matrix of _every other dataset in the pool_ from the JSON profile alone. The practical consequence is that **adding another dataset costs one scan, preventing the need to scan all the datasets in the S3 lake.** Regenerating every comparison report is fast.
 
 Current spec: **v2**, `sha a6832d31d1c2`, 16 numeric and 10 categorical features over the conn zone (plus `label_binary`, carried as a numeric only so the correlation matrix includes the point-biserial label row).
 
 ## Labelling: the hard problem
 
-The v1 labelling stage was built, ran to completion, and was **deleted**. It worked in the sense that it produced labels — it did not work in the sense that those labels were not reliable, and the cause was largely upstream.
+The v1 labelling stage was built, ran to completion, and was **deleted**. It worked in the sense that it produced labels — it did not work in the sense that those labels were not reliable, and the cause of the problem was largely upstream and amplified downstream.
 
 ### Why timing injection is not enough
 
@@ -187,21 +186,21 @@ The naive approach — mark every flow whose timestamp falls inside a published 
 
 1. No automated method reliably labels flows without human audit.
 2. No labelling method transfers unchanged across networks — the transfer failure is domain shift, not labelling error.
-3. Accurate labels are achievable _in principle_, at the cost of manual, non-scalable expert correction. It has been done on CIC. It does not scale to a honeypot.
+3. Accurate labels are achievable _in principle_, at the cost of manual, non-scalable expert correction. It has been done on CIC. 
 
 ### The new direction: behavioural pseudo-labelling with noise modelling
 
-Rather than trying to make rules that are more precise or broad, the rebuilt module labels flows by **behaviour** and then **models the resulting label noise explicitly** instead of trusting it. The method is adapted from Eslami & Hamouda, _Network Traffic Classification Using Self-Supervised Learning and Confident Learning_ ([arXiv:2509.23522](https://arxiv.org/abs/2509.23522)). Note that the paper's own task is application classification (YouTube, Skype, Google Docs) under a closed-world assumption, so porting it to attack/benign labelling is an adaptation, not a reimplementation.
+Rather than trying to make rules that are more precise, the rebuilt module labels flows by **behaviour** and then **models the resulting label noise explicitly** instead of trusting it. The method is adapted from Eslami & Hamouda, _Network Traffic Classification Using Self-Supervised Learning and Confident Learning_ ([arXiv:2509.23522](https://arxiv.org/abs/2509.23522)). Note that the paper's own task is application classification (YouTube, Skype, Google Docs) under a closed-world assumption, so porting it to attack/benign labelling is an adaptation.
 
 **Inputs.** After extraction and selection, two pools:
 
-- `D_s` — small, labelled and audited. Used for fine-tuning and model selection. (The paper curates this with DPI, heuristics and manual checks, Talos has no payload, so it has to come from manual audit or verified manifests.)
+- `D_s` — small, labelled and audited. Used for fine-tuning and model selection. (labels must be hand-applied from manual auditing or applied following verified manifest)
 - `D_l` — large, unlabelled. The thing to be labelled with the final labelling classifier.
 
 **Stage 1 — SSL pretraining on `D_l`.** Two complementary branches:
 
-- **Autoencoder** with constraint-consistent reconstruction. MSE on continuous features, cross-entropy on categoricals, plus a residual penalty enforcing relations that hold in real flows (`rate = bytes / duration`, `length = payload + header`). Reconstructing physically plausible tuples stabilises the latent space.
-- **TabCL** — tabular contrastive learning. Two-view NT-Xent with class-conditioned feature replacement, a constraint-preserving projection so augmented views remain valid flows, and dual projection heads with separate configurations for continuous vs categorical slices. Its class-conditioned replacement is bootstrapped from a light classifier trained on `D_s` and refreshed during pretraining, so `D_s` is a dependency of this stage too — not just of stage 2.
+- **Autoencoder** with constraint-consistent reconstruction. MSE on continuous features, cross-entropy on categorical features, plus a residual penalty enforcing relations that hold in real flows (`rate = bytes / duration`, `length = payload + header`). Reconstructing physically plausible tuples stabilises the latent space.
+- **TabCL** (Tabular Contrastive Learning) - Two-view NT-Xent with class-conditioned feature replacement, a constraint-preserving projection so augmented views remain valid flows, and dual projection heads with separate configurations for continuous vs categorical slices. Its class-conditioned replacement is bootstrapped from a light classifier trained on `D_s` and refreshed during pretraining, so `D_s` is a dependency of this stage too — not just of stage 2.
 
 **Stage 2 — fine-tune and pseudo-label.** Replace decoder/projection head with a classifier, freeze–unfreeze fine-tune on `D_s`, apply to all of `D_l`. Fuse the two branches by confidence, then margin.
 
@@ -209,15 +208,15 @@ Rather than trying to make rules that are more precise or broad, the rebuilt mod
 
 **Stage 4 — final classifier** trained on the full pseudo-labelled pool with weighted symmetric cross-entropy.
 
-**How this gets judged.** The paper's own headline is in-domain accuracy. That is _not_ the success criterion here, but another question we can attempt to answer is if behavioural pseudo-labels support **better cross-domain generalisation** than manifest-derived labels do. The benchmark is a three-way comparison against timing-injection labels and against the published manifests, scored on level-2 transfer, not on in-domain fit.
+**How this gets judged.** The benchmark is a three-way comparison against timing-injection labels and against the published manifests, scored on level-2 transfer, not on in-domain fit.
 
 ## Feature schema
 
-After extracting the full set of possible features with Zeek, we then begin pre-processing. The selection procedure is deliberately re-runnable per deployment, since a procedure fixed once cannot adapt to future network deployments — but its output is a locked schema pinned to a model version.
+After extracting the full set of possible features with Zeek, we then begin pre-processing. 
 
 **Pre-training pruning.** Drop zero-variance features and features with high missingness after imputation. Cluster Pearson/Spearman-correlated features above 0.9 and keep one representative per cluster, with a VIF pass to catch multi-feature collinearity the pairwise matrix misses. Score task relevance by mutual information against the label.
 
-**The domain probe.** Train a logistic classifier to predict _which dataset a flow came from_ using each feature. High domain AUC (>0.75) means the feature encodes provenance, not behaviour.
+**The domain probe.** Train a logistic classifier to predict _which dataset a flow came from_ using each feature. High domain AUC (>0.75) means the feature encodes the domain fingerprints, not attack behaviour.
 
 |Domain AUC|Task relevance|Decision|
 |---|---|---|
@@ -225,7 +224,7 @@ After extracting the full set of possible features with Zeek, we then begin pre-
 |High|Low|Drop|
 |High|High|Hold until post-training — keep or prune on the model's measured evaluation performance|
 
-**Post-training.** Under leave-one-domain-out, check SHAP dependence direction across folds. If there is a consistent sign then keep the feature, a sign that flips should be dropped. Then domain-grouped RFECV (or Boruta) inside each LODO fold, taking the **intersection** of the selected sets - a feature useful in only one fold is not stable enough to ship.
+**Post-training.** Under leave-one-domain-out, check SHAP dependence direction across folds. If there is a consistent sign then keep the feature, a sign that flips should be dropped. Then domain-grouped RFECV (or Boruta) inside each LODO fold, taking the **intersection** of the selected sets (a feature selected in only one fold is not stable enough to keep)
 
 Final schema locks to YAML with every rejection logged.
 
@@ -235,7 +234,7 @@ Final schema locks to YAML with every rejection logged.
 map → merge → clean → encode → split → train → register → evaluate
 ```
 
-Layer 1 is XGBoost over the canonical flow schema. Tree models handle unnormalised, heavy-tailed, mixed-type flow data natively, and sentinel values like `-1` are learned as flags rather than magnitudes — no normalisation stage required. (These sentinels are ours: `spec.yaml` coalesces a missing `id.resp_p` to `-1`. Zeek omits absent fields rather than emitting `-1`.)
+Layer 1 is XGBoost over the canonical flow schema. Tree models handle unnormalised, heavy-tailed, mixed-type flow data natively, and sentinel values like `-1` are learned as flags rather than magnitudes — no normalisation stage required.
 
 Layer 2 is a neural anomaly model taking the flow vector concatenated with layer-1 output probabilities.
 
@@ -296,32 +295,28 @@ Anything that touches the lake needs AWS credentials in the shell first:
 eval "$(aws configure export-credentials --format env)"
 ```
 
-| Command | What it does |
-| --- | --- |
-| `make extract` | Zeek over the raw pcaps (run on EC2; `RAW_ONLY=…` to scope) |
-| `make convert DATASET=cic-ids-2017` | Mirror one dataset's Zeek logs to Parquet |
-| `make discover` | Profile the lake by log type → `reports/lake_features_report.txt` |
-| `make eda-smoke` | 200k-row dry run of every dataset — proves the pipeline in seconds |
-| `make eda DATASET=cic-ids-2017` | Profile one dataset, then regenerate every comparison |
-| `make eda-all` | Profile every dataset, rebuild all reports once at the end |
-| `make eda-compare` | Rebuild comparisons from existing profiles (no lake access) |
-| `make eda-render` | Rebuild the HTML from existing JSON |
-
-The `eda` targets read the `labelled` zone and will not run until labelling is rebuilt. `make discover` reads `parquets` and works today.
-
-The DuckDB guard rails in the Makefile (spill directory, thread and memory caps) are sized for a 16 GB box and are deliberate — check `nproc` and `free -g` and override rather than assuming.
+| Command                             | What it does                                                         |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| `make extract`                      | Zeek over the raw pcaps (run on EC2; `RAW_ONLY=…` to scope)         |
+| `make convert DATASET=cic-ids-2017` | Mirror one dataset's Zeek logs to Parquet 1:1                        |
+| `make discover`                     | Profile the lake by log type → `reports/lake_features_report.txt`    |
+| `make eda-smoke`                    | 200k-row dry run of every dataset - for testing the pipeline flow   |
+| `make eda DATASET=cic-ids-2017`     | Profile one dataset, then regenerate every comparison                |
+| `make eda-all`                      | Profile every dataset, rebuild all reports once at the end           |
+| `make eda-compare`                  | Rebuild comparisons from existing profiles (no lake access required) |
+| `make eda-render`                   | Rebuild the HTML from existing JSON                                  |
 
 ## Prior results
 
-_From the predecessor repository [`IPS-xgboost`](https://github.com/Awais2805/IPS-xgboost), not from this codebase. Included because they are why Talos exists._
+_From the predecessor repository [`IPS-xgboost`](https://github.com/Awais2805/IPS-xgboost), not from this codebase. Included as it provides background context._
 
-|Experiment|Result|Reading|
-|---|---|---|
-|Trained 2017+2018 → held-out splits|ROC 0.97–0.99|In-domain ceiling. Establishes the pipeline, not the capability.|
-|Trained CIC-IDS 2018 → netemDocker capture|**Complete collapse**|Matching schema and extractor are not sufficient for transfer.|
-|Trained 2017+2018 → unseen CIC-DDoS 2019|ROC 0.78–0.89|**No collapse.** Degraded but usable — the result Talos scales up.|
+| Experiment                                 | Result                | Notes                                                              |
+| ------------------------------------------ | --------------------- | ------------------------------------------------------------------ |
+| Trained 2017+2018 → held-out splits        | ROC 0.97–0.99         | In-domain ceiling. Establishes the pipeline, not the capability.   |
+| Trained CIC-IDS 2018 → netemDocker capture | **Complete collapse** | Matching schema and extractor are not sufficient for transfer.     |
+| Trained 2017+2018 → unseen CIC-DDoS 2019   | ROC 0.78–0.89         | **No collapse.** Degraded but usable — the result Talos scales up. |
 
-The consistent failure mode across all of these: on genuinely unfamiliar traffic the output probabilities collapse toward zero. The model does not say _"I don't know"_ — it says _"benign"_ confidently. That is the specific behaviour layer 2 exists to catch.
+The consistent failure mode across all of these: on genuinely unfamiliar traffic the output probabilities collapse toward zero. The model does not say its unsure, it just labels flows as *benign* confidently. That is the specific behaviour layer 2 exists to catch.
 
 ## Related repositories
 
