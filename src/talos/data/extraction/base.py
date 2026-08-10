@@ -6,11 +6,19 @@ from typing import Type
 
 _EXTRACTOR_REGISTRY = {}
 
+# The provenance sidecar every extraction run drops beside its logs. Named here
+# because downstream stages have to recognise it to skip it: it sits in the same
+# tree as the logs and would otherwise be converted as if it were one of them.
+META_FILENAME = "_extractor_meta.json"
+
 def register_extractor(cls: Type['BaseExtractor']):
-    """Decorator to register an extractor class."""
-    # We instantiate temporarily to map the name to the class in the registry
-    temp_instance = cls()
-    _EXTRACTOR_REGISTRY[temp_instance.name] = cls
+    """Decorator to register an extractor class.
+
+    The key is read off an uninitialised instance rather than a constructed one:
+    `name` is a property, but running __init__ at import time would make a tool
+    that needs a constructor argument break the import of the whole package.
+    """
+    _EXTRACTOR_REGISTRY[cls.__new__(cls).name] = cls
     return cls
 
 def get_extractor(name: str, **kwargs) -> 'BaseExtractor':
@@ -54,7 +62,7 @@ class BaseExtractor(ABC):
         if extra_meta:
             meta.update(extra_meta)
             
-        out_path = Path(output_dir) / "_extractor_meta.json"
+        out_path = Path(output_dir) / META_FILENAME
         out_path.write_text(json.dumps(meta, indent=2))
         return out_path
 

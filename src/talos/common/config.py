@@ -70,12 +70,23 @@ class Config:
     def is_remote(self) -> bool:
         return zones.is_remote(self.root)
 
-    def zone(self, name: str, dataset: str | None = None) -> str:
+    def lake(self):
+        """The lake this config describes.
+
+        The only way a LakeClient should be built: constructing one by hand
+        loses `lake.zones` and silently falls back to the default layout, which
+        resolves to real-looking paths that hold no data.
+        """
+        from talos.common.lake.lake import LakeClient
+        return LakeClient(root=self.root, templates=self.zone_templates,
+                          region=self.region)
+
+    def zone(self, name: str, dataset: str | None = None, **scope) -> str:
         """Full URI of a zone, optionally scoped to one dataset."""
         if name not in self.zone_templates:
             known = ", ".join(sorted(self.zone_templates))
             raise ConfigError(f"unknown zone {name!r}; known zones: {known}")
-        return zones.resolve(self.root, self.zone_templates[name], dataset)
+        return zones.resolve(self.root, self.zone_templates[name], dataset, **scope)
 
     def parquet_glob(self, zone: str, dataset: str) -> str:
         """Every parquet under one dataset's zone, at any depth."""

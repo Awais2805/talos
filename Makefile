@@ -1,6 +1,5 @@
-# Lake location lives in config.yml (lake.root). This is kept only for the
-# `convert` target until to_parquet.py is made config-driven.
-BUCKET  = ids-datalakec48eb2cab942494ba5059fac3b3527d9
+# Lake location lives in config.yml (lake.root) -- no target carries a bucket
+# name any more; every stage resolves its own paths through Config.
 DATASET ?= cic-ids-2017
 # prefer the repo venv if present, else system python
 PY := $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
@@ -49,13 +48,11 @@ install:         ## create .venv and install the package in editable mode
 test:            ## golden regression over the committed EDA fixtures (no lake needed)
 	$(PY) -m pytest tests/ -q
 
-extract:         ## run Zeek over the raw pcaps (on the EC2 box; RAW_ONLY=… to scope)
-	bash src/talos/data/zeek_batch.sh
+extract:         ## run the configured extractor over the raw zone (DATASET=…)
+	$(TALOS) extract $(DATASET)
 
-convert:         ## mirror one dataset's Zeek logs to parquet, 1:1, same tree (DATASET=…)
-	$(PY) -m talos.data.to_parquet \
-		--input  s3://$(BUCKET)/extracted/$(DATASET) \
-		--output s3://$(BUCKET)/parquets/$(DATASET)
+convert:         ## convert extracted logs to parquet/csv (DATASET=…, FORMAT=parquet|csv|both)
+	$(TALOS) convert --dataset $(DATASET) $(if $(FORMAT),--format $(FORMAT),)
 
 discover:        ## profile the lake by log type -> reports/lake_features_report.txt
 	$(TALOS) discover --non_interactive \
@@ -84,13 +81,3 @@ eda-compare:     ## rebuild every comparison from existing profiles (no lake acc
 
 eda-render:      ## rebuild the HTML from existing JSON
 	$(TALOS) render
-
-extract:         ## run the configured extractor over the raw zone
-	$(TALOS) extract $(DATASET)
-
-convert:         ## convert extracted logs to parquet/csv (DATASET=..., FORMAT=parquet|csv|both)
-	$(TALOS) convert --dataset $(DATASET) $(if $(FORMAT),--format $(FORMAT),)
-
-discover:        ## profile the lake by log type -> reports/lake_features_report.txt
-	$(TALOS) discover --non_interactive \
-	> reports/lake_features_report.txt

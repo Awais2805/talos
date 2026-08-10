@@ -30,7 +30,7 @@ talos = "talos.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"talos.eda" = ["spec.yaml"]
+"talos.data.profiling.eda" = ["spec.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

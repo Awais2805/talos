@@ -23,7 +23,6 @@ from pathlib import Path
 
 from talos.common import zones
 from talos.common.config import Config, ConfigError
-from talos.common.lake.lake import LakeClient
 from talos.data.extraction import get_extractor
 
 
@@ -35,12 +34,7 @@ CONFIG_TEMPLATE = """\
 lake:
   root: "{root}"
   zones:
-    raw:       "raw/{{dataset}}"
-    extracted: "extracted/{{dataset}}"
-    parquets:  "parquets/{{dataset}}"
-    labelled:  "labelled/{{dataset}}"
-    mapped:    "mapped/{{dataset}}"
-
+{zones}
 reports:
   dir: "reports"
 
@@ -77,7 +71,11 @@ def cmd_init(args) -> int:
     if cfg_path.exists():
         print(f"\nconfig {cfg_path} already exists, left alone")
     else:
-        cfg_path.write_text(CONFIG_TEMPLATE.format(root=root))
+        # The zone block is generated rather than written out, so a fresh config
+        # cannot name zones that differ from the directories just created.
+        block = "".join(f"    {zone + ':':<11}{zones.DEFAULT_TEMPLATES[zone]!r}\n"
+                        .replace("'", '"') for zone in zones.ZONE_ORDER)
+        cfg_path.write_text(CONFIG_TEMPLATE.format(root=root, zones=block))
         print(f"\nconfig {cfg_path} written")
 
     print(f"\nNext: put captures in {base / 'raw' / '<dataset>'}/ then `talos extract`")
@@ -110,7 +108,15 @@ def run_stage(module: str, extra: list[str]) -> int:
         runpy.run_module(module, run_name="__main__")
         return 0
     except SystemExit as exc:                       # argparse / sys.exit from the stage
-        return int(exc.code or 0)
+        code = exc.code
+        if code is None:
+            return 0
+        if isinstance(code, int):
+            return code
+        # sys.exit("message") means print and fail. int() on it raises, which
+        # buried every stage's own error message under a traceback.
+        print(code, file=sys.stderr)
+        return 1
     finally:
         sys.argv = argv
 
@@ -129,7 +135,7 @@ def cmd_extract(args, extra) -> int:
         print(f"FATAL: {e}", file=sys.stderr)
         return 1
         
-    lake = LakeClient(root=cfg.root, region=cfg.region)
+    lake = cfg.lake()
     datasets = [d for d in cfg.datasets] if not extra else extra
     
     if not datasets:

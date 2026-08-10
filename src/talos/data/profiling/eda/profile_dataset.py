@@ -36,7 +36,7 @@ import duckdb
 
 from talos.common import zones
 from talos.common.config import Config
-from talos.common.lake.lake import Lake
+from talos.common.duck import DuckEngine
 from talos.common.paths import default_config
 from talos.data.profiling.eda import compare
 from talos.data.profiling.eda.spec import Spec, _q
@@ -239,8 +239,9 @@ def main():
     print(f"duckdb    {a.threads} threads, {a.memory_limit} memory"
           f"{f', spill {a.temp_dir} capped {a.max_temp}' if a.temp_dir else ''}")
 
-    lake = Lake(region, a.memory_limit, a.temp_dir, a.threads, a.max_temp,
-                require_s3=zones.is_remote(src))
+    lake = DuckEngine(remote=zones.is_remote(src), region=region,
+                      memory_limit=a.memory_limit, temp_dir=a.temp_dir,
+                      threads=a.threads, max_temp=a.max_temp)
     cols = lake.columns(src)
     num, cat, ident, nulls, skipped = spec.resolve(cols)
     if not num:

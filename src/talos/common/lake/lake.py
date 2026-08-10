@@ -86,7 +86,8 @@ class RemoteBackend:
             raise LakeError(
                 f"lake.root is {root}, which needs the remote backend.\n"
                 f"Install it with:  pip install -e '.[s3]'") from exc
-        self.fs = fsspec.filesystem(root.split("://", 1)[0],
+        self.protocol = root.split("://", 1)[0]
+        self.fs = fsspec.filesystem(self.protocol,
                                     client_kwargs={"region_name": region} if region else None)
 
     def exists(self, uri: str) -> bool:
@@ -98,9 +99,14 @@ class RemoteBackend:
 
     def list(self, prefix: str) -> list[str]:
         try:
-            return sorted(self.fs.find(prefix))
+            found = self.fs.find(prefix)
         except FileNotFoundError:
             return []
+        # fsspec answers in bucket/key form. Callers slice these against the
+        # scheme-carrying URI they asked for and hand them to DuckDB, both of
+        # which are silently wrong without the scheme, so it goes back on here.
+        return sorted(f if "://" in f else f"{self.protocol}://{f.lstrip('/')}"
+                      for f in found)
 
     def seal(self, uri: str) -> None:
         """No-op: object stores are already write-once by convention here."""
@@ -140,19 +146,11 @@ class LakeClient:
         """
         if zone not in self.templates:
             raise LakeError(f"unknown zone {zone!r}; known: {', '.join(sorted(self.templates))}")
-        template = self.templates[zone]
-        fields = {"dataset": dataset, "feature_space": feature_space,
-                  "schema_version": schema_version}
-        for name, value in fields.items():
-            token = "{" + name + "}"
-            if token not in template:
-                continue
-            if value is None:
-                # Truncate at the first unfilled placeholder: that is the static
-                # prefix, which is what listing a whole zone needs.
-                template = template.split(token, 1)[0]
-                break
-            template = template.replace(token, str(value))
+        # Truncation at the first unfilled placeholder is `zones.fill`'s job, so
+        # that a zone resolves to the same location however it is addressed.
+        template = zones.fill(self.templates[zone], dataset=dataset,
+                              feature_space=feature_space,
+                              schema_version=schema_version)
         return zones.join(self.root, template, rel or "")
 
     def parquet_glob(self, zone: str, dataset: str, **scope) -> str:

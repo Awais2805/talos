@@ -21,6 +21,7 @@ from pathlib import Path
 from talos.common.config import Config
 from talos.common.duck import DuckEngine
 from talos.common.lake.lake import LakeClient
+from talos.data.extraction.base import META_FILENAME
 
 LOG = logging.getLogger("to_parquet")
 
@@ -45,7 +46,7 @@ def resolve_feature_space(lake: LakeClient, dataset: str, explicit_fs: str = Non
     latest_fs, latest_ts = None, ""
 
     for item in files:
-        if item.endswith(f"/{dataset}/_extractor_meta.json"):
+        if item.endswith(f"/{dataset}/{META_FILENAME}"):
             try:
                 content = (
                     lake.backend.fs.cat(item).decode("utf-8")
@@ -92,7 +93,7 @@ def main():
 
     lf = setup_logger()
     cfg = Config.load(a.config)
-    lake = LakeClient(root=cfg.root, region=cfg.region)
+    lake = cfg.lake()
     duck = DuckEngine(
         remote=lake.remote,
         region=cfg.region,
@@ -111,7 +112,9 @@ def main():
     LOG.info(f"Destination:   {dst_uri}")
 
     files = lake.list(src_uri)
-    log_files = [f for f in files if f.endswith(".log") or f.endswith(".json")]
+    log_files = [f for f in files
+                 if (f.endswith(".log") or f.endswith(".json"))
+                 and Path(f).name != META_FILENAME]     # provenance, not a log
 
     if a.logtypes:
         want = set(a.logtypes)

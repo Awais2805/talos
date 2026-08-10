@@ -61,17 +61,32 @@ def join(root: str, *parts: str) -> str:
     return f"{root}/{tail}" if tail else root
 
 
-def resolve(root: str, template: str, dataset: str | None = None) -> str:
-    """Full URI for one zone, optionally scoped to a dataset.
+def fill(template: str, **values) -> str:
+    """Substitute a zone template's placeholders, stopping at the first unfilled one.
 
-    Without a dataset the static prefix is returned -- everything up to the
-    first `{dataset}` -- which is what listing or globbing a whole zone needs.
+    Truncating rather than raising is what makes a whole zone addressable:
+    everything up to the first unknown placeholder is the static prefix that
+    listing or globbing needs. The walk follows the order the placeholders
+    appear in the template, not the order the caller passed them, because which
+    one comes first is a property of the path -- `extracted/{feature_space}/
+    {dataset}` cannot be scoped by dataset alone, and truncating there is the
+    honest answer rather than a path with a literal `{feature_space}` in it.
     """
-    if dataset is None:
-        template = re.split(r"\{[a-z_]+\}", template, maxsplit=1)[0]
-    else:
-        template = template.replace("{dataset}", dataset)
-    return join(root, template)
+    for token in re.findall(r"\{([a-z_]+)\}", template):
+        value = values.get(token)
+        if value is None:
+            return template.split("{" + token + "}", 1)[0]
+        template = template.replace("{" + token + "}", str(value))
+    return template
+
+
+def resolve(root: str, template: str, dataset: str | None = None, **scope) -> str:
+    """Full URI for one zone, optionally scoped to a dataset and a feature space.
+
+    Without a dataset the static prefix is returned, which is what listing or
+    globbing a whole zone needs.
+    """
+    return join(root, fill(template, dataset=dataset, **scope))
 
 
 def init(root: str, templates: dict[str, str] | None = None) -> dict[str, tuple[Path, bool]]:
@@ -94,8 +109,7 @@ def init(root: str, templates: dict[str, str] | None = None) -> dict[str, tuple[
     result = {}
     for zone in ZONE_ORDER:
         template = templates.get(zone, DEFAULT_TEMPLATES[zone])
-        prefix = re.split(r"\{[a-z_]+\}", template, maxsplit=1)[0]
-        path = base / prefix.strip("/")
+        path = base / fill(template).strip("/")
         created = not path.exists()
         path.mkdir(parents=True, exist_ok=True)
         result[zone] = (path, created)

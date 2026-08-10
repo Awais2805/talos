@@ -20,7 +20,6 @@ from pathlib import Path
 
 # Leverage existing Talos modules for config and storage abstraction
 from talos.common.config import Config
-from talos.common.lake.lake import LakeClient
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -36,7 +35,7 @@ def upload_pcaps_to_lake(config_path: str, dataset: str, pcap_files: list[str]):
     config = Config.load(config_path)
     
     # 2. Initialize the LakeClient (handles Local vs S3 automatically)
-    lake = LakeClient(root=config.root, region=config.region)
+    lake = config.lake()
     
     for pcap_file in pcap_files:
         src = Path(pcap_file)

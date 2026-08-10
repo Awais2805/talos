@@ -54,8 +54,18 @@ def test_resolves_to_the_previously_hardcoded_uris():
 def test_local_root_is_not_remote():
     c = Config({"lake": {"root": "./lake"}})
     assert not c.is_remote
-    assert c.zone("extracted", "ds") == "lake/extracted/ds"
+    assert c.zone("extracted", "ds", feature_space="zeek_v8.2.1") == \
+        "lake/extracted/zeek_v8.2.1/ds"
     assert Config(CURRENT).is_remote
+
+
+def test_an_unscoped_zone_stops_at_the_static_prefix():
+    """The default extracted zone is feature-space scoped, so a dataset alone
+    cannot address it. Resolution stops rather than emitting a path with a
+    literal `{feature_space}` in it, which no backend could ever list."""
+    c = Config({"lake": {"root": "./lake"}})
+    assert c.zone("extracted") == "lake/extracted"
+    assert c.zone("extracted", "ds") == "lake/extracted"
 
 
 def test_roles_are_readable():
@@ -83,11 +93,19 @@ def test_init_creates_every_zone():
         for zone, (path, created) in made.items():
             assert path.is_dir(), zone
             assert created, zone
-        # the canonical zone lives at mapped/, which is why init reports paths
-        assert made["canonical"][0].name == "mapped"
         # idempotent
         again = zones.init(str(root))
         assert not any(created for _, created in again.values())
+
+
+def test_init_reports_the_path_it_made_not_the_zone_name():
+    """A lake may put a zone somewhere its name does not predict -- this one
+    puts canonical at mapped/ -- which is why init returns paths."""
+    with tempfile.TemporaryDirectory() as tmp:
+        made = zones.init(str(Path(tmp) / "lake"), Config(CURRENT).zone_templates)
+        assert made["canonical"][0].name == "mapped"
+        # raw is {dataset}/pcaps: no static prefix at all, so it is the root
+        assert made["raw"][0].name == "lake"
 
 
 def test_init_refuses_a_remote_root():
