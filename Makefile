@@ -84,3 +84,13 @@ eda-compare:     ## rebuild every comparison from existing profiles (no lake acc
 
 eda-render:      ## rebuild the HTML from existing JSON
 	$(TALOS) render
+
+extract:         ## run the configured extractor over the raw zone
+	$(TALOS) extract $(DATASET)
+
+convert:         ## convert extracted logs to parquet/csv (DATASET=..., FORMAT=parquet|csv|both)
+	$(TALOS) convert --dataset $(DATASET) $(if $(FORMAT),--format $(FORMAT),)
+
+discover:        ## profile the lake by log type -> reports/lake_features_report.txt
+	$(TALOS) discover --non_interactive \
+	> reports/lake_features_report.txt
