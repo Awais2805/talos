@@ -1,8 +1,6 @@
-duckdb>=1.1
-pyarrow>=17
-pandas>=2.2
-polars>=1.0
-numpy>=1.26
-scikit-learn>=1.5
-xgboost>=2.1
-pyyaml>=6.0
+# Dependencies are declared in pyproject.toml; this file exists so that
+# `pip install -r requirements.txt` still works. Extras:
+#   .[s3]     s3fs, only needed when lake.root is an s3:// URI
+#   .[model]  xgboost + scikit-learn, needed to train
+#   .[dev]    pytest
+-e .

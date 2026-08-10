@@ -1,19 +1,35 @@
-# Talos — central configuration
-# Values consolidated from the pipeline scripts. The EDA stage reads this file
-# (src/eda/profile_dataset.py --config); extraction, conversion and discovery
-# still carry their own hardcoded defaults.
-
-aws:
-  region: eu-north-1
-  bucket: ids-datalakec48eb2cab942494ba5059fac3b3527d9
+# Talos — central configuration.
+#
+# Everything that decides WHERE data lives is here; no script carries its own
+# bucket name or prefix. Point lake.root at a local directory or an s3:// URI
+# and the whole pipeline follows. `talos config` shows how it resolves.
 
 lake:
-  # zone -> S3 key prefix
-  raw: "{dataset}/pcaps"        # original immutable pcap archives
-  extracted: "extracted"        # Zeek NDJSON logs, per dataset
-  parquets: "parquets"          # 1 parquet per log type, per dataset
-  labelled: "labelled"          # conn flows + ground-truth labels, per dataset
-  canonical: "mapped"           # registry-governed, labelled, train-ready
+  # The lake this project actually uses. For a local lake instead:
+  #   root: "./lake"      then `talos init ./lake`
+  root: "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9"
+
+  # Zone -> path template beneath the root. Templates rather than fixed names
+  # because the layout is not uniform: raw pcaps predate the convention and sit
+  # at {dataset}/pcaps, while every other zone is {zone}/{dataset}. A fresh
+  # local lake made by `talos init` uses raw/{dataset} instead.
+  zones:
+    raw:       "{dataset}/pcaps"    # original pcap archives, immutable
+    extracted: "extracted/{dataset}"  # extractor output, per dataset
+    parquets:  "parquets/{dataset}"   # one parquet per source log, same tree
+    labelled:  "labelled/{dataset}"   # flows + ground truth
+    canonical: "mapped/{dataset}"     # registry-governed, train-ready
+
+reports:
+  dir: "reports"
+
+# Which plugins this project uses.
+extractor: zeek
+model: xgboost
+
+# Only consulted when lake.root is an s3:// URI.
+aws:
+  region: eu-north-1
 
 # role governs how a dataset may be used downstream:
 #   train    -- may contribute flows to a training pool

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "talos"
+version = "0.1.0"
+description = "A research platform for cross-domain network intrusion detection"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Only what the platform itself imports. Everything that is a deployment choice --
+# S3 access, the model library, the test runner -- is an extra, so a base install
+# pulls in no cloud SDK at all.
+dependencies = [
+    "duckdb>=1.1",
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+s3 = ["s3fs>=2024.6"]
+model = ["xgboost>=2.1", "scikit-learn>=1.5"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+talos = "talos.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"talos.eda" = ["spec.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

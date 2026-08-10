@@ -66,10 +66,10 @@ Layer 2 is designed, not built. It is gated behind a defensible level-2 result.
 | Stage                                            | State           | Notes                                                    |
 | ------------------------------------------------ | --------------- | -------------------------------------------------------- |
 | Raw pcap ingestion → S3                         | ✅ Working       | 3 public datasets archived immutably                     |
-| Zeek extraction (batch, resumable)               | ✅ Working       | `src/data/zeek_batch.sh`, Dockerised Zeek 8.2.1          |
-| Zeek logs → Parquet (1:1 tree mirror)            | ✅ Working       | `src/data/to_parquet.py`, streaming, memory-safe         |
-| Lake schema discovery / drift check              | ✅ Working       | `src/preprocess/lake_feature_discovery.py`, footers only |
-| Statistical profiling + cross-dataset comparison | ✅ Working       | `src/eda/`, reports committed; reads the labelled zone   |
+| Zeek extraction (batch, resumable)               | ✅ Working       | `talos/data/zeek_batch.sh`, Dockerised Zeek 8.2.1        |
+| Zeek logs → Parquet (1:1 tree mirror)            | ✅ Working       | `talos/data/to_parquet.py`, streaming, memory-safe       |
+| Lake schema discovery / drift check              | ✅ Working       | `talos/preprocess/lake_feature_discovery.py`, footers    |
+| Statistical profiling + cross-dataset comparison | ✅ Working       | `talos/eda/`; reads the labelled zone, reports regenerated |
 | **Labelling module**                             | ⏳ In Progress   | v1 was not trustworthy - being rebuilt (see below)      |
 | Canonical `mapped` zone                          | ⬜ Not started   | Blocked on labelling                                     |
 | Feature registry / schema lock                   | ⬜ Designed only | Methodology settled, no code                             |
@@ -256,11 +256,13 @@ _Design; not yet implemented._
 
 ```
 .
-├── Makefile
+├── Makefile                      # thin wrappers over the package
+├── pyproject.toml                # package metadata, deps, optional extras
 ├── config.yml                    # lake zones, dataset roles, Zeek settings
-├── requirements.txt
-├── src/
-│   ├── common/lake.py
+├── src/talos/
+│   ├── core/
+│   │   ├── lake.py               # DuckDB over local dir or S3, same code path
+│   │   └── paths.py              # output locations, resolved from CWD not __file__
 │   ├── data/
 │   │   ├── zeek_batch.sh
 │   │   └── to_parquet.py         # Zeek → Parquet, 1:1 tree mirror
@@ -275,10 +277,12 @@ _Design; not yet implemented._
 │   ├── model/
 │   ├── evaluate/
 │   └── visualization/
+├── tests/
+│   ├── fixtures/eda/             # three real profiles, kept as regression input
+│   ├── golden/                   # reference comparison output
+│   └── test_golden.py            # runs the EDA kernel with no lake
 ├── docs/diagrams/                # architecture source diagrams
-├── reports/
-│   ├── eda/                      # committed profiles + comparisons (HTML + JSON)
-│   └── lake_features_report.txt
+├── reports/                      # generated; not committed
 ├── data/{raw,interim,processed}/ # local scratch (data/raw/ is gitignored)
 ├── notebooks/
 └── models/ results/
@@ -287,10 +291,13 @@ _Design; not yet implemented._
 ## Usage
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+make install                       # creates .venv, installs the package
 make help                          # list every target
+make test                          # golden regression, needs no lake
 ```
+
+Talos installs as a package (`pip install -e .`). The base install pulls in no
+cloud SDK; S3 support is the `[s3]` extra and the model libraries are `[model]`.
 
 Anything that touches the lake needs AWS credentials in the shell first:
 

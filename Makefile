@@ -1,7 +1,11 @@
+# Lake location lives in config.yml (lake.root). This is kept only for the
+# `convert` target until to_parquet.py is made config-driven.
 BUCKET  = ids-datalakec48eb2cab942494ba5059fac3b3527d9
 DATASET ?= cic-ids-2017
 # prefer the repo venv if present, else system python
 PY := $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
+# the console script installed by `pip install -e .`
+TALOS := $(shell test -x .venv/bin/talos && echo .venv/bin/talos || echo talos)
 
 DATASETS = cic-ids-2017 cic-ids-2018 cic-ddos-2019
 
@@ -26,44 +30,57 @@ EDA_FLAGS ?= --temp-dir $(DUCK_TMP) --threads 4 --memory-limit 8GB
 # cleared when the labelling module was removed.
 # ---------------------------------------------------------------------------
 
-.PHONY: help extract convert discover \
+.PHONY: help install test init config extract convert discover \
         eda eda-all eda-smoke eda-compare eda-render
 
 help:            ## show available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
 
+init:            ## create a local lake + config (LAKE=./lake to place it)
+	$(TALOS) init $(or $(LAKE),./lake)
+
+config:          ## show where every zone resolves to
+	$(TALOS) config
+
+install:         ## create .venv and install the package in editable mode
+	python3 -m venv .venv
+	.venv/bin/python -m pip install -e ".[dev]"
+
+test:            ## golden regression over the committed EDA fixtures (no lake needed)
+	$(PY) -m pytest tests/ -q
+
 extract:         ## run Zeek over the raw pcaps (on the EC2 box; RAW_ONLY=… to scope)
-	bash src/data/zeek_batch.sh
+	bash src/talos/data/zeek_batch.sh
 
 convert:         ## mirror one dataset's Zeek logs to parquet, 1:1, same tree (DATASET=…)
-	$(PY) src/data/to_parquet.py \
+	$(PY) -m talos.data.to_parquet \
 		--input  s3://$(BUCKET)/extracted/$(DATASET) \
 		--output s3://$(BUCKET)/parquets/$(DATASET)
 
 discover:        ## profile the lake by log type -> reports/lake_features_report.txt
-	$(PY) src/preprocess/lake_feature_discovery.py --non_interactive \
+	$(TALOS) discover --non_interactive \
 		> reports/lake_features_report.txt
 
 eda-smoke:       ## 200k-row dry run of every dataset -> /tmp, proves the pipeline in seconds
 	@mkdir -p $(DUCK_TMP)
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
-		$(PY) src/eda/profile_dataset.py --dataset $$d --limit 200000 \
+		$(TALOS) eda --dataset $$d --limit 200000 \
 			--out /tmp/eda_smoke_$$d.json --no-cascade $(EDA_FLAGS) || exit 1; done
 	@echo "smoke ok — schema, spec and query all agree with the lake; now: make eda-all"
 
 eda:             ## profile one dataset -> its report + regen every comparison (DATASET=…)
 	@mkdir -p $(DUCK_TMP)
-	$(PY) src/eda/profile_dataset.py --dataset $(DATASET) $(EDA_FLAGS)
+	$(TALOS) eda --dataset $(DATASET) $(EDA_FLAGS)
 
 eda-all:         ## profile every dataset, then rebuild all reports once at the end
 	@mkdir -p $(DUCK_TMP)
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
-		$(PY) src/eda/profile_dataset.py --dataset $$d --no-cascade $(EDA_FLAGS) \
+		$(TALOS) eda --dataset $$d --no-cascade $(EDA_FLAGS) \
 			|| exit 1; done
-	$(PY) src/eda/compare.py --render
+	$(TALOS) compare --render
 
 eda-compare:     ## rebuild every comparison from existing profiles (no lake access)
-	$(PY) src/eda/compare.py --render
+	$(TALOS) compare --render
 
 eda-render:      ## rebuild the HTML from existing JSON
-	$(PY) src/eda/render.py
+	$(TALOS) render
