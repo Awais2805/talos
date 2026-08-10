@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
 """Talos command line.
 
     talos init [path]     create a lake and a config pointing at it
     talos config          show where everything resolves to
     talos extract         run the configured extractor over the raw zone
-    talos convert         extractor output -> parquet, 1:1
+    talos convert         convert extracted logs to parquet or csv
     talos discover        profile the lake by log type
     talos eda             profile one dataset -> reports
     talos compare         rebuild comparisons from existing profiles
@@ -96,11 +97,10 @@ def cmd_config(args) -> int:
 # Each stage is still a runnable module; the CLI is a front door, not a rewrite.
 
 STAGES = {
-    "convert": "talos.data.to_parquet",
-    "discover": "talos.preprocess.lake_feature_discovery",
-    "eda": "talos.eda.profile_dataset",
-    "compare": "talos.eda.compare",
-    "render": "talos.eda.render",
+    "discover": "talos.data.discovery.lake_feature_discovery",
+    "eda":      "talos.data.profiling.eda.profile_dataset",
+    "compare":  "talos.data.profiling.eda.compare",
+    "render":   "talos.data.profiling.eda.render",
 }
 
 def run_stage(module: str, extra: list[str]) -> int:
@@ -119,10 +119,8 @@ def run_stage(module: str, extra: list[str]) -> int:
 def cmd_extract(args, extra) -> int:
     """Run the configured extractor over the raw zone to populate the extracted zone."""
     cfg = Config.load(args.config)
-    
-    # 1. Dynamically load the extractor based on config.yml
     extractor_name = cfg.extractor
-    tool_cfg = cfg.doc.get(extractor_name, {}) # Pass tool-specific config (e.g., Zeek image)
+    tool_cfg = cfg.doc.get(extractor_name, {}) 
     
     print(f"Using extractor plugin: {extractor_name}")
     try:
@@ -132,8 +130,6 @@ def cmd_extract(args, extra) -> int:
         return 1
         
     lake = LakeClient(root=cfg.root, region=cfg.region)
-    
-    # Allow scoping to specific datasets via extra args, or default to all configured datasets
     datasets = [d for d in cfg.datasets] if not extra else extra
     
     if not datasets:
@@ -142,8 +138,6 @@ def cmd_extract(args, extra) -> int:
 
     for dataset in datasets:
         print(f"\n=== Extracting dataset: {dataset} ===")
-        
-        # Resolve raw zone prefix
         raw_prefix = lake.uri("raw", dataset=dataset)
         raw_files = lake.list(raw_prefix)
         
@@ -151,12 +145,9 @@ def cmd_extract(args, extra) -> int:
             print(f"No pcaps found in {raw_prefix}. Skipping.")
             continue
             
-        # Determine the target extracted URI with the strict feature_space scope
         ext_uri = lake.uri("extracted", dataset=dataset, feature_space=extractor.feature_space)
-        print(f"Target Feature Space: {extractor.feature_space}")
         print(f"Destination: {ext_uri}")
         
-        # Use temp directory for isolated, ephemeral processing
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
             pcap_scratch = tmp_path / "pcaps"
@@ -165,8 +156,6 @@ def cmd_extract(args, extra) -> int:
             out_scratch.mkdir()
             
             local_pcaps = []
-            
-            # Fetch PCAPs to local scratch space (Handles S3 vs Local automatically)
             for file_uri in raw_files:
                 if not any(file_uri.endswith(ext) for ext in [".pcap", ".pcapng", ".cap"]):
                     continue
@@ -177,28 +166,21 @@ def cmd_extract(args, extra) -> int:
                     lake.backend.fs.get(file_uri, str(local_dest))
                 else:
                     shutil.copy2(file_uri, local_dest)
-                
                 local_pcaps.append(str(local_dest))
             
             if not local_pcaps:
-                print("No valid pcaps found after filtering. Skipping.")
                 continue
 
-            # 2. Execute agnostic extraction
-            print(f"Starting extraction over {len(local_pcaps)} files...")
             try:
                 extractor.extract(local_pcaps, str(out_scratch))
             except Exception as e:
                 print(f"Extraction failed for {dataset}: {e}", file=sys.stderr)
                 continue
                 
-            # 3. Write standardized metadata
             extractor.write_metadata(str(out_scratch), dataset)
             
-            # 4. Upload extracted data + metadata to the exact feature_space zone
             print(f"Uploading extracted features to {ext_uri}...")
             if lake.remote:
-                # Append slash to ensure contents of folder are uploaded, not the folder itself
                 lake.backend.fs.put(str(out_scratch) + "/", ext_uri, recursive=True)
             else:
                 shutil.copytree(out_scratch, Path(ext_uri), dirs_exist_ok=True)
@@ -206,6 +188,39 @@ def cmd_extract(args, extra) -> int:
             print(f"Completed {dataset}.")
 
     return 0
+
+# ------------------------------------------------------------------- convert
+
+def cmd_convert(args, extra) -> int:
+    """Condenses format conversion into a single routing command."""
+    import argparse
+    p = argparse.ArgumentParser(prog="talos convert", description="Convert extracted logs.")
+    p.add_argument("--dataset", required=True, help="Target dataset name")
+    p.add_argument("--format", choices=["parquet", "csv", "both"], default="parquet", 
+                   help="Output format (parquet, csv, both). Defaults to parquet.")
+    p.add_argument("--feature-space", default=None, help="Explicit feature space")
+    
+    # Parse known arguments so downstream flags (e.g., --threads) pass through safely
+    c_args, c_extra = p.parse_known_args(extra)
+    
+    # Build standard downstream arguments
+    downstream_args = ["--dataset", c_args.dataset]
+    if args.config:
+        downstream_args.extend(["--config", args.config])
+    if c_args.feature_space:
+        downstream_args.extend(["--feature-space", c_args.feature_space])
+    downstream_args.extend(c_extra)
+
+    ret = 0
+    if c_args.format in ("parquet", "both"):
+        ret = run_stage("talos.data.conversion.to_parquet", downstream_args)
+        if ret != 0: 
+            return ret
+            
+    if c_args.format in ("csv", "both"):
+        ret = run_stage("talos.data.conversion.to_csv", downstream_args)
+        
+    return ret
 
 # --------------------------------------------------------------------- main
 
@@ -221,8 +236,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("config", help="show where everything resolves to")
     sub.add_parser("extract", help="run the configured extractor over the raw zone")
+    sub.add_parser("convert", help="convert extracted logs to parquet or csv", add_help=False)
 
-    for name in ("convert", "discover", "eda", "compare", "render"):
+    for name in ("discover", "eda", "compare", "render"):
         sub.add_parser(name, help=f"run the {name} stage", add_help=False)
 
     return p
@@ -239,6 +255,8 @@ def main(argv=None) -> int:
             return cmd_config(args)
         if args.cmd == "extract":
             return cmd_extract(args, extra)
+        if args.cmd == "convert":
+            return cmd_convert(args, extra)
         if args.cmd in STAGES:
             if args.config:
                 extra = ["--config", args.config, *extra]
