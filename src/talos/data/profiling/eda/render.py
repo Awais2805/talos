@@ -8,8 +8,8 @@ in the page. Charts are hand-written inline SVG: the reports have to open from
 a laptop, an EC2 box or a dissertation appendix with no network and no JS.
 
 Usage:
-    python src/eda/render.py                     # rebuild every page
-    python src/eda/render.py --dir reports/eda
+    python -m talos.eda.render                   # rebuild every page
+    python -m talos.eda.render --dir reports/eda
 """
 
 import argparse
@@ -18,14 +18,12 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+from talos.common.paths import eda_dir
+from talos.data.profiling.eda.compare import (class_view, corr_matrix, has_rank_space,
+                               js_divergence, label_signal, moments, r6,
+                               rank_corr_matrix)
 
-from src.eda.compare import (class_view, corr_matrix, has_rank_space,     # noqa: E402
-                             js_divergence, label_signal, moments, r6,
-                             rank_corr_matrix)
-
-EDA_DIR = ROOT / "reports" / "eda"
+EDA_DIR = eda_dir()
 
 CSS = """
 :root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e5e7eb;--card:#fafafa;

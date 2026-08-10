@@ -20,9 +20,9 @@ flows / 2.4 GB). Run it on the EC2 box, or use --sample for a smoke test.
 
 Usage:
     eval "$(aws configure export-credentials --format env)"
-    python src/eda/profile_dataset.py --dataset cic-ids-2017
-    python src/eda/profile_dataset.py --dataset cic-ddos-2019 --sample 2
-    python src/eda/profile_dataset.py --dataset cic-ids-2018 --no-cascade
+    python -m talos.eda.profile_dataset --dataset cic-ids-2017
+    python -m talos.eda.profile_dataset --dataset cic-ddos-2019 --sample 2
+    python -m talos.eda.profile_dataset --dataset cic-ids-2018 --no-cascade
 """
 
 import argparse
@@ -33,15 +33,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
-import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+from talos.common import zones
+from talos.common.config import Config
+from talos.common.lake.lake import Lake
+from talos.common.paths import default_config
+from talos.data.profiling.eda import compare
+from talos.data.profiling.eda.spec import Spec, _q
 
-from src.common.lake import Lake                              # noqa: E402
-from src.eda.spec import Spec, _q                             # noqa: E402
-
-EDA_DIR = ROOT / "reports" / "eda"
 PROFILE_VERSION = 2
 
 
@@ -67,7 +66,7 @@ def parse_args():
     p.add_argument("--temp-dir", default=None, help="DuckDB spill directory")
     p.add_argument("--max-temp", default="20GB", help="cap on the spill directory")
     p.add_argument("--spec", default=None, help="override the EDA spec file")
-    p.add_argument("--config", default=str(ROOT / "config.yml"))
+    p.add_argument("--config", default=str(default_config()))
     return p.parse_args()
 
 
@@ -221,12 +220,11 @@ def summarise(profile):
 
 def main():
     a = parse_args()
-    cfg = yaml.safe_load(Path(a.config).read_text())
-    bucket, region = cfg["aws"]["bucket"], cfg["aws"]["region"]
-    zone = cfg["lake"].get(a.zone, a.zone)
-    role = cfg.get("datasets", {}).get(a.dataset, {}).get("role", "unknown")
+    cfg = Config.load(a.config)
+    region, role = cfg.region, cfg.role(a.dataset)
+    eda_out = cfg.eda_dir
 
-    src = a.source or f"s3://{bucket}/{zone}/{a.dataset}/**/*.parquet"
+    src = a.source or cfg.parquet_glob(a.zone, a.dataset)
     spec = Spec(a.spec) if a.spec else Spec()
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -242,7 +240,7 @@ def main():
           f"{f', spill {a.temp_dir} capped {a.max_temp}' if a.temp_dir else ''}")
 
     lake = Lake(region, a.memory_limit, a.temp_dir, a.threads, a.max_temp,
-                require_s3=src.startswith("s3://"))
+                require_s3=zones.is_remote(src))
     cols = lake.columns(src)
     num, cat, ident, nulls, skipped = spec.resolve(cols)
     if not num:
@@ -303,7 +301,7 @@ def main():
         "captures": captures,
     }
 
-    out = Path(a.out) if a.out else EDA_DIR / f"profile_{a.dataset}.json"
+    out = Path(a.out) if a.out else eda_out / f"profile_{a.dataset}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(profile, indent=1) + "\n")
     summarise(profile)
@@ -314,12 +312,12 @@ def main():
     # the pool, so every comparison is stale the moment this file lands. They
     # are regenerated from JSON alone -- no lake access, seconds not hours.
     if not a.no_cascade:
-        from src.eda import compare, render
-        made = compare.regenerate(EDA_DIR)
+        from talos.data.profiling.eda import render
+        made = compare.regenerate(eda_out)
         print(f"comparisons regenerated: {', '.join(m.name for m in made) or '(none)'}")
         if not a.no_render:
-            print(f"rendered: {len(render.render_all(EDA_DIR))} page(s) -> "
-                  f"{EDA_DIR / 'index.html'}")
+            print(f"rendered: {len(render.render_all(eda_out))} page(s) -> "
+                  f"{eda_out / 'index.html'}")
 
 
 if __name__ == "__main__":

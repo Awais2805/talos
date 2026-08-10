@@ -18,9 +18,9 @@ The one thing that would break it is two profiles measured on different rulers,
 so every profile carries the spec hash and this stage refuses to mix hashes.
 
 Usage:
-    python src/eda/compare.py                      # regenerate all comparisons
-    python src/eda/compare.py --dataset cic-ids-2017
-    python src/eda/compare.py --dir reports/eda
+    python -m talos.eda.compare                    # regenerate all comparisons
+    python -m talos.eda.compare --dataset cic-ids-2017
+    python -m talos.eda.compare --dir reports/eda
 """
 
 import argparse
@@ -31,12 +31,10 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+from talos.common.paths import eda_dir
+from talos.data.profiling.eda.spec import Spec
 
-from src.eda.spec import Spec                                  # noqa: E402
-
-EDA_DIR = ROOT / "reports" / "eda"
+EDA_DIR = eda_dir()
 COMPARE_VERSION = 2
 LABEL_COL = "label_binary"
 EPS = 1e-12
@@ -695,7 +693,7 @@ def main():
               f"{o['n_domain_biased']} domain-biased / {o['n_transfers']} transferable "
               f"features -> {w.name}")
     if a.render:
-        from src.eda import render
+        from talos.data.profiling.eda import render
         print(f"rendered {len(render.render_all(a.dir))} page(s)")
 
 
