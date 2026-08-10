@@ -21,13 +21,13 @@ LEGACY = {
     "aws": {"bucket": "ids-datalakec48eb2cab942494ba5059fac3b3527d9",
             "region": "eu-north-1"},
     "lake": {"raw": "{dataset}/pcaps", "extracted": "extracted",
-             "parquets": "parquets", "labelled": "labelled", "canonical": "mapped"},
+             "parquet": "parquets", "labelled": "labelled", "canonical": "mapped"},
 }
 
 CURRENT = {
     "lake": {"root": BUCKET,
              "zones": {"raw": "{dataset}/pcaps", "extracted": "extracted/{dataset}",
-                       "parquets": "parquets/{dataset}", "labelled": "labelled/{dataset}",
+                       "parquet": "parquets/{dataset}", "labelled": "labelled/{dataset}",
                        "canonical": "mapped/{dataset}"}},
     "aws": {"region": "eu-north-1"},
 }
@@ -44,7 +44,7 @@ def test_resolves_to_the_previously_hardcoded_uris():
     """Exactly what profile_dataset.py and zeek_batch.sh used to build by hand."""
     c = Config(CURRENT)
     assert c.zone("labelled", "cic-ddos-2019") == f"{BUCKET}/labelled/cic-ddos-2019"
-    assert c.zone("parquets", "cic-ids-2017") == f"{BUCKET}/parquets/cic-ids-2017"
+    assert c.zone("parquet", "cic-ids-2017") == f"{BUCKET}/parquets/cic-ids-2017"
     assert c.zone("raw", "cic-ids-2017") == f"{BUCKET}/cic-ids-2017/pcaps"
     assert c.zone("canonical", "cic-ids-2018") == f"{BUCKET}/mapped/cic-ids-2018"
     assert c.parquet_glob("labelled", "cic-ddos-2019") == \

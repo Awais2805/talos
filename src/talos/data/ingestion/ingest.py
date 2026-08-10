@@ -8,7 +8,7 @@ after running talos init, we have the lake dir created, where the structure is a
 lake/
     raw/
     extracted/
-    parquets/
+    parquet/
     labelled/
     mapped/
 the raw zone is where we will upload the pcaps.

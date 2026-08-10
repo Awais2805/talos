@@ -49,7 +49,9 @@ def parse_args():
     p.add_argument("--dataset", required=True, help="dataset name as it appears in the lake")
     p.add_argument("--source", default=None,
                    help="parquet glob to profile (default: the dataset's labelled conn flows)")
-    p.add_argument("--zone", default="labelled", choices=["labelled", "canonical", "parquets"],
+    # Defaults to `parquet` because the labelled zone was cleared when labelling
+    # was removed; put this back to "labelled" once that zone is repopulated.
+    p.add_argument("--zone", default="parquet", choices=["parquet", "labelled", "canonical"],
                    help="lake zone to read when --source is not given")
     p.add_argument("--sample", type=float, default=None,
                    help="profile a random %% of rows (recorded in the profile)")
@@ -247,7 +249,7 @@ def main():
     if not num:
         sys.exit(f"none of the spec's numeric features exist in {src}")
     # An unlabelled zone still profiles cleanly -- it just has one class. That
-    # keeps this usable on `parquets` for a pre-labelling sanity check.
+    # keeps this usable on `parquet` for a pre-labelling sanity check.
     group_expr = _q(spec.group_by) if spec.group_by in cols else "'(unlabelled)'"
 
     idx = {f.name: i for i, f in enumerate(num)}

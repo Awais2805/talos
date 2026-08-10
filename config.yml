@@ -16,7 +16,10 @@ lake:
   zones:
     raw:       "{dataset}/pcaps"    # original pcap archives, immutable
     extracted: "extracted/{dataset}"  # extractor output, per dataset
-    parquets:  "parquets/{dataset}"   # one parquet per source log, same tree
+    parquet:   "parquets/{dataset}"   # one parquet per source log, same tree.
+                                      # Zone key is `parquet`; the prefix stays
+                                      # `parquets/` because that is where the
+                                      # existing tree physically sits.
     labelled:  "labelled/{dataset}"   # flows + ground truth
     canonical: "mapped/{dataset}"     # registry-governed, train-ready
 
