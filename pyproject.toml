@@ -31,6 +31,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "talos.data.profiling.eda" = ["spec.yaml"]
+"talos.data.labelling" = ["manifests/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
