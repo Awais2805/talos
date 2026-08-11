@@ -1,76 +1,285 @@
+"""The plugin contract for extraction, and the registry that resolves one.
+
+An extractor defines what a flow *is*. The same pcap through Zeek and through
+CICFlowMeter yields different row counts, different columns and different flow
+boundaries; they are not comparable and must never be pooled. `feature_space`
+is the identifier that makes that structural rather than advisory -- it scopes
+zones 2-4, so two extractions cannot share a directory unless they genuinely
+produced the same kind of table.
+
+Which means the identifier has to change whenever the OUTPUT SCHEMA changes, not
+merely when the tool does. Loading an extra Zeek script adds columns; running an
+unpinned `latest` tag six months apart is two different builds. Both are covered
+here, deliberately over-conservatively: a spurious fork wastes some disk, a
+missed fork silently pools incompatible data into one training set.
+"""
+
+from __future__ import annotations
+
+import hashlib
 import json
+import re
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Type
+from typing import ClassVar, Type
 
-_EXTRACTOR_REGISTRY = {}
+_EXTRACTOR_REGISTRY: dict[str, Type["BaseExtractor"]] = {}
 
 # The provenance sidecar every extraction run drops beside its logs. Named here
 # because downstream stages have to recognise it to skip it: it sits in the same
 # tree as the logs and would otherwise be converted as if it were one of them.
 META_FILENAME = "_extractor_meta.json"
 
-def register_extractor(cls: Type['BaseExtractor']):
-    """Decorator to register an extractor class.
+# A feature space becomes a directory name, so it may not smuggle a path
+# separator or anything else that would change where data lands.
+_SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
 
-    The key is read off an uninitialised instance rather than a constructed one:
-    `name` is a property, but running __init__ at import time would make a tool
-    that needs a constructor argument break the import of the whole package.
+# A tag that looks like a real version can be trusted as one. `latest`, `dev` or
+# an absent tag cannot, and the extractor must resolve them properly.
+_VERSION_LIKE = re.compile(r"^v?\d+(\.\d+)*[A-Za-z0-9.\-_]*$")
+
+
+class ExtractionError(Exception):
+    pass
+
+
+# What downstream stages need an extractor to supply. Declared per plugin so a
+# stage can refuse, or degrade explicitly, instead of assuming Zeek's data model
+# and producing something wrong-but-plausible.
+FLOW_ID = "flow_id"              # a stable per-flow identifier (Zeek: uid)
+CONN_BACKBONE = "conn_backbone"  # one record per connection, other logs hang off it
+BYTE_COUNTS = "byte_counts"      # directional payload bytes (Zeek: orig_bytes)
+
+CAPABILITY_MEANING = {
+    FLOW_ID: "a stable per-flow id; labels are attached to it and inherited by "
+             "every enrichment log",
+    CONN_BACKBONE: "one record per connection; the schedule join is written "
+                   "against connections, not packets or sub-events",
+    BYTE_COUNTS: "directional payload byte counts; without them an attack cannot "
+                 "be told from a connection attempt",
+}
+
+
+@dataclass
+class ExtractionReport:
+    """What a run actually managed. Returned rather than logged and forgotten."""
+
+    extracted: list[str] = field(default_factory=list)
+    failed: list[tuple[str, str]] = field(default_factory=list)   # (capture, why)
+    skipped: list[str] = field(default_factory=list)              # already present
+
+    @property
+    def attempted(self) -> int:
+        return len(self.extracted) + len(self.failed)
+
+    @property
+    def complete(self) -> bool:
+        return not self.failed
+
+    def merged_with(self, previous: dict | None) -> dict:
+        """This run's outcome, folded into what the zone already recorded.
+
+        A capture that failed before and succeeded (or was skipped, meaning its
+        output is present) now counts as resolved. Everything else is still
+        outstanding, so completeness describes the tree rather than the last
+        invocation.
+        """
+        resolved = set(self.extracted) | set(self.skipped)
+        carried = [(c, why) for c, why in
+                   ((f["capture"], f["error"]) for f in (previous or {}).get("failures", []))
+                   if c not in resolved and c not in dict(self.failed)]
+        outstanding = carried + self.failed
+        return {
+            "pcaps_extracted": len(self.extracted),
+            "pcaps_skipped": len(self.skipped),
+            "pcaps_failed": len(outstanding),
+            "failures": [{"capture": c, "error": why} for c, why in outstanding],
+            # An incomplete extraction must be visible to anything that later
+            # picks "the most recent feature space" -- otherwise a run where
+            # most pcaps failed is indistinguishable from a clean one.
+            "complete": not outstanding,
+        }
+
+    def as_meta(self) -> dict:
+        return self.merged_with(None)
+
+    def summary(self) -> str:
+        parts = [f"{len(self.extracted)} extracted"]
+        if self.skipped:
+            parts.append(f"{len(self.skipped)} already present")
+        if self.failed:
+            parts.append(f"{len(self.failed)} FAILED")
+        return ", ".join(parts)
+
+
+def register_extractor(cls: Type["BaseExtractor"]):
+    """Register an extractor class under its declared name.
+
+    `name` is read straight off the CLASS. It used to be an abstract property,
+    which meant the registry had to conjure an instance to read it -- first by
+    calling __init__ (so any tool needing a constructor argument broke the
+    import of the whole package), then via __new__ (which only worked while
+    `name` never touched self). A plugin's name is a fact about the plugin, not
+    about one configured instance of it, so it belongs on the class.
     """
-    _EXTRACTOR_REGISTRY[cls.__new__(cls).name] = cls
+    name = getattr(cls, "name", "")
+    if not isinstance(name, str) or not name:
+        raise ExtractionError(
+            f"{cls.__name__} must declare a class-level `name`, e.g. "
+            f'`name = "zeek"`. It is read off the class at import time.')
+    if name in _EXTRACTOR_REGISTRY and _EXTRACTOR_REGISTRY[name] is not cls:
+        raise ExtractionError(
+            f"two extractors both call themselves {name!r}: "
+            f"{_EXTRACTOR_REGISTRY[name].__name__} and {cls.__name__}")
+    _EXTRACTOR_REGISTRY[name] = cls
     return cls
 
-def get_extractor(name: str, **kwargs) -> 'BaseExtractor':
-    """Retrieve an instantiated extractor from the registry."""
+
+def get_extractor(name: str, **kwargs) -> "BaseExtractor":
+    """Resolve and construct an extractor by name."""
     if name not in _EXTRACTOR_REGISTRY:
-        known = ", ".join(_EXTRACTOR_REGISTRY.keys())
-        raise ValueError(f"Unknown extractor '{name}'. Known extractors: {known}")
+        known = ", ".join(sorted(_EXTRACTOR_REGISTRY)) or "none registered"
+        raise ExtractionError(f"unknown extractor {name!r}. Known: {known}")
     return _EXTRACTOR_REGISTRY[name](**kwargs)
 
+
+def registered() -> tuple[str, ...]:
+    return tuple(sorted(_EXTRACTOR_REGISTRY))
+
+
 class BaseExtractor(ABC):
-    """The strict contract every extraction tool must follow."""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """The core name of the tool (e.g., 'zeek', 'cicflowmeter')."""
-        pass
+    """The contract every extraction tool must satisfy."""
+
+    #: The tool's name, e.g. "zeek". A CLASS attribute, not a property: the
+    #: registry reads it at import time without constructing anything, and a
+    #: plugin's name does not vary between configured instances of it.
+    name: ClassVar[str] = ""
 
     @property
     @abstractmethod
     def version(self) -> str:
-        """The version of the tool (e.g., '8.2.1', '4.0')."""
-        pass
+        """The tool's resolved version, e.g. '8.2.1'. Never a moving tag."""
+
+    def capabilities(self) -> frozenset[str]:
+        """What this extractor's output can support downstream.
+
+        Declared rather than assumed. A stage that needs something absent then
+        refuses, or degrades in a recorded way, instead of running against a
+        schema it silently mis-reads.
+        """
+        return frozenset()
+
+    def supports(self, capability: str) -> bool:
+        return capability in self.capabilities()
+
+    def require(self, *capabilities: str) -> None:
+        """Refuse early when a stage cannot work against this extractor at all."""
+        missing = [c for c in capabilities if not self.supports(c)]
+        if missing:
+            detail = "; ".join(f"{c} ({CAPABILITY_MEANING.get(c, '')})" for c in missing)
+            raise ExtractionError(
+                f"{self.name} does not provide: {detail}. This stage cannot run "
+                f"against its output.")
+
+    def config_fingerprint(self) -> dict:
+        """Settings that change the SHAPE of the output, not merely the run.
+
+        Anything returned here forks the feature space when it changes. Zeek's
+        loaded scripts belong in it -- `protocols/conn/mac-logging` adds two
+        columns to conn -- while a thread count would not.
+
+        Empty means the tool has no output-affecting settings, and the feature
+        space is then just name and version.
+        """
+        return {}
+
+    @property
+    def config_sha(self) -> str:
+        fingerprint = self.config_fingerprint()
+        if not fingerprint:
+            return ""
+        canonical = json.dumps(fingerprint, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode()).hexdigest()[:6]
 
     @property
     def feature_space(self) -> str:
-        """Dynamically builds the feature space from name and version.
-        This dictates the S3/local folder, e.g., 'zeek_v8.2.1'.
-        """
-        return f"{self.name}_v{self.version}"
+        """The directory that scopes zones 2-4, e.g. `zeek_v8.2.1_3f9a21`.
 
-    def write_metadata(self, output_dir: str, dataset: str, extra_meta: dict = None):
-        """Standardized metadata sidecar dropped into the extracted zone."""
+        Readable prefix so a human can see what made a tree, plus a short digest
+        of the output-affecting settings so two incompatible configurations of
+        the same tool version cannot land in one place.
+        """
+        base = f"{self.name}_v{self.version}"
+        space = f"{base}_{self.config_sha}" if self.config_sha else base
+        if not _SAFE_SEGMENT.match(space):
+            raise ExtractionError(
+                f"{space!r} is not usable as a directory name. A feature space "
+                f"becomes a path segment; check the tool's name and version.")
+        return space
+
+    def available(self) -> tuple[bool, str]:
+        """(can run here, why not). Reported so a caller can refuse early.
+
+        Checked BEFORE any pcap is fetched -- discovering that a tool is
+        unusable after downloading several hundred GB is an expensive way to
+        read an error message.
+        """
+        return True, ""
+
+    def write_metadata(self, output_dir: str, dataset: str,
+                       report: ExtractionReport | None = None,
+                       extra_meta: dict | None = None,
+                       previous: dict | None = None) -> Path:
+        """The provenance sidecar: the state of the TREE, not of one invocation.
+
+        `previous` is the sidecar already in the zone, if any. Failures from an
+        earlier run are carried forward unless this run resolved them, so a
+        second pass over a subset cannot quietly report `complete` while five
+        captures from the first pass are still missing.
+        """
         meta = {
             "dataset": dataset,
             "extractor_tool": self.name,
             "extractor_version": self.version,
             "feature_space": self.feature_space,
+            "capabilities": sorted(self.capabilities()),
+            "config_fingerprint": self.config_fingerprint(),
             "extracted_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            **(report or ExtractionReport()).merged_with(previous),
+            **(extra_meta or {}),
         }
-        if extra_meta:
-            meta.update(extra_meta)
-            
+        if previous and previous.get("first_extracted_at"):
+            meta["first_extracted_at"] = previous["first_extracted_at"]
+        else:
+            meta["first_extracted_at"] = meta["extracted_at_utc"]
+        meta["runs"] = int((previous or {}).get("runs", 0)) + 1
+
         out_path = Path(output_dir) / META_FILENAME
         out_path.write_text(json.dumps(meta, indent=2))
         return out_path
 
     @abstractmethod
-    def extract(self, pcap_paths: list[str], output_dir: str) -> None:
-        """The tool-specific extraction logic.
-        
-        pcap_paths: List of local paths to the downloaded raw pcaps.
-        output_dir: The local scratch directory where the tool should write its logs.
+    def extract(self, pcap_paths: list[str], output_dir: str) -> ExtractionReport:
+        """Run the tool over each pcap, reporting what succeeded and what did not.
+
+        Returns rather than raises on a per-pcap failure, so one unreadable
+        capture does not discard the work already done -- but the caller is
+        given the failures and must decide, rather than being told nothing.
         """
-        pass
+
+
+def version_from_tag(image: str) -> str | None:
+    """A concrete version out of a Docker tag, or None if the tag is a moving one.
+
+    `zeek/zeek:8.2.1` gives 8.2.1. `zeek/zeek:latest` gives None, because
+    "latest" is not a version -- two runs months apart would share a feature
+    space while being different builds, which is exactly the contamination the
+    feature space exists to prevent.
+    """
+    tail = image.rsplit("/", 1)[-1]           # drop registry host, which may hold a port
+    if ":" not in tail:
+        return None
+    tag = tail.rsplit(":", 1)[-1]
+    return tag if _VERSION_LIKE.match(tag) else None
