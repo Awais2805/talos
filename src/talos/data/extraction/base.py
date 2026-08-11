@@ -190,8 +190,10 @@ class BaseExtractor(ABC):
         loaded scripts belong in it -- `protocols/conn/mac-logging` adds two
         columns to conn -- while a thread count would not.
 
-        Empty means the tool has no output-affecting settings, and the feature
-        space is then just name and version.
+        Recorded in the sidecar but NOT currently part of the feature space,
+        which is tool and version only. So two runs of the same version with
+        different settings land in the same directory today; give the second one
+        a distinct version, or add the write-time fingerprint check.
         """
         return {}
 
@@ -205,14 +207,16 @@ class BaseExtractor(ABC):
 
     @property
     def feature_space(self) -> str:
-        """The directory that scopes zones 2-4, e.g. `zeek_v8.2.1_3f9a21`.
+        """The directory that scopes zones 2-4, e.g. `zeek_v8.2.1`.
 
-        Readable prefix so a human can see what made a tree, plus a short digest
-        of the output-affecting settings so two incompatible configurations of
-        the same tool version cannot land in one place.
+        Tool and version only, for readability. `config_fingerprint()` is still
+        recorded in the sidecar, so a write-time check ("this tree was extracted
+        with different settings") can be added later without re-extracting
+        anything. Until it is, changing a schema-affecting setting WITHOUT also
+        changing the version will write into the existing tree -- see the
+        warning on config_fingerprint.
         """
-        base = f"{self.name}_v{self.version}"
-        space = f"{base}_{self.config_sha}" if self.config_sha else base
+        space = f"{self.name}_v{self.version}"
         if not _SAFE_SEGMENT.match(space):
             raise ExtractionError(
                 f"{space!r} is not usable as a directory name. A feature space "

@@ -3,6 +3,7 @@
 
     talos init [path]     create a lake and a config pointing at it
     talos config          show where everything resolves to
+    talos ingest          put captures into a source's raw zone
     talos extract         run the configured extractor over the raw zone
     talos convert         convert extracted logs to parquet or csv
     talos label           attach ground truth from the attack schedule
@@ -46,9 +47,14 @@ model: xgboost
 aws:
   region: eu-north-1
 
-# role governs how a dataset may be used downstream:
-#   train    -- may contribute flows to a training pool
-#   holdout  -- evaluation only; MUST NOT enter a training pool
+# What is in the lake, and where each dataset's traffic came from. `source`
+# decides which labelling is applicable, not merely where files sit:
+#   datasets  -- public corpora, labelled from a published attack schedule
+#   netem     -- emulator runs, labels known by construction
+#   honeypot  -- live capture, no schedule; behavioural labelling only
+#
+# ROLES ARE NOT HERE. Whether a dataset may contribute to a training pool is a
+# property of an experiment, so it lives in experiments/<name>/experiment.yaml.
 datasets: {{}}
 """
 
@@ -142,6 +148,22 @@ def run_stage(module: str, extra: list[str]) -> int:
     finally:
         sys.argv = argv
 
+# -------------------------------------------------------------------- ingest
+
+def cmd_ingest(args, extra) -> int:
+    """Put captures into a source's raw zone, with provenance, and seal it."""
+    from talos.data.ingestion.ingest import IngestionError, main as ingest_main
+
+    argv = list(extra)
+    if args.config:
+        argv = ["--config", args.config, *argv]
+    try:
+        return ingest_main(argv)
+    except IngestionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
 # ------------------------------------------------------------------- extract
 
 def cmd_extract(args, extra) -> int:
@@ -226,10 +248,24 @@ def _extract_dataset(lake, extractor, dataset, pcaps, destination):
             if report.extracted:
                 lake.put_tree(out, destination)
 
-    # The sidecar records whether the run completed, so anything later choosing
-    # "the most recent extraction" can tell a clean run from a mostly-failed one.
+    # The sidecar records whether the TREE is complete, so anything later
+    # choosing "the most recent extraction" can tell a clean run from a
+    # mostly-failed one. The existing sidecar is read first: without it the
+    # merge has nothing to carry forward and a second pass over a subset would
+    # report `complete` while earlier failures were still missing.
+    import json
+    from talos.data.extraction.base import META_FILENAME
+
+    previous = None
+    marker = f"{destination}/{META_FILENAME}"
+    if lake.exists(marker):
+        try:
+            previous = json.loads(lake.read_text(marker))
+        except (ValueError, OSError):
+            previous = None          # unreadable sidecar: start fresh, do not crash
+
     with tempfile.TemporaryDirectory() as tmp:
-        extractor.write_metadata(tmp, dataset, report=total)
+        extractor.write_metadata(tmp, dataset, report=total, previous=previous)
         lake.put_tree(Path(tmp), destination)
     return total
 
@@ -326,6 +362,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("path", nargs="?", default="./lake", help="lake root (default: ./lake)")
 
     sub.add_parser("config", help="show where everything resolves to")
+    sub.add_parser("ingest", help="put captures into a source's raw zone",
+                   add_help=False)
     sub.add_parser("extract", help="run the configured extractor over the raw zone")
     sub.add_parser("convert", help="convert extracted logs to parquet or csv", add_help=False)
     sub.add_parser("label", help="attach ground truth from the attack schedule", add_help=False)
@@ -345,6 +383,8 @@ def main(argv=None) -> int:
             return cmd_init(args)
         if args.cmd == "config":
             return cmd_config(args)
+        if args.cmd == "ingest":
+            return cmd_ingest(args, extra)
         if args.cmd == "extract":
             return cmd_extract(args, extra)
         if args.cmd == "convert":

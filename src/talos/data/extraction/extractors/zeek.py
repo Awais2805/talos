@@ -23,10 +23,14 @@ from talos.data.extraction.base import (
 
 logger = logging.getLogger(__name__)
 
-# Loaded on every run. These CHANGE THE CONN SCHEMA -- mac-logging adds
-# orig_l2_addr and resp_l2_addr -- so they are part of the config fingerprint,
-# and changing them forks the feature space.
-DEFAULT_SCRIPTS = ("protocols/conn/mac-logging",)
+# Zeek policy scripts CHANGE THE CONN SCHEMA, so they are part of the config
+# fingerprint and changing them forks the feature space.
+#
+# Empty by default. `protocols/conn/mac-logging` used to be loaded here; it adds
+# orig_l2_addr and resp_l2_addr, which nothing reads and which identify the
+# testbed's hardware rather than any behaviour. Declare scripts in config.yml
+# when a stage actually needs the columns they add.
+DEFAULT_SCRIPTS = ()
 
 # Zeek writes conn.log for any capture it processed, so the presence of one is
 # the resumption checkpoint. No separate state store to fall out of sync.

@@ -64,6 +64,8 @@ datasets:
     source: datasets
 
 zeek:
-  image: zeek/zeek:8.2.1
+  image: zeek/zeek:8.2.1        # pin the tag; `latest` is refused as a version
   flags: "-C"                   # ignore invalid TCP checksums
   json_logs: true
+  scripts: []
+  # version: 8.2.1              # only needed if the image tag is not a version

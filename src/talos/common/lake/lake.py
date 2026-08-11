@@ -107,7 +107,12 @@ class LocalBackend:
             path.chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
 
     def unseal(self, uri: str) -> None:
+        # Guarded like `seal`: unsealing a zone that does not exist yet is what
+        # the first ingest into a dataset does, and it must be a no-op rather
+        # than a crash.
         base = Path(uri)
+        if not base.exists():
+            return
         for path in [base, *base.rglob("*")]:
             path.chmod(path.stat().st_mode | stat.S_IWUSR)
 
