@@ -1,6 +1,6 @@
 """The checks that run on every labelling run.
 
-Four for v0, and the split between fatal and advisory is the important part.
+Five for v0, and the split between fatal and advisory is the important part.
 
 **Silent rules abort.** A rule matching zero flows means a wrong time or a wrong
 address, and it is the single most likely place for a transcription error to
@@ -31,6 +31,16 @@ from talos.common.validation import Check, CheckResult, ValidationGate
 
 # A burst is suspicious when it is both large in absolute terms and large
 # relative to the dataset -- and when almost all of it involves a known victim.
+#
+# These are EMPIRICAL, not derived and not cited. They are the values that
+# caught the two real defects: 2019's DNS window being ~14 minutes early (a
+# 4,981,469-flow flood sitting just outside it) and the off-by-one-minute
+# extension bug worth 2,508,616 flows. Recorded as such rather than presented as
+# principled, because a threshold that found something twice is evidence and a
+# threshold that sounds reasonable is not.
+#
+# They are tuned to the 2017/2018/2019 shapes and have no justification for a
+# fourth dataset. Revisit before trusting the check on one.
 BURST_MIN_FLOWS = 10_000
 BURST_MIN_SHARE = 0.005
 BURST_VICTIM_SHARE = 0.9
@@ -117,11 +127,15 @@ class LabelValidator:
     @staticmethod
     def gate() -> ValidationGate:
         gate = ValidationGate("labelling")
-        gate.register(Check("silent rules", silent_rules))
-        gate.register(Check("uid unique in conn", uid_is_unique))
-        gate.register(Check("no null labels", no_null_labels))
+        gate.register(Check("silent rules", silent_rules,
+                            requires=("silent_rules", "rules_total")))
+        gate.register(Check("uid unique in conn", uid_is_unique,
+                            requires=("total_flows", "distinct_uids")))
+        gate.register(Check("no null labels", no_null_labels,
+                            requires=("null_labels",)))
         gate.register(Check("rule breadth", rule_breadth, fatal=False))
-        gate.register(Check("benign burst audit", benign_audit, fatal=False))
+        gate.register(Check("benign burst audit", benign_audit, fatal=False,
+                            requires=("suspect_bursts",)))
         return gate
 
     @staticmethod
