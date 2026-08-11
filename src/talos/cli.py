@@ -273,35 +273,44 @@ def _extract_dataset(lake, extractor, dataset, pcaps, destination):
 # ------------------------------------------------------------------- convert
 
 def cmd_convert(args, extra) -> int:
-    """Condenses format conversion into a single routing command."""
+    """Mirror the extracted zone into parquet, and optionally CSV, in one pass."""
     import argparse
-    p = argparse.ArgumentParser(prog="talos convert", description="Convert extracted logs.")
-    p.add_argument("--dataset", required=True, help="Target dataset name")
-    p.add_argument("--format", choices=["parquet", "csv", "both"], default="parquet", 
-                   help="Output format (parquet, csv, both). Defaults to parquet.")
-    p.add_argument("--feature-space", default=None, help="Explicit feature space")
-    
-    # Parse known arguments so downstream flags (e.g., --threads) pass through safely
-    c_args, c_extra = p.parse_known_args(extra)
-    
-    # Build standard downstream arguments
-    downstream_args = ["--dataset", c_args.dataset]
-    if args.config:
-        downstream_args.extend(["--config", args.config])
-    if c_args.feature_space:
-        downstream_args.extend(["--feature-space", c_args.feature_space])
-    downstream_args.extend(c_extra)
+    from talos.data.conversion.convert import Converter, ConversionError
 
-    ret = 0
-    if c_args.format in ("parquet", "both"):
-        ret = run_stage("talos.data.conversion.to_parquet", downstream_args)
-        if ret != 0: 
-            return ret
-            
-    if c_args.format in ("csv", "both"):
-        ret = run_stage("talos.data.conversion.to_csv", downstream_args)
-        
-    return ret
+    p = argparse.ArgumentParser(prog="talos convert")
+    p.add_argument("--dataset", required=True)
+    p.add_argument("--format", choices=["parquet", "csv", "both"], default="parquet")
+    p.add_argument("--source", default=None,
+                   help="defaults to the dataset's declaration in config.yml")
+    p.add_argument("--feature-space", default=None,
+                   help="defaults to the most recent COMPLETE extraction")
+    p.add_argument("--logtypes", nargs="*",
+                   help="only convert these log stems, e.g. conn dns")
+    p.add_argument("--allow-incomplete", action="store_true",
+                   help="convert an extraction that reported failed captures")
+    a = p.parse_args(extra)
+
+    formats = ("parquet", "csv") if a.format == "both" else (a.format,)
+    cfg = Config.load(args.config)
+    try:
+        report = Converter(cfg).convert(
+            a.dataset, formats=formats, source=a.source,
+            feature_space=a.feature_space, logtypes=a.logtypes,
+            allow_incomplete=a.allow_incomplete)
+    except ConversionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"dataset       {report.dataset}  ({report.source})")
+    print(f"feature space {report.feature_space}")
+    print(f"source        {report.src}")
+    for fmt, uri in report.destinations.items():
+        print(f"  -> {fmt:<8} {uri}")
+    print(f"\n{report.summary()}")
+    for rel, why in report.skipped[:5]:
+        print(f"  SKIPPED {rel}: {why}", file=sys.stderr)
+    return 1 if report.skipped else 0
+
 
 # --------------------------------------------------------------------- label
 

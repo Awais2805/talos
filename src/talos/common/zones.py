@@ -47,9 +47,15 @@ DEFAULT_TEMPLATES = {
     "parquet": "sources/{source}/parquet/{feature_space}/{dataset}",
     "labelled": "sources/{source}/labelled/{feature_space}/{dataset}",
     "canonical": "canonical/{schema_version}/{dataset}",
+    # An EXPORT, not a pipeline stage: nothing reads it, it exists for people
+    # and other tools. Addressable like any zone so no stage has to invent a
+    # path, but deliberately absent from ZONE_ORDER so `init` does not create it
+    # and `config` does not list it as a step.
+    "csv": "sources/{source}/csv/{feature_space}/{dataset}",
 }
 
 DESCRIPTIONS = {
+    "csv": "human-readable export of the parquet zone",
     "raw": "captures, immutable — drop pcaps here",
     "extracted": "extractor output, per feature space",
     "parquet": "one parquet per source log, same tree",
@@ -58,6 +64,7 @@ DESCRIPTIONS = {
 }
 
 SOURCE_DESCRIPTIONS = {
+    "csv": "human-readable export of the parquet zone",
     "datasets": "public IDS datasets — labelled from a published schedule",
     "netem": "emulator captures — labels known by construction",
     "honeypot": "live capture — no schedule, behavioural labelling only",

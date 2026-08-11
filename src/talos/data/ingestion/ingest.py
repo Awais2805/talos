@@ -244,6 +244,13 @@ def main(argv=None) -> int:
     print(f"dataset     {report.dataset}  ({report.source})")
     print(f"destination {report.destination}")
     print(f"            {report.summary()}")
+    if a.dataset not in cfg.datasets:
+        # Every later command resolves the source from config.yml, so an
+        # undeclared dataset silently reverts to `datasets` and the next stage
+        # looks in the wrong tree.
+        print(f"\nnote: {a.dataset} is not declared in config.yml, so later "
+              f"commands will assume source `datasets`. Add:\n"
+              f"  datasets:\n    {a.dataset}:\n      source: {report.source}")
     if not a.utc_offset and report.ingested:
         print("\nnote: no --utc-offset declared. For a capture you control, "
               "declaring it now is what stops its labels resting on a guess.")
