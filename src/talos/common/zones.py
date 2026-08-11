@@ -4,29 +4,48 @@ A zone is a stage in the pipeline, and every stage reads zone n and writes zone
 n+1 without mutating its input. That contract is what makes provenance possible,
 and it holds wherever the root points.
 
-Zone paths are templates rather than fixed names for two reasons. Zones 2-4 are
-scoped by the feature space that produced them, so the placeholder set differs
-per zone. And a pre-existing lake may not follow the current convention -- one
-such lake puts raw captures at `{dataset}/pcaps` -- so a template lets an old
-layout and a freshly initialised one be addressed by the same code.
+**The lake is source-major.** Talos takes traffic from three kinds of place, and
+they are not interchangeable
+
+    lake/
+      lake.yaml
+      sources/
+        datasets/            public IDS datasets
+          raw/{dataset}
+          extracted/{feature_space}/{dataset}
+          parquet/{feature_space}/{dataset}
+          labelled/{feature_space}/{dataset}
+        netem/               emulator captures — labels known by construction
+        honeypot/            live capture — no schedule, behavioural labelling only
+      canonical/{schema_version}/{dataset}
+
+The end-user flow the layout is built for: pick a source, drop pcaps into its
+raw zone, watch them move zone by zone.
+
 """
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 # Order matters: it is the pipeline order, and `init` creates them in it.
 ZONE_ORDER = ["raw", "extracted", "parquet", "labelled", "canonical"]
 
-# Zones 2-4 are scoped by feature_space because an extractor defines what a flow
-# *is*: the same dataset extracted two ways is two different tables, and giving
-# them separate paths makes accidental pooling impossible rather than merely
-# discouraged. The canonical zone keys on schema_version, which pins the feature
-# space transitively.
+# The three kinds of place traffic comes from. Not a taxonomy of datasets -- a
+# taxonomy of PROVENANCE, which is why it decides what labelling can be applied.
+SOURCES = ("datasets", "netem", "honeypot")
+DEFAULT_SOURCE = "datasets"
+
+# Zones 1-4 are scoped by `source`, and 2-4 additionally by `feature_space`
+# because an extractor defines what a flow *is*: the same capture extracted two
+# ways is two different tables, and separate paths make accidental pooling
+# impossible rather than merely discouraged. The canonical zone keys on
+# schema_version, which pins the feature space transitively.
 DEFAULT_TEMPLATES = {
-    "raw": "raw/{dataset}",
-    "extracted": "extracted/{feature_space}/{dataset}",
-    "parquet": "parquet/{feature_space}/{dataset}",
-    "labelled": "labelled/{feature_space}/{dataset}",
+    "raw": "sources/{source}/raw/{dataset}",
+    "extracted": "sources/{source}/extracted/{feature_space}/{dataset}",
+    "parquet": "sources/{source}/parquet/{feature_space}/{dataset}",
+    "labelled": "sources/{source}/labelled/{feature_space}/{dataset}",
     "canonical": "canonical/{schema_version}/{dataset}",
 }
 
@@ -35,8 +54,34 @@ DESCRIPTIONS = {
     "extracted": "extractor output, per feature space",
     "parquet": "one parquet per source log, same tree",
     "labelled": "flows + ground truth",
-    "canonical": "registry-governed, train-ready",
+    "canonical": "registry-governed, train-ready — all sources merged",
 }
+
+SOURCE_DESCRIPTIONS = {
+    "datasets": "public IDS datasets — labelled from a published schedule",
+    "netem": "emulator captures — labels known by construction",
+    "honeypot": "live capture — no schedule, behavioural labelling only",
+}
+
+
+@dataclass(frozen=True)
+class ZoneDir:
+    """One zone location, and where it belongs.
+
+    `uri` is a lake URI, not a Path: a lake may be a directory, a bucket or
+    anything else fsspec can reach, and this module has no business knowing
+    which. `created` is filled in by whoever materialises the plan.
+    """
+
+    zone: str
+    source: str | None          # None for a zone shared across sources
+    uri: str
+    created: bool = False
+
+    @property
+    def name(self) -> str:
+        """Last segment — what the zone is actually called on disk."""
+        return self.uri.rstrip("/").rsplit("/", 1)[-1]
 
 
 def is_remote(root: str) -> bool:
@@ -89,28 +134,38 @@ def resolve(root: str, template: str, dataset: str | None = None, **scope) -> st
     return join(root, fill(template, dataset=dataset, **scope))
 
 
-def init(root: str, templates: dict[str, str] | None = None) -> dict[str, tuple[Path, bool]]:
-    """Create the zone directories under a local root.
+def is_source_scoped(template: str) -> bool:
+    """Whether a zone lives under a source.
 
-    Returns {zone: (path, created)} -- the path is reported rather than derived
-    from the zone name, because the two differ: the `canonical` zone lives at
-    `mapped/`, and a legacy lake puts `raw` at `{dataset}/pcaps`.
-
-    Remote roots need no initialisation: object stores have no directories, and
-    a prefix springs into existence when the first object is written.
+    Read off the template, exactly as feature-space scoping is. A lake that
+    declares a zone without `{source}` gets a shared one, and nothing else has
+    to be told.
     """
-    if is_remote(root):
-        raise ValueError(
-            f"{root} is a remote lake — object stores have no directories to "
-            "create. Set lake.root to a local path to use `talos init`.")
+    return "{source}" in template
 
+
+def plan(root: str, templates: dict[str, str] | None = None,
+         sources: tuple[str, ...] = SOURCES) -> list[ZoneDir]:
+    """Every zone location a lake at `root` should have. Pure — touches nothing.
+
+    A user who installs Talos and initialises a lake should get somewhere to put
+    pcaps without reading any documentation: three sources, each with its zones,
+    and the shared canonical zone alongside.
+
+    Locations are reported rather than derived from zone names, because the two
+    differ — a legacy lake puts `raw` at `{dataset}/pcaps` and its canonical zone
+    at `mapped/`.
+
+    This function does no I/O at all, which is what lets one plan serve a
+    directory, a bucket, or anything else fsspec reaches. Materialising it is
+    `LakeClient.init`, because that is the only class allowed to touch storage.
+    """
     templates = templates or DEFAULT_TEMPLATES
-    base = Path(normalise_root(root))
-    result = {}
+    out: list[ZoneDir] = []
     for zone in ZONE_ORDER:
         template = templates.get(zone, DEFAULT_TEMPLATES[zone])
-        path = base / fill(template).strip("/")
-        created = not path.exists()
-        path.mkdir(parents=True, exist_ok=True)
-        result[zone] = (path, created)
-    return result
+        scopes = sources if is_source_scoped(template) else (None,)
+        for source in scopes:
+            prefix = fill(template, source=source) if source else fill(template)
+            out.append(ZoneDir(zone=zone, source=source, uri=join(root, prefix)))
+    return out
