@@ -44,7 +44,17 @@ class DuckEngine:
     """
 
     def __init__(self, remote=False, region=None, memory_limit=None, temp_dir=None,
-                 threads=None, max_temp=None):
+                 threads=None, max_temp=None, profile=None):
+        # A profile supplies the machine's share; explicit kwargs are a
+        # per-stage override on top of it. Neither is required -- with both
+        # absent DuckDB uses its own defaults, which is right for a test.
+        if profile is not None:
+            settings = profile.override(memory_limit=memory_limit, threads=threads,
+                                        temp_dir=temp_dir, max_temp=max_temp)
+            settings.ensure_temp_dir()
+            memory_limit, threads = settings.memory_limit, settings.threads
+            temp_dir, max_temp = settings.temp_dir, settings.max_temp
+
         self.remote, self.region, self._minted = bool(remote), region, 0.0
         self.con = duckdb.connect()
 
@@ -95,6 +105,18 @@ class DuckEngine:
         return True
 
     # ------------------------------------------------------------------- sql
+
+    def relation(self, query):
+        """A lazy relation, not rows.
+
+        `sql` fetches everything, which is right for a count and catastrophic
+        for a scan: labelling reads 2.1M conn rows and writes them straight back
+        out, and materialising that into Python tuples would be both pointless
+        and fatal. Composition -- project, filter, join, COPY -- stays inside
+        DuckDB where it belongs.
+        """
+        self.refresh()
+        return self.con.sql(query)
 
     def sql(self, query):
         self.refresh()
