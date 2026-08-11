@@ -63,10 +63,12 @@ def parse_args():
     p.add_argument("--no-cascade", action="store_true",
                    help="do not regenerate the comparison reports afterwards")
     p.add_argument("--no-render", action="store_true", help="write JSON only, no HTML")
-    p.add_argument("--memory-limit", default="8GB", help="DuckDB memory limit")
-    p.add_argument("--threads", type=int, default=4, help="DuckDB threads")
-    p.add_argument("--temp-dir", default=None, help="DuckDB spill directory")
-    p.add_argument("--max-temp", default="20GB", help="cap on the spill directory")
+    # Default to None so the machine's resource profile decides. A flag here
+    # is a deliberate per-run override, not a guess baked in at import time.
+    p.add_argument("--memory-limit", default=None, help="override DuckDB memory limit")
+    p.add_argument("--threads", type=int, default=None, help="override DuckDB threads")
+    p.add_argument("--temp-dir", default=None, help="override DuckDB spill directory")
+    p.add_argument("--max-temp", default=None, help="override the spill cap")
     p.add_argument("--spec", default=None, help="override the EDA spec file")
     p.add_argument("--config", default=str(default_config()))
     return p.parse_args()
@@ -223,14 +225,18 @@ def summarise(profile):
 def main():
     a = parse_args()
     cfg = Config.load(a.config)
-    region, role = cfg.region, cfg.role(a.dataset)
+    # `lake_source` = which of the three provenance kinds this dataset is, not
+    # to be confused with `a.source`/`src`, which is the parquet glob. A ROLE is
+    # deliberately not read here: a role belongs to an experiment, and a profile
+    # is a property of the data -- the same profile whichever study reads it.
+    region, lake_source = cfg.region, cfg.source_of(a.dataset)
     eda_out = cfg.eda_dir
 
     src = a.source or cfg.parquet_glob(a.zone, a.dataset)
     spec = Spec(a.spec) if a.spec else Spec()
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-    print(f"dataset   {a.dataset}  (role: {role})")
+    print(f"dataset   {a.dataset}  (from: {lake_source})")
     print(f"source    {src}")
     partial = ("; ".join(x for x in (
         f"{a.sample}% random sample" if a.sample else "",
@@ -238,10 +244,11 @@ def main():
 
     print(f"spec      v{spec.version} sha {spec.sha}"
           f"{'  PARTIAL: ' + partial if partial else ''}")
-    print(f"duckdb    {a.threads} threads, {a.memory_limit} memory"
-          f"{f', spill {a.temp_dir} capped {a.max_temp}' if a.temp_dir else ''}")
+    print(cfg.resources.override(memory_limit=a.memory_limit, threads=a.threads,
+                                temp_dir=a.temp_dir, max_temp=a.max_temp).describe())
 
     lake = DuckEngine(remote=zones.is_remote(src), region=region,
+                      profile=cfg.resources,
                       memory_limit=a.memory_limit, temp_dir=a.temp_dir,
                       threads=a.threads, max_temp=a.max_temp)
     cols = lake.columns(src)
@@ -276,7 +283,8 @@ def main():
     profile = {
         "profile_version": PROFILE_VERSION,
         "meta": {
-            "dataset": a.dataset, "role": role, "source": src, "zone": a.zone,
+            "dataset": a.dataset, "lake_source": lake_source,
+            "source": src, "zone": a.zone,
             "generated_utc": started, "scan_seconds": round(elapsed, 1),
             "spec_version": spec.version, "spec_sha": spec.sha,
             # A partial profile is still a valid profile -- it just describes a
