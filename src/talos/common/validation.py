@@ -4,19 +4,7 @@ Validation is a service rather than asserts scattered through business logic for
 two reasons. A check written inline is invisible to anything that wants to
 report what was verified, so "which checks ran" becomes unanswerable. And
 `assert` is removed by `python -O`, which makes it precisely the wrong
-instrument for a correctness gate.
-
-**A gate has no bypass.** `raise_on_fail` either returns or raises; there is no
-argument that suppresses it. A gate that can be skipped is not a gate, it is a
-log line, and the pressure to add the flag arrives exactly when the check is
-telling the truth.
-
-Checks are fatal by default and may opt out. Labelling needs both kinds: a rule
-that matched zero flows is a transcription error and must stop the run, while a
-suspicious benign burst is evidence to record and investigate, not grounds to
-refuse to write. Collapsing the two would either make the pipeline unrunnable or
-make the abort meaningless.
-"""
+instrument for a correctness gate."""
 
 from __future__ import annotations
 
@@ -58,8 +46,20 @@ class Check:
     name: str
     fn: Callable[[Mapping[str, Any]], Any]
     fatal: bool = True
+    #: Context keys this check reads. Declared so a stage that renames one gets
+    #: "the harness did not supply X" rather than a check that appears to have
+    #: found a fault in the data -- which, for a fatal check, aborts the run for
+    #: entirely the wrong reason.
+    requires: tuple[str, ...] = ()
 
     def run(self, ctx: Mapping[str, Any]) -> CheckResult:
+        absent = [k for k in self.requires if k not in ctx]
+        if absent:
+            return CheckResult(
+                self.name, False,
+                f"could not run: the stage did not supply {', '.join(absent)}. "
+                f"This is a harness fault, not a finding about the data.",
+                self.fatal, {"missing_context": absent})
         try:
             outcome = self.fn(ctx)
         except Exception as exc:                    
