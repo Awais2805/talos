@@ -21,6 +21,11 @@ import yaml
 
 DEFAULT_PATH = Path(__file__).with_name("manifests") / "taxonomy.yaml"
 
+# The class every unmatched flow falls to under the closed-world assumption.
+# Defined here, beside the vocabulary it must belong to, so the labeller cannot
+# emit a class the taxonomy does not declare.
+BENIGN = "benign"
+
 
 class TaxonomyError(Exception):
     pass
@@ -41,6 +46,11 @@ class TaxonomyMapper:
         """A mapping onto a class that does not exist is a typo, caught at load."""
         if not self._classes:
             raise TaxonomyError(f"{self.path}: no canonical_classes declared")
+        if BENIGN not in self._classes:
+            raise TaxonomyError(
+                f"{self.path}: no {BENIGN!r} class. Every flow no rule matched is "
+                f"labelled with it under the closed-world assumption, so a taxonomy "
+                f"without it would emit a class outside its own vocabulary.")
         unknown = {raw: cls for raw, cls in self._mapping.items()
                    if cls not in self._classes}
         if unknown:

@@ -32,6 +32,8 @@ dataset contains no executed FTP brute force at all.
 
 from __future__ import annotations
 
+from talos.data.labelling.join import MATCHED
+
 # NULL means "not applicable, or not measurable" — never "no". A three-valued
 # column is the honest shape: true, false, and we-cannot-say.
 #
@@ -50,7 +52,7 @@ class ExecutionClassifier:
     generator, and it was briefly a mutable field the engine reached in and set.
     """
 
-    def __init__(self, orig_bytes: str = "orig_bytes", matched: str = "m"):
+    def __init__(self, orig_bytes: str = "orig_bytes", matched: str = MATCHED):
         self.orig_bytes = orig_bytes
         self.matched = matched
 
