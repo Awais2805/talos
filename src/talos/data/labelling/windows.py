@@ -151,18 +151,51 @@ def extend_windows(windows: Sequence[Window], clamp_starts: Iterable[float]) -> 
     return out
 
 
+def resolve_when(entry: dict, doc: dict) -> tuple[str, str]:
+    """(date, utc_offset) for one entry, from whichever shape the manifest uses.
+
+    2019 keys entries on `day` because its two capture days carry different
+    offsets -- ADT then AST, either side of the 2018 DST change. Resolving that
+    per entry is the only way the difference can be expressed at all.
+
+    Lives here rather than on the manifest loader because quarantine regions
+    need it too, and a shared resolver is what stops the two shapes being
+    interpreted differently.
+    """
+    days = doc.get("days")
+    if days is not None:
+        key = entry.get("day")
+        if key not in days:
+            raise WindowError(f"{entry.get('name') or entry.get('reason')}: "
+                              f"day {key!r} is not in the days: table")
+        day = days[key]
+        return str(day["date"]), day["utc_offset"]
+
+    if "date" not in entry:
+        raise WindowError(f"{entry.get('name') or entry.get('reason')}: "
+                          f"no date, and no days: table")
+    offset = doc.get("utc_offset")
+    if offset is None:
+        raise WindowError(f"{entry.get('name') or entry.get('reason')}: "
+                          f"manifest declares no utc_offset")
+    return str(entry["date"]), offset
+
+
 def build_all(factory, entries) -> list:
     """Construct every window, reporting ALL the bad ones rather than the first.
 
     `__post_init__` fails on one window; a manifest with four mistakes should
     cost one round trip, not four.
     """
-    built, errs = [], []
+    built, errs, kind = [], [], WindowError
     for entry in entries:
         try:
             built.append(factory(entry))
         except WindowError as exc:
+            # Keep the first error's type: a caller catching QuarantineError
+            # should still catch a batch of quarantine problems.
+            kind = type(exc) if not errs else kind
             errs.append(str(exc))
     if errs:
-        raise WindowError("invalid windows:\n  " + "\n  ".join(errs))
+        raise kind("invalid windows:\n  " + "\n  ".join(errs))
     return built
