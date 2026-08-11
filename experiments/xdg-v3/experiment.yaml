@@ -1,0 +1,57 @@
+# Cross-domain generalisation study — the reference experiment.
+
+name: xdg-v3
+description: >
+  Does training on domain-diverse network flows reinforce cross-domain
+  generalisation, given a consistent feature format across datasets? Detection
+  ladder level 2 — known attack, novel environment.
+
+# Names a lake; does not own one. Zones 1-4 are shared substrate reused across
+# experiments, because re-extracting 137M flows per study would be absurd. Only
+# the canonical zone is experiment-scoped, keyed on the schema version this
+# experiment locks. Omit to use whatever `config.yml` points at.
+lake: null
+
+extractor: zeek
+labelling_strategy: schedule        # schedule | behavioural
+
+# role  -- train: may contribute flows to a training pool
+#          holdout: evaluation only; MUST NOT enter a training pool
+#          audit: neither; held back for hand inspection and the label benchmark
+#
+# A dataset this file does not mention is `unassigned`, never `train`. Defaulting
+# the other way would let a dataset dropped into the lake join a training pool
+# because nobody wrote a line about it.
+datasets:
+  cic-ids-2017:
+    role: train
+
+  cic-ids-2018:
+    role: train
+
+  cic-ddos-2019:
+    role: holdout
+    reason: >
+      Excluded from training to prevent domain leakage. 97.9% of all
+      ddos-labelled flows in the lake come from this one capture (66.8M of
+      68.3M), and it supplies 94% of every attack flow across all three
+      datasets, so in any merged pool "2019-ness" and "attack-ness" become
+      nearly the same variable -- a model would learn the environment, not the
+      behaviour, and stripping IPs at Map time does not remove packet-size,
+      timing or protocol-mix signatures. Its benign class is also ~98%
+      unlabelled attack traffic and only ~110k flows are genuinely benign,
+      because the testbed ran 25 simulated users against a victim under
+      near-constant attack. Used instead as a held-out evaluation domain
+      measuring attack RECALL under domain shift (ladder rungs 2 and 4);
+      false-positive rate is taken from 2017/2018, whose benign classes are
+      verified clean.
+
+# Evaluation protocol. Designed, not yet implemented -- recorded here so the
+# result carries the protocol that produced it.
+evaluation:
+  primary: leave-one-domain-out
+  metric: tpr_at_fixed_fpr
+  # FPR is measured on 2017/2018 only: they are the domains whose benign
+  # classes are verified clean.
+  fpr_measured_on: [cic-ids-2017, cic-ids-2018]
+  breakdown: per_attack_family
