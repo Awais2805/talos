@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from talos.common import zones
 from talos.common.provenance import ProvenanceService, content_sha
 from talos.data.extraction.base import BYTE_COUNTS, CONN_BACKBONE, FLOW_ID
 from talos.common.validation import GateResult, ValidationGate
@@ -27,6 +28,16 @@ from talos.data.labelling.manifest import AttackRule, ManifestLoader
 from talos.data.labelling.taxonomy import TaxonomyMapper
 from talos.data.labelling.validate import Burst, LabelValidator
 from talos.data.labelling.writer import LabelWriter
+
+
+class LabellingError(Exception):
+    pass
+
+
+# What the join and the execution classifier read off `conn`. Checked from
+# footers before any scan starts: a capability declaration says what an
+# extractor CAN emit, this says what this particular tree actually has.
+REQUIRED_COLUMNS = ("ts", "uid", "id.orig_h", "id.resp_h")
 
 
 @dataclass
@@ -139,6 +150,8 @@ class LabellingEngine:
                 f"so an executed attack cannot be told from a connection attempt")
 
         duck = self.lake.duck
+        self._preflight(duck, src, dataset, feature_space,
+                        self.cfg.source_of(dataset), can_tell_executed)
         ctes = self.join.base_ctes(manifest.rules, src, base, regions)
 
         # `union_by_name` here too: every other read of this glob uses it, and a
@@ -189,6 +202,50 @@ class LabellingEngine:
         zone = self.lake.uri("parquet", dataset=dataset, feature_space=feature_space,
                              source=self.cfg.source_of(dataset))
         return f"{zone}/**/conn.parquet", f"{zone}/"
+
+    def _preflight(self, duck, src: str, dataset: str, feature_space: str,
+                   source: str, measurable: bool) -> None:
+        """Fail usefully before three scans, not usefully-ish during the first.
+
+        Without this the common mistakes -- never converted, wrong feature
+        space, dataset filed under a different source -- all surface as the same
+        raw DuckDB "No files found that match the pattern", which names a path
+        and nothing else.
+        """
+        zone = self.lake.uri("parquet", dataset=dataset, source=source,
+                             feature_space=feature_space)
+        if not self.lake.list(zone):
+            raise LabellingError(self._nothing_to_label(dataset, source, feature_space))
+
+        columns = duck.columns(src)
+        wanted = list(REQUIRED_COLUMNS) + (["orig_bytes"] if measurable else [])
+        missing = [c for c in wanted if c not in columns]
+        if missing:
+            raise LabellingError(
+                f"{src} has no {', '.join(missing)}. The schedule join reads "
+                f"Zeek's conn backbone; this tree does not look like conn.")
+
+    def _nothing_to_label(self, dataset: str, source: str, feature_space: str) -> str:
+        """Name what IS there, since the answer is usually one of three things."""
+        spaces = sorted({
+            uri.split(f"/{dataset}/")[0].rstrip("/").rsplit("/", 1)[-1]
+            for uri in self.lake.list(self.lake.uri("parquet", source=source))
+            if f"/{dataset}/" in uri})
+        if spaces:
+            return (f"no parquet for {dataset!r} under feature space "
+                    f"{feature_space!r}, but it exists under: {', '.join(spaces)}. "
+                    f"Pass --feature-space, or check the extractor config.")
+
+        elsewhere = [other for other in zones.SOURCES if other != source
+                     and self.lake.list(self.lake.uri("parquet", dataset=dataset,
+                                                      source=other))]
+        if elsewhere:
+            return (f"no parquet for {dataset!r} under source {source!r}, but it "
+                    f"exists under: {', '.join(elsewhere)}. Declare the source in "
+                    f"config.yml under datasets.{dataset}.source.")
+
+        return (f"nothing to label: no parquet for {dataset!r}. "
+                f"Run `talos convert --dataset {dataset}` first.")
 
     def _summary_query(self, ctes: str, measurable: bool = True) -> str:
         """Attack flows only. Benign is total minus attack, and total is free.

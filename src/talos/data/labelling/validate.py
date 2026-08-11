@@ -79,10 +79,21 @@ def uid_is_unique(ctx: Mapping) -> CheckResult:
         evidence={"rows": total, "distinct": distinct})
 
 
-def no_null_labels(ctx: Mapping) -> CheckResult:
-    nulls = ctx["null_labels"]
-    return CheckResult("no null labels", nulls == 0, f"{nulls:,} null label_class",
-                       evidence={"nulls": nulls})
+def counts_reconcile(ctx: Mapping) -> CheckResult:
+    """Attack flows cannot outnumber flows.
+
+    Cheap arithmetic over numbers already in hand, and it fails on the symptom
+    of a non-unique `uid`: the join double-counts and the summary reports more
+    attacks than the dataset contains. `uid_is_unique` catches the cause; this
+    catches it again at the point where it would corrupt a published ratio.
+    """
+    attack, total = ctx["attack_flows"], ctx["total_flows"]
+    ok = 0 <= attack <= total
+    return CheckResult(
+        "counts reconcile", ok,
+        f"{attack:,} attack of {total:,} flows"
+        + ("" if ok else " — the join produced more matches than there are flows"),
+        evidence={"attack": attack, "total": total})
 
 
 def rule_breadth(ctx: Mapping) -> CheckResult:
@@ -131,8 +142,8 @@ class LabelValidator:
                             requires=("silent_rules", "rules_total")))
         gate.register(Check("uid unique in conn", uid_is_unique,
                             requires=("total_flows", "distinct_uids")))
-        gate.register(Check("no null labels", no_null_labels,
-                            requires=("null_labels",)))
+        gate.register(Check("counts reconcile", counts_reconcile,
+                            requires=("attack_flows", "total_flows")))
         gate.register(Check("rule breadth", rule_breadth, fatal=False))
         gate.register(Check("benign burst audit", benign_audit, fatal=False,
                             requires=("suspect_bursts",)))

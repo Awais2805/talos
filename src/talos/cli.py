@@ -318,7 +318,7 @@ def cmd_label(args, extra) -> int:
     """Attach ground truth to one dataset's conn flows from its attack schedule."""
     import argparse
     from talos.common.validation import GateFailure
-    from talos.data.labelling.engine import LabellingEngine
+    from talos.data.labelling.engine import LabellingEngine, LabellingError
 
     p = argparse.ArgumentParser(prog="talos label")
     p.add_argument("--dataset", required=True, help="dataset name (must have a manifest)")
@@ -337,6 +337,10 @@ def cmd_label(args, extra) -> int:
     print(f"feature space {feature_space}")
     try:
         report = engine.label(a.dataset, feature_space, a.source, write=not a.no_write)
+    except LabellingError as exc:
+        # Nothing to label, or the wrong shape of table. Refused before any scan.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     except GateFailure as exc:
         # The gate has already been written to the run report; surface it and stop.
         print(f"\nLABELLING ABORTED\n{exc}", file=sys.stderr)
