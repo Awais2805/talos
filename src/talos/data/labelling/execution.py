@@ -1,34 +1,4 @@
-"""Executed attacks versus mere attempts.
-
-Matching on time and endpoints alone means a flow is called an attack *because
-of when it happened*, without anything verifying that an attack occurred. Empty
-and failed TCP connections between attacker and victim get counted as executed
-attacks. Published audits of CIC-IDS-2017 identify this and propose the
-distinction; we adopt it.
-
-The distinction is only meaningful where the attacker must send data for the
-attack to happen — brute force, web attacks, botnet C2, HTTP floods. That set is
-declared per raw attack name in `taxonomy.yaml` and arrives here as the
-`needs_payload` column of the rules table, so this module never decides which
-attacks qualify. It only decides, for those that do, whether payload was sent.
-
-Two things it must not get wrong:
-
-**Zero is not unknown.** `orig_bytes = 0` is a confirmed empty connection.
-`orig_bytes IS NULL` means Zeek could not determine the byte count. Conflating
-them marks flows as attempts on the basis of missing measurement.
-
-**Some attacks are legitimately empty.** Port scans, slow-DoS (which hold sockets
-open by sending almost nothing), SYN floods and UDP reflection are deliberately
-outside `requires_payload`. Marking those "attempted" would discard real attack
-traffic — which is why the exempt set is a declared list in the taxonomy rather
-than a condition in this file.
-
-The immediate consequence of this test on real data: all 192,300 of 2018's FTP
-brute-force flows have conn_state `REJ` — a SYN answered by a reset, one packet
-each way, zero bytes — meaning the service refused every connection and the
-dataset contains no executed FTP brute force at all.
-"""
+"""Executed attacks versus mere attempts."""
 
 from __future__ import annotations
 
