@@ -1,61 +1,67 @@
 # Talos — central configuration.
 #
 # Everything that decides WHERE data lives is here; no script carries its own
-# bucket name or prefix. Point lake.root at a local directory or an s3:// URI
-# and the whole pipeline follows. `talos config` shows how it resolves.
+# bucket name or prefix. Point lake.root at a local directory, an S3 bucket, GCS
+# or anything else fsspec reaches, and the whole pipeline follows.
+# `talos config` shows how it resolves.
+#
+# What is NOT here: dataset roles. Whether a dataset may contribute to a
+# training pool is a property of an experiment, not of the lake, so it lives in
+# experiments/<name>/experiment.yaml and is hashed into experiment_sha beside
+# the result it produced.
 
 lake:
-  # The lake this project actually uses. For a local lake instead:
-  #   root: "./lake"      then `talos init ./lake`
+  # Local directory, s3://bucket/prefix, gs://…, abfs://… — one code path.
+  # `talos init <root>` creates the layout wherever this points.
   root: "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9"
 
-  # Zone -> path template beneath the root. Templates rather than fixed names
-  # because the layout is not uniform: raw pcaps predate the convention and sit
-  # at {dataset}/pcaps, while every other zone is {zone}/{dataset}. A fresh
-  # local lake made by `talos init` uses raw/{dataset} instead.
-  zones:
-    raw:       "{dataset}/pcaps"    # original pcap archives, immutable
-    extracted: "extracted/{dataset}"  # extractor output, per dataset
-    parquet:   "parquets/{dataset}"   # one parquet per source log, same tree.
-                                      # Zone key is `parquet`; the prefix stays
-                                      # `parquets/` because that is where the
-                                      # existing tree physically sits.
-    labelled:  "labelled/{dataset}"   # flows + ground truth
-    canonical: "mapped/{dataset}"     # registry-governed, train-ready
+  # zones: is an OVERRIDE for a lake whose layout Talos did not create. Omitted
+  # here, so the standard source-major layout applies:
+  #
+  #   sources/{source}/raw/{dataset}
+  #   sources/{source}/extracted/{feature_space}/{dataset}
+  #   sources/{source}/parquet/{feature_space}/{dataset}
+  #   sources/{source}/labelled/{feature_space}/{dataset}
+  #   canonical/{schema_version}/{dataset}          <- shared across sources
+
+# What this machine may spend. Every value defaults to `auto`, detected at run
+# time, and `talos config` shows what was detected. Declare a value to pin it —
+# useful when the machine is shared, or when you know which disk is the big one.
+#
+#   memory_limit  75% of physical RAM
+#   threads       cores, capped so each has at least 512 MB to work in
+#   temp_dir      the roomiest volume, NEVER left to default onto the root disk
+#   max_temp      min(20GB, a quarter of that volume's free space)
+resources:
+  memory_limit: auto
+  threads: auto
+  temp_dir: auto
+  max_temp: auto
 
 reports:
   dir: "reports"
 
-# Which plugins this project uses.
+# Which plugins this project uses. `talos config` shows what is registered.
 extractor: zeek
 model: xgboost
 
-# Only consulted when lake.root is an s3:// URI.
+# Only consulted when lake.root is a remote URI.
 aws:
   region: eu-north-1
 
-# role governs how a dataset may be used downstream:
-#   train    -- may contribute flows to a training pool
-#   holdout  -- evaluation only; MUST NOT enter a training pool
+# What is in the lake, and where each dataset's traffic came from.
+#
+# source decides which labelling is even applicable, not just where files sit:
+#   datasets  -- public IDS corpora, labelled from a published attack schedule
+#   netem     -- emulator runs, labels known by construction
+#   honeypot  -- live capture, no schedule; behavioural labelling only
 datasets:
   cic-ids-2017:
-    role: train
+    source: datasets
   cic-ids-2018:
-    role: train
+    source: datasets
   cic-ddos-2019:
-    role: holdout
-    reason: >
-      Excluded from training to prevent domain leakage. 97.9% of all ddos-labelled
-      flows in the lake come from this one capture (66.8M of 68.3M), and it supplies
-      94% of every attack flow across all three datasets, so in any merged pool
-      "2019-ness" and "attack-ness" become nearly the same variable -- a model would
-      learn the environment, not the behaviour, and stripping IPs at Map time does
-      not remove packet-size, timing or protocol-mix signatures. Its benign class is
-      also ~98% unlabelled attack traffic and only ~110k flows are genuinely benign,
-      because the testbed ran 25 simulated users against a victim under near-constant
-      attack. Used instead as a held-out evaluation domain measuring attack RECALL
-      under domain shift (ladder rungs 2 and 4); false-positive rate is taken from
-      2017/2018, whose benign classes are verified clean.
+    source: datasets
 
 zeek:
   image: zeek/zeek:8.2.1
