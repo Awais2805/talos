@@ -7,52 +7,54 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
-
-from talos.common.provenance import content_sha
+from talos.common.plugins import ConfigPlugins
 from talos.experiment.spec import ROLES, ExperimentSpec
 
 DEFAULT_DIR = Path("experiments")
 SPEC_FILE = "experiment.yaml"
-STRATEGIES = ("schedule", "behavioural")
+DEFAULT_LABELS = "schedule"
 
 
 class ExperimentError(Exception):
     pass
 
 
+#: The experiment plug-in point: a user declares their own study without it
+#: having to live in this repository's `experiments/`.
+EXPERIMENTS = ConfigPlugins("experiment", built_in=DEFAULT_DIR,
+                            filename=SPEC_FILE, error=ExperimentError)
+
+
 class ExperimentLoader:
     """Finds and loads experiment declarations."""
 
-    def __init__(self, directory: str | Path = DEFAULT_DIR):
-        self.directory = Path(directory)
+    def __init__(self, directory: str | Path | None = None):
+        """Reads the shared `EXPERIMENTS` point unless scoped to one directory."""
+        self.specs = EXPERIMENTS if directory is None else ConfigPlugins(
+            "experiment", built_in=directory, filename=SPEC_FILE,
+            error=ExperimentError, addressable=False)
+
+    @property
+    def directory(self) -> Path | None:
+        return self.specs.built_in
 
     def path_for(self, name: str) -> Path:
         """`experiments/<name>/experiment.yaml`, or the file itself."""
-        candidate = Path(name)
-        if candidate.suffix in (".yaml", ".yml") and candidate.exists():
-            return candidate
-        path = self.directory / name / SPEC_FILE
-        if not path.exists():
-            available = ", ".join(sorted(
-                p.parent.name for p in self.directory.glob(f"*/{SPEC_FILE}"))) or "none"
-            raise ExperimentError(
-                f"no experiment {name!r} under {self.directory}. Have: {available}")
-        return path
+        return self.specs.path_for(name)
 
     def load(self, name: str) -> ExperimentSpec:
-        path = self.path_for(name)
-        doc = yaml.safe_load(path.read_text()) or {}
+        declaration = self.specs.get(name)
+        doc, path = declaration.doc, declaration.path
         datasets = doc.get("datasets") or {}
         self.validate(doc, datasets, path)
 
         return ExperimentSpec(
-            name=doc.get("name", path.parent.name),
+            name=doc.get("name", declaration.name),
             lake=doc.get("lake"),
             extractor=doc.get("extractor", "zeek"),
-            labelling_strategy=doc.get("labelling_strategy", "schedule"),
+            labels=doc.get("labels", DEFAULT_LABELS),
             datasets=datasets,
-            sha=content_sha(path),
+            sha=declaration.sha,
             path=path,
             doc=doc,
         )
@@ -76,10 +78,18 @@ class ExperimentLoader:
                 errs.append(f"{name}: holdout with no reason. Excluding a dataset "
                             f"from training is an argument, and it has to be on record")
 
-        strategy = doc.get("labelling_strategy", "schedule")
-        if strategy not in STRATEGIES:
-            errs.append(f"labelling_strategy {strategy!r} is not one of "
-                        f"{', '.join(STRATEGIES)}")
+        # `labels` names a METHOD DECLARATION, not a family. It is not checked
+        # against the registry here: an experiment that imported the labelling
+        # package to validate one string would invert the dependency, and an
+        # unknown name is refused loudly by whichever stage resolves it. Only the
+        # shape is checked, because a name becomes a directory in the lake.
+        labels = doc.get("labels", DEFAULT_LABELS)
+        if not isinstance(labels, str) or not labels.strip():
+            errs.append("labels must name one labelling method declaration, "
+                        "e.g. `labels: fused-v1`")
+        elif "/" in labels:
+            errs.append(f"labels {labels!r} becomes a directory in the labelled "
+                        f"zone, so it may not contain a path separator")
 
         if errs:
             raise ExperimentError(f"{path}:\n  " + "\n  ".join(errs))

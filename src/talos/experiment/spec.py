@@ -26,7 +26,7 @@ class ExperimentSpec:
     name: str
     lake: str | None
     extractor: str
-    labelling_strategy: str
+    labels: str
     datasets: Mapping[str, Mapping[str, Any]]
     sha: str
     path: Path | None = None
@@ -63,7 +63,7 @@ class ExperimentSpec:
             f"sha         {self.sha}",
             f"lake        {self.lake or '(from config)'}",
             f"extractor   {self.extractor}",
-            f"labelling   {self.labelling_strategy}",
+            f"labels      {self.labels}",
             "datasets:",
         ]
         for name in sorted(self.datasets):
@@ -74,6 +74,6 @@ class ExperimentSpec:
         return {
             "name": self.name, "sha": self.sha, "lake": self.lake,
             "extractor": self.extractor,
-            "labelling_strategy": self.labelling_strategy,
+            "labels": self.labels,
             "datasets": {d: {"role": self.role(d)} for d in sorted(self.datasets)},
         }
