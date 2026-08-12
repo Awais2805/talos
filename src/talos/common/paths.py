@@ -23,6 +23,11 @@ def eda_dir() -> Path:
     return reports_dir() / "eda"
 
 
+def models_dir() -> Path:
+    """Root for model checkpoints. `TALOS_MODELS` overrides."""
+    return Path(os.environ.get("TALOS_MODELS", "models"))
+
+
 def default_config() -> Path:
     """Config search: `TALOS_CONFIG`, else ./config.yml."""
     return Path(os.environ.get("TALOS_CONFIG", "config.yml"))

@@ -342,6 +342,8 @@ def cmd_label(args, extra) -> int:
                    help="report only; do not write the labelled table")
     p.add_argument("--force", action="store_true",
                    help="overwrite a table built from different inputs")
+    p.add_argument("--allow-untrained", action="store_true",
+                   help="write a table from parts that cannot learn (harness only)")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
@@ -350,7 +352,7 @@ def cmd_label(args, extra) -> int:
         # The DECLARATION is resolved first; it names the implementation. A
         # `--method-file` is just a declaration resolved from somewhere else.
         spec = MethodLoader().load(a.method_file or a.method)
-        method = spec.build(cfg)
+        method = spec.build(cfg, allow_untrained=a.allow_untrained)
     except LabellingError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -373,15 +375,12 @@ def cmd_label(args, extra) -> int:
         print(f"\nLABELLING ABORTED\n{exc}", file=sys.stderr)
         return 1
 
-    from talos.data.labelling.schedule import MANIFESTS
-    print(f"method sha    {report.method_sha}   "
-          f"(manifest {report.manifest_sha}, taxonomy {report.taxonomy_sha})")
-    print(f"manifest      {a.dataset}{_whose(MANIFESTS.origin_of(a.dataset))}")
+    # Only what every method has. Whatever is particular to one of them is its
+    # own report's business -- which is the core-schema argument, for output.
+    print(f"method sha    {report.method_sha}")
     print(f"source        {report.source}\n")
     print(report.table())
-    print(f"\n{report.gate.report()}")
-    if report.overlaps:
-        print(f"note: {report.overlaps:,} flow(s) matched >1 rule; lowest rule id wins")
+    print(f"\n{report.summary()}")
     print(f"\noutput        {report.output or '(report only — --no-write)'}")
     return 0
 

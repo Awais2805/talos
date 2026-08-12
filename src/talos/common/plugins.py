@@ -13,7 +13,7 @@ The plug-in points, and where each is created:
     experiment               .yaml      talos.experiment          [gate 7]
     labelling method         .py        talos.data.labelling      [gate 8]
     method, label space      .yaml      talos.data.labelling      [gate 9]
-    encoder decoder head     .py        talos.nn                  [gate 11]
+    encoder decoder head     .py        talos.parts                [gate 11]
     model                    .py        talos.engine              [later]
 
 Adding a point is one line -- `X = CodePlugins("thing", error=ThingError)` -- and

@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 from talos.common import zones
-from talos.common.paths import default_config, reports_dir
+from talos.common.paths import default_config, models_dir, reports_dir
 
 
 class ConfigError(Exception):
@@ -141,6 +141,11 @@ class Config:
     @property
     def eda_dir(self) -> Path:
         return self.reports / "eda"
+
+    @property
+    def models(self) -> Path:
+        """Where model checkpoints live. Local: a checkpoint is not lake data."""
+        return Path((self.doc.get("models") or {}).get("dir", models_dir()))
 
     # ------------------------------------------------------------ resources
 
