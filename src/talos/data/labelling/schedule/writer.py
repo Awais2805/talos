@@ -33,7 +33,11 @@ from talos.data.labelling.schedule.join import MATCHED, QUARANTINED
 #: What schedule labelling emits beyond the core ten.
 EXTRAS = (
     "label_raw", "label_executed", "rule_id", "rules_matched",
-    "label_quality", "quarantine_reason",
+    # `label_quality` is NOT here: it moved into core when pools began filtering
+    # on it. Out-of-space is a property of the label space, every method has one,
+    # so every method can and must answer. `quarantine_reason` stays -- only
+    # schedule labelling has regions.
+    "quarantine_reason",
 )
 
 

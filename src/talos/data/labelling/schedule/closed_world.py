@@ -48,13 +48,18 @@ class ClosedWorldResolver:
         """`label_quality` and `quarantine_reason`.
 
         `out_of_space` is a SQL expression yielding an exclusion reason or NULL,
-        generated from the label space. It takes PRECEDENCE over a quarantine
-        region, because the two mean different things: `uncertain` says the label
-        may be wrong, `out-of-space` says the label is fine and this study cannot
-        use the class. The second excludes the flow from every pool, so it is the
-        stronger statement. A flow that is both loses the region's reason -- noted
-        rather than concatenated, since the reason is an identifier that gets
-        grouped on downstream.
+        generated from the label space. The two flags mean different things --
+        `uncertain` says the label may be wrong, `out-of-space` says the label is
+        fine and this study cannot use the class -- and a flow can be both.
+
+        `label_quality` gives out-of-space PRECEDENCE, because it excludes the
+        flow from every pool while `uncertain` only marks it.
+
+        `quarantine_reason` resolves the tie the OTHER way, and that asymmetry is
+        deliberate. An out-of-space reason is recoverable from the row: take
+        `label_class`, look it up in the label space, get the reason back. A
+        region's reason is not recoverable from anything on the row. So the
+        column keeps the irrecoverable one and nothing is lost either way.
 
         A quarantined flow KEEPS the label the schedule gave it and is flagged
         beside it, rather than getting a third `label_class` value. Every
@@ -71,16 +76,16 @@ class ClosedWorldResolver:
             return (f"'{CERTAIN}' AS label_quality,\n"
                     f"             CAST(NULL AS VARCHAR) AS quarantine_reason")
 
-        # Ordered most-excluding first; `coalesce` picks the matching reason.
-        cases, reasons = [], []
+        cases = []                       # most-excluding first
         if out_of_space is not None:
             cases.append(f"WHEN ({out_of_space}) IS NOT NULL THEN '{OUT_OF_SPACE}'")
-            reasons.append(f"({out_of_space})")
         if region is not None:
             cases.append(f"WHEN {region} IS NOT NULL THEN '{UNCERTAIN}'")
-            reasons.append(region)
-
         quality = f"CASE {' '.join(cases)} ELSE '{CERTAIN}' END"
+
+        # Irrecoverable first: the region reason, then the derivable one.
+        reasons = [r for r in (region, f"({out_of_space})"
+                               if out_of_space is not None else None) if r]
         reason = reasons[0] if len(reasons) == 1 else f"coalesce({', '.join(reasons)})"
         return (f"{quality} AS label_quality,\n"
                 f"             {reason} AS quarantine_reason")
