@@ -23,9 +23,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import ClassVar, Type
+from typing import ClassVar
 
-_EXTRACTOR_REGISTRY: dict[str, Type["BaseExtractor"]] = {}
+from talos.common.plugins import CodePlugins
 
 # The provenance sidecar every extraction run drops beside its logs. Named here
 # because downstream stages have to recognise it to skip it: it sits in the same
@@ -114,39 +114,14 @@ class ExtractionReport:
         return ", ".join(parts)
 
 
-def register_extractor(cls: Type["BaseExtractor"]):
-    """Register an extractor class under its declared name.
+#: The extractor plug-in point. `EXTRACTORS.add(path)` imports a user's own `.py`
+#: so they can bring their own tool without editing this package; `plugins:
+#: extractor:` in config.yml does the same, once, for every command.
+EXTRACTORS = CodePlugins("extractor", error=ExtractionError)
 
-    `name` is read straight off the CLASS. It used to be an abstract property,
-    which meant the registry had to conjure an instance to read it -- first by
-    calling __init__ (so any tool needing a constructor argument broke the
-    import of the whole package), then via __new__ (which only worked while
-    `name` never touched self). A plugin's name is a fact about the plugin, not
-    about one configured instance of it, so it belongs on the class.
-    """
-    name = getattr(cls, "name", "")
-    if not isinstance(name, str) or not name:
-        raise ExtractionError(
-            f"{cls.__name__} must declare a class-level `name`, e.g. "
-            f'`name = "zeek"`. It is read off the class at import time.')
-    if name in _EXTRACTOR_REGISTRY and _EXTRACTOR_REGISTRY[name] is not cls:
-        raise ExtractionError(
-            f"two extractors both call themselves {name!r}: "
-            f"{_EXTRACTOR_REGISTRY[name].__name__} and {cls.__name__}")
-    _EXTRACTOR_REGISTRY[name] = cls
-    return cls
-
-
-def get_extractor(name: str, **kwargs) -> "BaseExtractor":
-    """Resolve and construct an extractor by name."""
-    if name not in _EXTRACTOR_REGISTRY:
-        known = ", ".join(sorted(_EXTRACTOR_REGISTRY)) or "none registered"
-        raise ExtractionError(f"unknown extractor {name!r}. Known: {known}")
-    return _EXTRACTOR_REGISTRY[name](**kwargs)
-
-
-def registered() -> tuple[str, ...]:
-    return tuple(sorted(_EXTRACTOR_REGISTRY))
+register_extractor = EXTRACTORS.register
+get_extractor = EXTRACTORS.get
+registered = EXTRACTORS.names
 
 
 class BaseExtractor(ABC):

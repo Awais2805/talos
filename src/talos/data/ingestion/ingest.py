@@ -205,7 +205,7 @@ class IngestionService:
 
 def zones_offset_check(offset: str) -> None:
     """Reject an unparseable offset here rather than at labelling time."""
-    from talos.data.labelling.windows import WindowError, parse_offset
+    from talos.data.labelling.schedule.windows import WindowError, parse_offset
     try:
         parse_offset(offset)
     except WindowError as exc:

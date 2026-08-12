@@ -45,7 +45,12 @@ DEFAULT_TEMPLATES = {
     "raw": "sources/{source}/raw/{dataset}",
     "extracted": "sources/{source}/extracted/{feature_space}/{dataset}",
     "parquet": "sources/{source}/parquet/{feature_space}/{dataset}",
-    "labelled": "sources/{source}/labelled/{feature_space}/{dataset}",
+    # `{method}` scopes the labelled zone for the same reason `{feature_space}`
+    # scopes the three above it: schedule labelling, an autoencoder and a fused
+    # result are three different opinions about the same flows, and separate
+    # paths make pooling them by accident impossible rather than discouraged.
+    # Fusion and the three-way benchmark read several of these deliberately.
+    "labelled": "sources/{source}/labelled/{feature_space}/{method}/{dataset}",
     "canonical": "canonical/{schema_version}/{dataset}",
     # An EXPORT, not a pipeline stage: nothing reads it, it exists for people
     # and other tools. Addressable like any zone so no stage has to invent a

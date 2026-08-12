@@ -237,7 +237,7 @@ class LakeClient:
 
     def uri(self, zone: str, dataset: str | None = None, rel: str | None = None,
             feature_space: str | None = None, schema_version: str | None = None,
-            source: str | None = None) -> str:
+            source: str | None = None, method: str | None = None) -> str:
         """Logical address -> physical location.
 
         `feature_space` scopes the extracted, parquet and labelled zones, because
@@ -254,6 +254,7 @@ class LakeClient:
         template = zones.fill(self.templates[zone], dataset=dataset,
                               feature_space=feature_space,
                               schema_version=schema_version,
+                              method=method,
                               source=source or self.default_source)
         return zones.join(self.root, template, rel or "")
 
