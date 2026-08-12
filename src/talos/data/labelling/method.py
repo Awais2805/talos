@@ -22,7 +22,9 @@ from talos.common.plugins import ConfigPlugins, Declaration, Origin
 from talos.common.provenance import Sha12, composite_sha
 from talos.data.labelling.base import LABELLERS, LabellingError
 from talos.data.labelling.space import DEFAULT_SPACE, LabelSpace, LabelSpaceLoader
-from talos.data.labelling.taxonomy import DEFAULT_TAXONOMY, TaxonomyMapper
+from talos.data.labelling.taxonomy import (
+    DEFAULT_TAXONOMY, TAXONOMIES, TaxonomyMapper,
+)
 
 LABELLING_DIR = Path(__file__).parent
 METHOD_FILE = "method.yaml"
@@ -66,8 +68,9 @@ class MethodSpec:
         A per-dataset input -- schedule labelling's manifest -- is added by the
         method itself, because only it knows there is one.
         """
-        return (self.path, self.label_space.path,
-                TaxonomyMapper(self.taxonomy).path)
+        # `path_for`, not `TaxonomyMapper(...).path`: the mapper parses and
+        # validates a whole YAML file, and this is called on every `method_sha`.
+        return (self.path, self.label_space.path, TAXONOMIES.path_for(self.taxonomy))
 
     def method_sha(self, *extra: Path) -> Sha12:
         """Composite over the declaration and everything it names.

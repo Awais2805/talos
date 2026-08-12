@@ -51,6 +51,7 @@ CORE_COLUMNS = (
     "method_sha",         # composite hash of everything that determined it
     "label_confidence",   # NULL when the method cannot measure one
     "label_weight",       # NULL until confident learning assigns one
+    "label_quality",      # certain | uncertain | out-of-space
     "dataset",
     "capture",            # leakage-safe split key
     "labelled_at",
@@ -67,6 +68,7 @@ CORE_TYPES = {
     "method_sha": "VARCHAR",
     "label_confidence": "DOUBLE",
     "label_weight": "DOUBLE",
+    "label_quality": "VARCHAR",
     "dataset": "VARCHAR",
     "capture": "VARCHAR",
     "labelled_at": "VARCHAR",

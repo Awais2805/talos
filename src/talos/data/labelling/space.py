@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from talos.common.plugins import ConfigPlugins, Declaration
+import re
+
 from talos.common.provenance import Sha12
 from talos.data.labelling.taxonomy import BENIGN, TaxonomyMapper
 
@@ -19,9 +21,19 @@ DEFAULT_SPACE = "core-5"
 #: fine and the study cannot use it".
 OUT_OF_SPACE = "out-of-space"
 
+#: An exclusion reason is written into every out-of-space row, grouped on
+#: downstream, and interpolated into generated SQL. Strict, so that all three
+#: are safe: "no spaces" alone would still admit an apostrophe.
+_REASON = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
 
 class LabelSpaceError(Exception):
     pass
+
+
+def _quote(value: str) -> str:
+    """A SQL string literal. Class names come from a user-supplied taxonomy."""
+    return "'" + str(value).replace("'", "''") + "'"
 
 
 #: The label-space plug-in point. A user declares their own set of classes -- a
@@ -98,8 +110,10 @@ class LabelSpace:
         """
         if not self.excluded:
             return "CAST(NULL AS VARCHAR)"
+        # The class name comes from a user-supplied taxonomy, so it is escaped.
+        # The reason is pattern-checked at load and cannot need escaping.
         whens = " ".join(
-            f"WHEN {column} = '{label}' THEN '{e.reason}'"
+            f"WHEN {column} = {_quote(label)} THEN '{e.reason}'"
             for label, e in sorted(self.excluded.items()))
         return f"CASE {whens} ELSE CAST(NULL AS VARCHAR) END"
 
@@ -165,16 +179,16 @@ class LabelSpaceLoader:
             if not exclusion.reason:
                 errs.append(f"{label}: excluded with no reason. Holding a class "
                             f"out of a study is an argument and has to be on record")
-            elif " " in exclusion.reason:
-                errs.append(f"{label}: reason {exclusion.reason!r} is prose. It is "
-                            f"written into every out-of-space row and grouped on "
-                            f"downstream, so it must be an identifier; put the "
+            elif not _REASON.match(exclusion.reason):
+                errs.append(f"{label}: reason {exclusion.reason!r} is not an "
+                            f"identifier. It is written into every out-of-space "
+                            f"row, grouped on downstream and interpolated into "
+                            f"SQL, so it must match [a-z0-9][a-z0-9-]*; put the "
                             f"explanation in `note`")
 
         if taxonomy is not None:
-            unknown = sorted(
-                set(classes) | set(excluded) - {c for c in taxonomy.classes})
-            unknown = [c for c in unknown if c not in taxonomy.classes]
+            named = set(classes) | set(excluded)
+            unknown = sorted(named - set(taxonomy.classes))
             if unknown:
                 errs.append(
                     f"names classes the taxonomy does not declare: "
