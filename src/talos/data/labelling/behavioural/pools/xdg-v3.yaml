@@ -1,0 +1,71 @@
+# Talos — the pools the cross-domain study draws from.
+#
+# Membership is COMPUTED, never recorded: bucket = hash(seed || uid) % buckets,
+# and each pool owns a contiguous range. Two pools cannot overlap, because the
+# ranges come from one cumulative walk over the shares below. Nothing is
+# materialised, which at 137M flows is the difference between a declaration and
+# a multi-gigabyte uid list that drifts out of step with the lake.
+#
+# Re-deriving is free and exact, so a pool is reproducible from this file plus
+# the labelled tables it names — and `pool_sha` is this file's content hash.
+
+name: xdg-v3
+description: >
+  Pools for the cross-domain generalisation study. Drawn only from the two
+  training-role domains; cic-ddos-2019 is a holdout and never enters a pool.
+
+source:
+  # 2019 is deliberately absent. Its role is holdout in experiments/xdg-v3, and
+  # a pool that quietly included it would defeat the guard the role exists for.
+  datasets: [cic-ids-2017, cic-ids-2018]
+  labels: schedule           # which labelled table; a method declaration name
+
+# Where the label space finally bites. Gate 9 flags heartbleed, infiltration,
+# portscan and web_attack `out-of-space` and LEAVES them in the labelled table,
+# so that table stays the whole dataset. This is the line at which they stop
+# being training data.
+#
+# `uncertain` is NOT excluded: a quarantined flow is one we are unsure about,
+# and confident learning exists precisely to weigh those rather than discard
+# them. Add it here only for a run that deliberately wants clean input.
+exclude:
+  - out-of-space
+
+# `uid` gives fine-grained, proportional pools — a hash is uniform within any
+# subset, so every class and every capture is represented in proportion without
+# anyone asking. Switch to `capture` for a leakage-safe evaluation split, at the
+# cost of balance: captures differ in size by orders of magnitude.
+partition_by: uid
+
+# Changing this reshuffles every pool. It is part of the hash, so a result can
+# always name the split that produced it.
+seed: "talos-xdg-v3-20260812"
+
+buckets: 1000000
+
+# Shares are fractions and must total exactly 1: every flow lands in exactly one
+# pool. A total below 1 would silently discard the remainder.
+pools:
+  d_s:
+    share: 0.0002            # ~13k flows of 64M — the audit CANDIDATE pool
+    role: audited
+    description: >
+      Candidates for hand adjudication. NOT the audited set itself: a uniform
+      share cannot guarantee a floor for rare classes, so whoever builds D_s
+      draws from here with a per-class minimum. Kept small because every row in
+      it is eventually looked at by a person.
+
+  d_l:
+    share: 0.8498            # the large unlabelled pool Path B pretrains on
+    role: unlabelled
+    description: >
+      Pretraining pool for the autoencoder and contrastive branches. Its labels
+      are present in the table but deliberately unused: the point of the SSL
+      stage is that it does not need them.
+
+  held:
+    share: 0.15
+    role: held
+    description: >
+      Never trained on, never audited. Reserved so that an in-domain evaluation
+      exists that no stage of Path B has touched.
