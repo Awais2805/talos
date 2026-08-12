@@ -33,6 +33,7 @@ where = ["src"]
 "talos.data.profiling.eda" = ["spec.yaml"]
 "talos.data.labelling" = ["taxonomies/*.yaml"]
 "talos.data.labelling.schedule" = ["manifests/*.yaml"]
+"talos.data.labelling.behavioural" = ["pools/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
