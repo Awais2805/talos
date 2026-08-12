@@ -53,10 +53,10 @@ Levels 1 and 2 will use XGBoost. Levels 3 and 4 belong to a second-layer NN that
 ## Status
 | Stage                                            | State           | Notes                                                    |
 | ------------------------------------------------ | --------------- | -------------------------------------------------------- |
-| Raw pcap ingestion   S3                         |   Working       | 3 public datasets archived immutably                     |
-| Zeek extraction (batch, resumable)               |   Working       | `talos/data/zeek_batch.sh`, Dockerised Zeek 8.2.1        |
-| Zeek logs   Parquet (1:1 tree mirror)            |   Working       | `talos/data/to_parquet.py`, streaming, memory-safe       |
-| Lake schema discovery / drift check              |   Working       | `talos/preprocess/lake_feature_discovery.py`, footers    |
+| Raw pcap ingestion   S3                         |   Working       | `data/ingestion/`, 3 public datasets archived immutably   |
+| Zeek extraction (batch, resumable)               |   Working       | `data/extraction/extractors/zeek.py`, Dockerised Zeek 8.2.1 |
+| Zeek logs   Parquet (1:1 tree mirror)            |   Working       | `data/conversion/convert.py`, streaming, memory-safe      |
+| Lake schema discovery / drift check              |   Working       | `data/discovery/lake_feature_discovery.py`, footers       |
 | Statistical profiling + cross-dataset comparison |   Working       | `talos/eda/`; reads the labelled zone, reports regenerated |
 | **Labelling module**                             |   In Progress   | Schedule labelling & validation working; behavioural pool partitioning implemented; behavioural models in progress. |
 | Canonical `mapped` zone                          |   Not started   | Blocked on labelling                                     |
@@ -124,19 +124,52 @@ Note: **every stage reads zone *n* and writes zone *n+1*, and never mutates its 
 
 ## The data lake
 
-Amazon S3, five zones. Configured centrally in [`config.yml`](config.yml).
+Five zones, configured centrally in [`config.yml`](config.yml). `lake.root` is the
+only thing that decides *where* — a local directory, `s3://…`, `gs://…`, anything
+fsspec reaches — and the whole pipeline follows. `talos config` shows how every
+zone resolves.
 
-| Zone | Prefix | Contents |
+The layout is **source-major**, because sources differ semantically rather than
+organisationally: a netem run is labelled by construction, a public dataset has a
+published schedule, and a honeypot capture has *no* schedule, so schedule
+labelling can never apply to it. Which labelling is applicable belongs in the
+path, not in someone's head.
+
+| Zone | Path | Contents |
 | --- | --- | --- |
-| Raw | `{dataset}/pcaps` | Original pcap archives, immutable |
-| Extracted | `extracted/` | Zeek NDJSON logs, per dataset, dated tree preserved |
-| Parquet | `parquets/` | One parquet per source `.log`, same tree, no flattening |
-| Labelled | `labelled/` | conn flows + ground truth |
-| Canonical | `mapped/` | Registry-governed, train-ready |
+| Raw | `sources/{source}/raw/{dataset}` | Original pcap archives, immutable |
+| Extracted | `sources/{source}/extracted/{feature_space}/{dataset}` | Zeek NDJSON logs, dated tree preserved |
+| Parquet | `sources/{source}/parquet/{feature_space}/{dataset}` | One parquet per source `.log`, same tree, no flattening |
+| Labelled | `sources/{source}/labelled/{feature_space}/{method}/{dataset}` | conn flows + ground truth |
+| Canonical | `canonical/{schema_version}/{dataset}` | Registry-governed, train-ready |
+
+`{source}` is one of `datasets` · `netem` · `honeypot`. `{feature_space}` is the
+extractor and its version (`zeek_v8.2.1`), and `{method}` is which labelling
+method wrote the table — separate paths make accidental pooling of two extractors
+or two labellers *impossible* rather than merely discouraged.
+
+**Canonical is deliberately not under a source.** It is exactly where sources stop
+being separate: the merged pool the cross-domain experiment draws from. At that
+point the source becomes a column, not a directory.
+
+> The live S3 bucket still holds an older flat layout (`parquets/{dataset}`) from
+> before this change. `lake.zones` in `config.yml` exists to override the defaults
+> for a lake Talos did not create; migrating is a server-side copy, not a
+> re-extraction.
 
 ## Data sources and dataset roles
 
-Every dataset carries a **role** in `config.yml` which is enforced
+Every dataset carries a **role** — but a role is a property of a *study*, not of
+the lake. Whether 2019 may contribute to a training pool is a decision the
+cross-domain experiment makes; another study could legitimately train on it. So
+roles live in [`experiments/{name}/experiment.yaml`](experiments/), hashed into
+the experiment's own sha beside the result they produced, while `config.yml`
+carries only what is true regardless of experiment (which source the traffic came
+from). A dataset an experiment does not mention is `unassigned`, never `train` —
+defaulting the other way would let a dataset dropped into the lake join a
+training pool because nobody wrote a line about it.
+
+Roles below are those declared by `xdg-v3`, the reference experiment.
 
 | Dataset | Role | conn flows | Classes present |
 | --- | --- | --- | --- |
@@ -265,6 +298,7 @@ Layer 2 is a neural anomaly model taking the flow vector concatenated with layer
 │   ├── model/                    # ML model training, evaluation, and registry
 │   └── visualization/            # plotting and charting tools
 └── tests/                        # unit tests and snapshot regression (fixtures/golden)
+```
 
 ## Usage
 
