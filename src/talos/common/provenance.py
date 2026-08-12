@@ -43,6 +43,23 @@ def content_sha(path: str | Path) -> Sha12:
     return h.hexdigest()[:12]
 
 
+def composite_sha(*paths: str | Path) -> Sha12:
+    """One hash over several files: everything that determined a result.
+
+    A labelling method is decided by more than one file -- schedule labelling by
+    its manifest AND its taxonomy, a behavioural one by its declaration, its
+    feature spec and its label space. Hashing them together gives a single
+    `method_sha` that changes when ANY of them does, so the row does not have to
+    carry a column per input.
+
+    Order-independent: the pairs are sorted by name, so listing the same inputs
+    differently cannot produce a different hash for identical content.
+    """
+    parts = sorted((Path(p).name, content_sha(p)) for p in paths)
+    joined = "\n".join(f"{name}:{sha}" for name, sha in parts)
+    return digest(joined.encode())
+
+
 def _literal(value: Any) -> str:
     """A Python value as a SQL literal.
 
