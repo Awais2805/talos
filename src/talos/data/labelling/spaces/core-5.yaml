@@ -1,0 +1,72 @@
+# Talos — label space `core-5`.
+#
+# WHICH CLASSES A METHOD MAY PREDICT. Not the same question as which classes
+# exist: the taxonomy is the vocabulary, this is the subset a study can actually
+# learn and score.
+#
+# The test applied here is the evaluation protocol's, not a modelling one. The
+# primary protocol is leave-one-domain-out, so a class present in only one domain
+# can never be scored under it however many flows it has — and confident learning
+# estimates a noise matrix per class, which a handful of flows cannot support.
+#
+# Every exclusion carries its evidence and its reason, because excluding a class
+# is an argument and the argument has to travel with the result.
+#
+# WARNING: the counts below come from the labelling run of 2026-07-27, whose code
+# was deleted. They are the best evidence available and have NOT been reproduced
+# by the rebuilt engine. Re-verify before quoting them in the dissertation.
+
+name: core-5
+description: >
+  The five classes that appear in at least two of the three CIC domains, so that
+  every one of them is scorable under leave-one-domain-out.
+
+# Order is the reported order. `benign` must be present: closed-world labelling
+# falls to it, so a space without it could emit a class outside itself.
+classes:
+  - benign
+  - ddos
+  - dos
+  - brute_force
+  - botnet
+
+# Kept in the labelled table, flagged `out-of-space`, and held out of D_l, D_s
+# and the noise matrix. NOT dropped and NOT relabelled benign: dropping breaks
+# the closed-world guarantee that the table is the whole dataset, and relabelling
+# would teach the model that a real attack is benign — deliberate label noise
+# fed into the stage whose entire job is estimating label noise.
+excluded:
+  portscan:
+    flows: 238039
+    domains: 1
+    reason: single-domain
+    note: >
+      Plenty of flows and a genuinely distinct behaviour, but it appears only in
+      cic-ids-2017, so leave-one-domain-out can never score it. Excluded for the
+      protocol, not for the data — a study with a different protocol should
+      re-include it.
+  web_attack:
+    flows: 2474
+    domains: 2
+    reason: too-few-executed
+    note: >
+      2,047 in 2017 and 427 in 2018. Engelen et al. (WTMC 2021) find ~90% of
+      2017's are connection attempts rather than executed attacks, leaving a few
+      hundred real ones — too few to estimate a noise row from.
+  infiltration:
+    flows: 33
+    domains: 2
+    reason: too-few
+    note: >
+      25 in 2017 and 8 in 2018. 2018's second step is unlabellable at all, since
+      CIC never published the infected host's IP.
+  heartbleed:
+    flows: 1
+    domains: 1
+    reason: unestimable
+    note: One flow. Nothing can be estimated from it at any sample size.
+
+# `label_binary` is DERIVED, never predicted separately: attack is
+# `label_class != benign`. One source of truth, so the two columns cannot
+# disagree on a row.
+binary: derived
