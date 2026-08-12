@@ -6,7 +6,7 @@
     talos ingest          put captures into a source's raw zone
     talos extract         run the configured extractor over the raw zone
     talos convert         convert extracted logs to parquet or csv
-    talos label           attach ground truth from the attack schedule
+    talos label           label flows (--method schedule|ae-v1|...)
     talos discover        profile the lake by log type
     talos eda             profile one dataset -> reports
     talos compare         rebuild comparisons from existing profiles
@@ -42,6 +42,13 @@ reports:
 # Which plugins this project uses. `talos config` shows what is registered.
 extractor: zeek
 model: xgboost
+
+# Bring your own, keyed by plug-in point. Yours is searched before the shipped
+# one, and every run reports the origin of what it resolved.
+#
+# plugins:
+#   extractor: ["~/talos-plugins/nprobe.py"]
+#   manifest:  ["~/talos-plugins/manifests"]
 
 # Only consulted when lake.root is an s3:// URI.
 aws:
@@ -315,28 +322,48 @@ def cmd_convert(args, extra) -> int:
 # --------------------------------------------------------------------- label
 
 def cmd_label(args, extra) -> int:
-    """Attach ground truth to one dataset's conn flows from its attack schedule."""
+    """Label one dataset's conn flows, by whichever method is asked for."""
     import argparse
     from talos.common.validation import GateFailure
-    from talos.data.labelling.engine import LabellingEngine, LabellingError
+    from talos.data.labelling.base import LabellingError
+    from talos.data.labelling.method import METHODS, MethodLoader
+    import talos.points                             # noqa: F401 -- registers methods
 
     p = argparse.ArgumentParser(prog="talos label")
     p.add_argument("--dataset", required=True, help="dataset name (must have a manifest)")
+    p.add_argument("--method", default="schedule",
+                   help=f"labelling method: {', '.join(METHODS.names())}")
+    p.add_argument("--method-file", default=None,
+                   help="a method.yaml outside the package, e.g. your own ae-v2")
     p.add_argument("--feature-space", default=None,
                    help="extractor feature space (defaults to the configured extractor)")
     p.add_argument("--source", default=None, help="conn parquet glob to label instead")
     p.add_argument("--no-write", action="store_true",
                    help="report only; do not write the labelled table")
+    p.add_argument("--force", action="store_true",
+                   help="overwrite a table built from different inputs")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
     feature_space = a.feature_space or _feature_space(cfg)
-    engine = LabellingEngine(cfg)
+    try:
+        # The DECLARATION is resolved first; it names the implementation. A
+        # `--method-file` is just a declaration resolved from somewhere else.
+        spec = MethodLoader().load(a.method_file or a.method)
+        method = spec.build(cfg)
+    except LabellingError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"dataset       {a.dataset}")
+    print(f"method        {spec.name}  ({spec.implementation}){_whose(spec.origin)}")
+    print(f"label space   {spec.label_space.name}  sha {spec.label_space.sha}  "
+          f"({spec.label_space.n_classes} classes, "
+          f"{len(spec.label_space.excluded)} excluded)")
     print(f"feature space {feature_space}")
     try:
-        report = engine.label(a.dataset, feature_space, a.source, write=not a.no_write)
+        report = method.label(a.dataset, feature_space, source=a.source,
+                              write=not a.no_write, force=a.force)
     except LabellingError as exc:
         # Nothing to label, or the wrong shape of table. Refused before any scan.
         print(f"error: {exc}", file=sys.stderr)
@@ -346,7 +373,10 @@ def cmd_label(args, extra) -> int:
         print(f"\nLABELLING ABORTED\n{exc}", file=sys.stderr)
         return 1
 
-    print(f"manifest      {report.manifest_sha}   taxonomy {report.taxonomy_sha}")
+    from talos.data.labelling.schedule import MANIFESTS
+    print(f"method sha    {report.method_sha}   "
+          f"(manifest {report.manifest_sha}, taxonomy {report.taxonomy_sha})")
+    print(f"manifest      {a.dataset}{_whose(MANIFESTS.origin_of(a.dataset))}")
     print(f"source        {report.source}\n")
     print(report.table())
     print(f"\n{report.gate.report()}")
@@ -354,6 +384,15 @@ def cmd_label(args, extra) -> int:
         print(f"note: {report.overlaps:,} flow(s) matched >1 rule; lowest rule id wins")
     print(f"\noutput        {report.output or '(report only — --no-write)'}")
     return 0
+
+
+def _whose(origin) -> str:
+    """Nothing for a built-in, a loud suffix for anything the user substituted.
+
+    A run that used the user's own manifest or method must not read identically
+    to one that used ours -- which is the entire reason `Origin` exists.
+    """
+    return "" if origin.built_in else f"   [{origin.where} {origin.source}]"
 
 
 def _feature_space(cfg) -> str:
@@ -379,7 +418,7 @@ def build_parser() -> argparse.ArgumentParser:
                    add_help=False)
     sub.add_parser("extract", help="run the configured extractor over the raw zone")
     sub.add_parser("convert", help="convert extracted logs to parquet or csv", add_help=False)
-    sub.add_parser("label", help="attach ground truth from the attack schedule", add_help=False)
+    sub.add_parser("label", help="label flows by the chosen method", add_help=False)
 
     for name in ("discover", "eda", "compare", "render"):
         sub.add_parser(name, help=f"run the {name} stage", add_help=False)
