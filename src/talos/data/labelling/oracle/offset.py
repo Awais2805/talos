@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
-from talos.data.labelling.windows import Window, parse_offset
+from talos.data.labelling.schedule.windows import Window, parse_offset
 
 HOUR = 3600.0
 

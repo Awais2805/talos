@@ -17,9 +17,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-import yaml
+from talos.common.plugins import ConfigPlugins
 
-DEFAULT_PATH = Path(__file__).with_name("manifests") / "taxonomy.yaml"
+TAXONOMY_DIR = Path(__file__).with_name("taxonomies")
+DEFAULT_TAXONOMY = "default"
 
 # The class every unmatched flow falls to under the closed-world assumption.
 # Defined here, beside the vocabulary it must belong to, so the labeller cannot
@@ -31,12 +32,22 @@ class TaxonomyError(Exception):
     pass
 
 
+#: The taxonomy plug-in point. Not schedule-specific: every method that emits a
+#: class needs this vocabulary, and a user labelling their own traffic will have
+#: attack names the CIC taxonomy has never heard of. Lives one level above
+#: `schedule/` for that reason.
+TAXONOMIES = ConfigPlugins("taxonomy", built_in=TAXONOMY_DIR, error=TaxonomyError)
+
+
 class TaxonomyMapper:
     """The canonical class vocabulary and the mapping onto it."""
 
-    def __init__(self, path: str | Path = DEFAULT_PATH):
-        self.path = Path(path)
-        doc = yaml.safe_load(self.path.read_text()) or {}
+    def __init__(self, name: str | Path = DEFAULT_TAXONOMY):
+        declaration = TAXONOMIES.get(name)
+        self.path = declaration.path
+        self.origin = declaration.origin
+        self.sha = declaration.sha
+        doc = declaration.doc
         self._classes = tuple(doc.get("canonical_classes") or {})
         self._mapping = dict(doc.get("raw_to_canonical") or {})
         self._needs_payload = frozenset(doc.get("requires_payload") or [])
