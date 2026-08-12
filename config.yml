@@ -45,6 +45,20 @@ reports:
 extractor: zeek
 model: xgboost
 
+# Bring your own. Keyed by plug-in point, so a directory of manifests is never
+# searched for experiments. `talos config` lists every point and what it holds.
+#
+#   .py points  (a file, or a directory of them)  extractor, and later:
+#                                                 labelling method, encoder, model
+#   .yaml points (a directory of declarations)    manifest, experiment
+#
+# Yours is searched BEFORE the shipped one, so it wins -- and every run reports
+# the origin of what it resolved, so a substitution is never silent.
+#
+# plugins:
+#   extractor: ["~/talos-plugins/nprobe.py"]
+#   manifest:  ["~/talos-plugins/manifests"]
+
 # Only consulted when lake.root is a remote URI.
 aws:
   region: eu-north-1

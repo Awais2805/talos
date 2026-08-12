@@ -1,0 +1,15 @@
+# Talos — labelling method `schedule`.
+#
+# Path A: an attack schedule joined onto flows by time and endpoint, with
+# everything unmatched read as benign. The per-dataset input is the manifest,
+# resolved by dataset name rather than declared here, because one declaration
+# serves every dataset that has one.
+#
+# This file is hashed together with the label space, the taxonomy and the
+# dataset's manifest into the `method_sha` stamped on every labelled row.
+
+name: schedule
+implementation: schedule
+
+label_space: core-5
+taxonomy: default

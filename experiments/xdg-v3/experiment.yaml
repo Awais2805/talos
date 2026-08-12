@@ -13,7 +13,13 @@ description: >
 lake: null
 
 extractor: zeek
-labelling_strategy: schedule        # schedule | behavioural
+
+# WHICH LABELLED TABLE THIS STUDY CONSUMES, by method declaration name. Not a
+# family ("schedule" vs "behavioural") but one specific declaration, because
+# `ae-v1` and `ae-v2` are two runs of one implementation and a study has to say
+# which of them produced the labels it drew conclusions from. Resolves to
+# sources/{source}/labelled/{feature_space}/{labels}/{dataset}.
+labels: schedule
 
 # role  -- train: may contribute flows to a training pool
 #          holdout: evaluation only; MUST NOT enter a training pool
