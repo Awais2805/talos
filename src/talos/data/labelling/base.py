@@ -153,10 +153,13 @@ class LabellingMethod(ABC):
     #: per-flow id there is nothing to attach a label to.
     requires: ClassVar[tuple[str, ...]] = (CONN_BACKBONE, FLOW_ID)
 
-    def __init__(self, cfg, lake=None, spec=None):
+    def __init__(self, cfg, lake=None, spec=None, allow_untrained: bool = False):
         self.cfg = cfg
         self.lake = lake if lake is not None else cfg.lake()
         self.spec = spec
+        #: May this method write a table it cannot vouch for? Part of the
+        #: contract, so one CLI flag means the same thing whichever method ran.
+        self.allow_untrained = allow_untrained
 
     @property
     def run_name(self) -> str:
