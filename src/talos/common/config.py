@@ -38,6 +38,7 @@ class Config:
         self.datasets = self.doc.get("datasets") or {}
         self.extractor = self.doc.get("extractor", "zeek")
         self.model = self.doc.get("model", "xgboost")
+        self.installed: list[str] = []      # filled by install_plugins()
 
     # ------------------------------------------------------------------ load
 
@@ -53,7 +54,12 @@ class Config:
             doc = yaml.safe_load(path.read_text()) or {}
         except yaml.YAMLError as exc:
             raise ConfigError(f"{path} is not valid YAML: {exc}") from exc
-        return cls(doc, source=path)
+        config = cls(doc, source=path)
+        # Installed HERE rather than by each command, because a config that names
+        # a plug-in and does not get it is worse than one that names none: some
+        # code paths would use the user's extractor and others silently would not.
+        config.install_plugins()
+        return config
 
     # ------------------------------------------------------------- locations
 
@@ -106,6 +112,27 @@ class Config:
     def parquet_glob(self, zone: str, dataset: str) -> str:
         """Every parquet under one dataset's zone, at any depth."""
         return f"{self.zone(zone, dataset)}/**/*.parquet"
+
+    # -------------------------------------------------------------- plug-ins
+
+    def install_plugins(self) -> list[str]:
+        """Apply the `plugins:` block: the user's own extractors, manifests, methods.
+
+        Keyed by plug-in kind, so a directory of manifests is never searched for
+        experiments:
+
+            plugins:
+              extractor:  [~/talos/nprobe.py]     # a .py, or a dir of them
+              manifest:   [~/talos/manifests]     # a directory of .yaml
+        """
+        import talos.points                     # noqa: F401 -- populates POINTS
+        from talos.common.plugins import PluginError, install
+
+        try:
+            self.installed = install(self.doc.get("plugins"))
+        except PluginError as exc:
+            raise ConfigError(f"{self.source or 'config'}: {exc}") from exc
+        return self.installed
 
     @property
     def reports(self) -> Path:
@@ -164,4 +191,12 @@ class Config:
             lines.append("datasets:")
             for name in sorted(self.datasets):
                 lines.append(f"  {name:<16} {self.source_of(name)}")
+
+        import talos.points                     # noqa: F401 -- populates POINTS
+        from talos.common.plugins import POINTS
+        lines.append("plug-ins:")
+        for kind in sorted(POINTS):
+            lines.append(f"  {POINTS[kind].describe()}")
+        for line in self.installed:
+            lines.append(f"  + {line}")
         return "\n".join(lines)
