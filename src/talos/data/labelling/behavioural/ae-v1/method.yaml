@@ -1,0 +1,40 @@
+# Talos — labelling method `ae-v1`.
+#
+# Path B, autoencoder branch. Pretrains on D_l with constraint-consistent
+# reconstruction, then fine-tunes a head on the audited D_s. Hashed together
+# with the label space, taxonomy, pools and feature set into `method_sha`.
+
+name: ae-v1
+implementation: autoencoder
+
+label_space: core-5
+taxonomy: default
+
+settings:
+  # Which pools and which columns. Both are hashed into method_sha, because both
+  # decide what the model saw.
+  pools: xdg-v3
+  features: conn-v1
+  vectoriser: passthrough
+
+  latent_dim: 16
+  hidden: [128, 64]
+
+  epochs: 5
+  freeze_epochs: 2
+  finetune_epochs: 5
+  lr: 0.001
+  batch: 65536
+
+  # Relative to the squared error on continuous columns. The residual weight is
+  # low because the penalty is a plausibility prior, not the objective — the
+  # reconstruction is what carries the signal.
+  categorical_weight: 1.0
+  residual_weight: 0.1
+
+  seed: 0
+
+  # `cpu` and not `auto`: auto resolves per machine, and cuda, mps and cpu are
+  # not bitwise identical even under one seed. A declaration whose numbers get
+  # quoted has to name the device that produced them.
+  device: cpu

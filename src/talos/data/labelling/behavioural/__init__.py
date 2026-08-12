@@ -20,5 +20,12 @@ slice) that will get its own splitter.
 from talos.data.labelling.behavioural.pool import (
     PARTITIONS, Partition, PartitionLoader, Pool, PoolError,
 )
+from talos.data.labelling.behavioural.base import (
+    BehaviouralMethod, BehaviouralReport, labelling_columns,
+)
+from talos.data.labelling.behavioural import autoencoder as _autoencoder  # noqa: F401
 
-__all__ = ["PARTITIONS", "Partition", "PartitionLoader", "Pool", "PoolError"]
+__all__ = [
+    "PARTITIONS", "Partition", "PartitionLoader", "Pool", "PoolError",
+    "BehaviouralMethod", "BehaviouralReport", "labelling_columns",
+]
