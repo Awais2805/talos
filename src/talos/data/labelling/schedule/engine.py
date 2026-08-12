@@ -88,6 +88,19 @@ class LabellingReport:
             **self.extra,
         }
 
+    def summary(self) -> str:
+        """What only a schedule run has. The CLI prints it without knowing."""
+        from talos.data.labelling.schedule import MANIFESTS
+        lines = [f"manifest      {self.dataset} {self.manifest_sha}"
+                 f"{'' if MANIFESTS.origin_of(self.dataset).built_in else '  [substituted]'}",
+                 f"taxonomy      {self.taxonomy_sha}"]
+        if self.gate:
+            lines.append(f"\n{self.gate.report()}")
+        if self.overlaps:
+            lines.append(f"note: {self.overlaps:,} flow(s) matched >1 rule; "
+                         f"lowest rule id wins")
+        return "\n".join(lines)
+
     def table(self) -> str:
         """The human-facing summary, in the shape the previous runs printed."""
         head = (f"{'canonical class':<15}{'raw attack name':<25}"
