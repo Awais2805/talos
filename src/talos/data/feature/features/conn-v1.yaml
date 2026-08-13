@@ -1,0 +1,149 @@
+# Talos — feature set `conn-v1`. The LABELLER's input, not a selected schema.
+#
+# Hand-declared so Path B has something to train on; the README's selection
+# process (domain probe, SHAP, RFECV) scores relevance against the label and so
+# cannot run until labelling is done. It will produce a different declaration.
+
+name: conn-v1
+description: >
+  Behavioural features over the Zeek conn backbone, shared by all three CIC
+  domains. Volume, rate, direction and connection outcome; no identity.
+
+# `indicator` adds a 0/1 column saying the value was absent. `log1p` where the
+# quantity spans orders of magnitude.
+numeric:
+  duration:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+    note: >
+      Zeek leaves this null for a connection with no observed teardown. The
+      indicator matters: gate 5 had to distinguish orig_bytes = 0 (a connection
+      attempt) from orig_bytes IS NULL (Zeek could not say), and the Engelen et
+      al. attempted-attack criterion turns on exactly that.
+
+  orig_bytes:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+
+  resp_bytes:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+
+  orig_pkts:
+    transform: log1p
+    missing: 0.0
+
+  resp_pkts:
+    transform: log1p
+    missing: 0.0
+
+  orig_ip_bytes:
+    transform: log1p
+    missing: 0.0
+
+  resp_ip_bytes:
+    transform: log1p
+    missing: 0.0
+
+  missed_bytes:
+    transform: log1p
+    missing: 0.0
+    note: >
+      Capture loss, kept as a feature rather than only as a quality flag: heavy
+      loss is itself characteristic of a flood.
+
+# Rates and shapes — where flood, scan and session traffic separate.
+derived:
+  orig_rate:
+    expr: "orig_bytes / nullif(duration, 0)"
+    transform: log1p
+    missing: 0.0
+    note: Bytes per second from the originator.
+
+  resp_rate:
+    expr: "resp_bytes / nullif(duration, 0)"
+    transform: log1p
+    missing: 0.0
+
+  bytes_per_pkt_orig:
+    expr: "orig_bytes / nullif(orig_pkts, 0)"
+    transform: log1p
+    missing: 0.0
+    note: Payload shape. Separates a scan's empty SYNs from a real transfer.
+
+  bytes_per_pkt_resp:
+    expr: "resp_bytes / nullif(resp_pkts, 0)"
+    transform: log1p
+    missing: 0.0
+
+  ratio_orig_resp:
+    expr: "(orig_bytes + 1.0) / (resp_bytes + 1.0)"
+    transform: log1p
+    missing: 1.0
+    note: >
+      Directional asymmetry. +1 on both sides so a silent responder is a large
+      finite number rather than a division by zero.
+
+  overhead_orig:
+    expr: "orig_ip_bytes - orig_bytes"
+    transform: log1p
+    missing: 0.0
+    note: >
+      Header bytes. High overhead with near-zero payload is the signature of a
+      scan or a SYN flood.
+
+# Every vocabulary is closed; unknown values and NULLs share the `__other` column.
+categorical:
+  proto:
+    values: [tcp, udp, icmp]
+    note: Zeek emits no others for these captures.
+
+  conn_state:
+    values: [S0, S1, SF, REJ, S2, S3, RSTO, RSTR, RSTOS0, RSTRH, SH, SHR, OTH]
+    note: >
+      The most informative categorical in the schema — S0 (no reply) is what a
+      scan and a SYN flood look like, SF is a completed session. All 13 states
+      are listed even though the rare ones barely appear: a state that fell into
+      __other in one dataset and had its own column in another would not be the
+      same feature twice.
+
+  local_orig:
+    expr: "CAST(local_orig AS VARCHAR)"
+    values: ["true", "false"]
+    note: >
+      Direction relative to the monitored network, inbound or outbound. Carries
+      no address.
+
+  local_resp:
+    expr: "CAST(local_resp AS VARCHAR)"
+    values: ["true", "false"]
+
+# Relations true of any real record. Residuals are computed in original units.
+constraints:
+  - name: orig_rate_definition
+    form: ratio
+    target: orig_rate
+    operands: [orig_bytes, duration]
+
+  - name: resp_rate_definition
+    form: ratio
+    target: resp_rate
+    operands: [resp_bytes, duration]
+
+  - name: orig_payload_shape
+    form: ratio
+    target: bytes_per_pkt_orig
+    operands: [orig_bytes, orig_pkts]
+
+  - name: resp_payload_shape
+    form: ratio
+    target: bytes_per_pkt_resp
+    operands: [resp_bytes, resp_pkts]
+
+  - name: orig_ip_bytes_decomposition
+    form: sum
+    target: orig_ip_bytes
+    operands: [orig_bytes, overhead_orig]

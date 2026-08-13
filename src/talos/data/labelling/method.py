@@ -32,7 +32,8 @@ METHOD_FILE = "method.yaml"
 #: Directories that ship declarations. Each labelling family keeps its own
 #: beside its code, so this grows by one entry per family rather than by a
 #: central list of every method.
-BUILT_IN_DIRS = (LABELLING_DIR, LABELLING_DIR / "behavioural")
+BUILT_IN_DIRS = (LABELLING_DIR, LABELLING_DIR / "behavioural",
+                 LABELLING_DIR / "fusion")
 
 
 class MethodError(LabellingError):
