@@ -58,7 +58,7 @@ Levels 1 and 2 will use XGBoost. Levels 3 and 4 belong to a second-layer NN that
 | Zeek logs   Parquet (1:1 tree mirror)            |   Working       | `data/conversion/convert.py`, streaming, memory-safe      |
 | Lake schema discovery / drift check              |   Working       | `data/discovery/lake_feature_discovery.py`, footers       |
 | Statistical profiling + cross-dataset comparison |   Working       | `talos/eda/`; reads the labelled zone, reports regenerated |
-| **Labelling module**                             |   In Progress   | Schedule labelling & validation working; behavioural pool partitioning implemented; behavioural models in progress. |
+| **Labelling module**                             |   Built, untrained | All four methods land end to end: `schedule`, `ae-v1`, `tabcl-v1`, `fused-v1`, plus the audit and the three-way benchmark. The **torch path has never executed** — no macOS x86_64 wheel for the dev machine — so every behavioural result so far comes from the `inert` parts. Runs on the EC2 box are the outstanding evidence. |
 | Canonical `mapped` zone                          |   Not started   | Blocked on labelling                                     |
 | Feature registry / schema lock                   |   Designed only | Methodology settled, no code                             |
 | Training + cross-domain evaluation               |   Not started   | Blocked on canonical zone                                |
@@ -220,7 +220,7 @@ Rather than trying to make rules that are more precise, the rebuilt module label
 **Stage 1   SSL pretraining on `D_l`.** Two complementary branches:
 
 * **Autoencoder** with constraint-consistent reconstruction. MSE on continuous features, cross-entropy on categorical features, plus a residual penalty enforcing relations that hold in real flows (`rate = bytes / duration`, `length = payload + header`). Reconstructing physically plausible tuples stabilises the latent space.
-* **TabCL** (Tabular Contrastive Learning) - Two-view NT-Xent with class-conditioned feature replacement, a constraint-preserving projection so augmented views remain valid flows, and dual projection heads with separate configurations for continuous vs categorical slices. Its class-conditioned replacement is bootstrapped from a light classifier trained on `D_s` and refreshed during pretraining, so `D_s` is a dependency of this stage too   not just of stage 2.
+* **TabCL** (Tabular Contrastive Learning) - Two-view NT-Xent with class-conditioned feature replacement, and a constraint-preserving projection so augmented views remain valid flows. Replacement values are drawn **per coordinate** from the class-conditional marginal, so an augmented view need not be a flow that ever existed. There are two projection heads, and both read the **whole** latent   the specialisation is carried by their separate temperatures (0.5 continuous, 0.2 categorical) and a convex mixing weight, not by slicing the representation. Its class-conditioned replacement is bootstrapped from a light classifier trained on `D_s` and refreshed during pretraining, so `D_s` is a dependency of this stage too   not just of stage 2.
 
 **Stage 2   fine-tune and pseudo-label.** Replace decoder/projection head with a classifier, freeze unfreeze fine-tune on `D_s`, apply to all of `D_l`. Fuse the two branches by confidence, then margin.
 
@@ -228,7 +228,39 @@ Rather than trying to make rules that are more precise, the rebuilt module label
 
 **Stage 4   final classifier** trained on the full pseudo-labelled pool with weighted symmetric cross-entropy.
 
-**How this gets judged.** The benchmark is a three-way comparison against timing-injection labels and against the published manifests, scored on level-2 transfer, not on in-domain fit.
+**How this gets judged.** A hash-selected slice of `D_s` is emitted for hand adjudication with a **per-class floor**, and every method is scored against those verdicts. That slice is the only ground truth in the project, so it is the one place the word *accuracy* is used; everywhere else the pipeline reports **agreement** and says so. Results are per class and never pooled — the floor means the slice's class mix is deliberately not the population's, so a single figure would weight the classes by the wrong priors. The level-2 transfer score is a defined but empty slot until the ML pipeline exists.
+
+### What is built
+
+Four methods, one output contract. Every one emits the same ten core columns, so
+fusion, EDA, the benchmark and training read one shape and never ask who wrote it.
+
+| method | what it does | key columns it adds |
+| --- | --- | --- |
+| `schedule` | Path A — attack schedule joined by time and endpoint | `label_raw` `rule_id` `label_executed` |
+| `ae-v1` | autoencoder branch, constraint-consistent reconstruction | `recon_error` `label_margin` |
+| `tabcl-v1` | contrastive branch, class-conditioned augmentation | `view_agreement` `label_margin` |
+| `fused-v1` | reconciles the two, then confident learning | `branches_agreed` `label_weight` |
+
+```bash
+talos label --dataset cic-ids-2017 --method schedule    # then ae-v1, tabcl-v1, fused-v1
+talos audit emit --dataset cic-ids-2017                 # candidates -> CSV + parquet
+talos audit benchmark --dataset cic-ids-2017 --compare schedule ae-v1 fused-v1
+```
+
+**Where this departs from the paper.** The method is adapted, not copied, and the
+adaptations are recorded in each `method.yaml`. The paper is closed-world
+application identification on ~8.7k flows; this is attack labelling across
+domains at 137M. Three differences matter most. Its class-conditional marginals
+are exact over the whole pool — here they are a declared bounded reservoir,
+because the exact version is unstorable. Its constraint residuals are computed on
+raw units — here the `log1p` transform is inverted first, because
+`log1p(a/b) ≠ log1p(a)/log1p(b)`. And its **balanced retention constraint lifts
+the weight of any class whose retained mass falls short**: in application
+identification the minority classes are coherent, but here the minority class is
+attack traffic, which is exactly where pseudo-labels are least reliable. It is
+implemented as published and left on, and every class it lifts is named in the
+run report.
 
 ## Feature schema
 

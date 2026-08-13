@@ -7,6 +7,8 @@
     talos extract         run the configured extractor over the raw zone
     talos convert         convert extracted logs to parquet or csv
     talos label           label flows (--method schedule|ae-v1|...)
+    talos audit           emit audit candidates, or score methods against them
+    talos pools           show how a partition splits a lake
     talos discover        profile the lake by log type
     talos eda             profile one dataset -> reports
     talos compare         rebuild comparisons from existing profiles
@@ -24,6 +26,7 @@ from pathlib import Path
 
 from talos.common import zones
 from talos.common.config import Config, ConfigError
+from talos.common.provenance import ProvenanceService
 from talos.data.extraction import get_extractor
 
 
@@ -385,6 +388,152 @@ def cmd_label(args, extra) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------- audit
+
+def cmd_audit(args, extra) -> int:
+    """Emit candidates for a person, read their decisions back, or score methods."""
+    import argparse
+    from talos.data.labelling.audit import (
+        AdjudicationTable, AuditError, AuditPage, CandidateSelector, LabelBenchmark,
+    )
+    from talos.data.labelling.behavioural.pool import PartitionLoader
+    from talos.data.labelling.method import MethodLoader
+
+    p = argparse.ArgumentParser(prog="talos audit")
+    p.add_argument("action", choices=("emit", "render", "status", "benchmark"))
+    p.add_argument("--dataset", required=True)
+    p.add_argument("--pools", default="xdg-v3", help="partition declaring the audit pool")
+    p.add_argument("--method", default="schedule", help="method whose labels are the prior")
+    p.add_argument("--space", default="core-5")
+    p.add_argument("--feature-space", default=None)
+    p.add_argument("--out", default=None, help="audit file (default reports/audit/…)")
+    p.add_argument("--floor", type=int, default=200, help="rows per class")
+    p.add_argument("--cap", type=int, default=2000, help="total rows a person will read")
+    p.add_argument("--compare", nargs="*", default=[], help="methods to score")
+    p.add_argument("--alerts", default=None,
+                   help="a Suricata eve.json, to put independent evidence beside "
+                        "each candidate")
+    p.add_argument("--tolerance", type=float, default=2.0,
+                   help="seconds of slack when joining an alert to a flow")
+    a = p.parse_args(extra)
+
+    cfg = Config.load(args.config)
+    feature_space = a.feature_space or _feature_space(cfg)
+    lake, duck = cfg.lake(), cfg.lake().duck
+    space = MethodLoader().load(a.method).label_space
+    partition = PartitionLoader().load(a.pools)
+    base = Path(a.out) if a.out else cfg.reports / "audit" / f"{a.dataset}.csv"
+    table = AdjudicationTable(space, prior_method=a.method)
+
+    _print_origins(a, partition)
+    try:
+        if a.action == "emit":
+            sources = partition.sources(lake, feature_space, cfg)
+            chosen, selection = CandidateSelector(
+                partition, floor=a.floor, cap=a.cap).select(duck, sources)
+            alerts = _oracle_join(duck, cfg, lake, a, feature_space)
+            # Both formats, every time: a person adjudicates the CSV, and the
+            # parquet keeps the types the CSV round-trip would flatten.
+            written = [table.emit(duck, chosen, base.with_suffix(suffix), alerts)
+                       for suffix in (".csv", ".parquet")]
+            print(selection.describe())
+            print(f"\npool          {selection.pool}")
+            page = AuditPage(space, a.dataset, a.method).render(
+                duck, base.with_suffix(".csv"), base.with_suffix(".html"))
+            print(f"oracle        {'suricata ' + a.alerts if alerts else 'not consulted'}")
+            for path in written + [page]:
+                print(f"written       {path}")
+            print(f"\nOpen {page} to adjudicate, then feed the downloaded CSV back "
+                  f"to `talos audit status`.")
+            return 0
+
+        if a.action == "render":
+            page = AuditPage(space, a.dataset, a.method).render(
+                duck, base, base.with_suffix(".html"))
+            print(f"written       {page}")
+            return 0
+
+        adjudication = table.read(duck, base)
+        if a.action == "status":
+            print(table.summarise(duck, adjudication, base).describe())
+            return 0
+
+        tables = {name: lake.uri("labelled", dataset=a.dataset, method=name,
+                                 feature_space=feature_space,
+                                 source=cfg.source_of(a.dataset), rel="conn.parquet")
+                  for name in (a.compare or [a.method])}
+        report = LabelBenchmark(space).run(duck, adjudication, tables, name=str(base))
+        print(report.describe())
+        ProvenanceService(cfg.reports).run_report(f"benchmark_{a.dataset}",
+                                                  report.to_dict())
+        return 0
+    except (AuditError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
+def _oracle_join(duck, cfg, lake, a, feature_space) -> str | None:
+    """Independent evidence beside each candidate, or None if none was given.
+
+    Reuses the oracle's own join rather than writing a second one, so the
+    signature an adjudicator reads is the same event the corroboration rate
+    counted.
+    """
+    if not a.alerts:
+        return None
+    from talos.data.labelling.oracle import Corroborator, SuricataOracle
+
+    labelled = lake.uri("labelled", dataset=a.dataset, method=a.method,
+                        feature_space=feature_space,
+                        source=cfg.source_of(a.dataset), rel="conn.parquet")
+    relation = SuricataOracle().alerts_relation(duck, a.alerts)
+    joined = Corroborator(tolerance=a.tolerance).join_sql(labelled, relation.sql_query())
+    # Materialised, not nested: the join carries CTEs that do not survive being
+    # used as a derived table, and this way it is evaluated once rather than
+    # re-run for each of the two output formats.
+    duck.sql(f"CREATE OR REPLACE TEMP TABLE oracle_hits AS {joined}")
+    return "SELECT uid, alerted, signature FROM oracle_hits"
+
+
+def _print_origins(a, partition) -> None:
+    """Whose declarations resolved. A run on the user's own must not read
+    identically to a run on ours -- D7.4, made visible where someone looks."""
+    from talos.data.labelling.behavioural.pool import PARTITIONS
+    from talos.data.labelling.method import METHODS
+
+    print(f"dataset       {a.dataset}")
+    print(f"method        {a.method}{_whose(METHODS.origin_of(a.method))}")
+    print(f"pools         {partition.name} {partition.sha}"
+          f"{_whose(PARTITIONS.origin_of(a.pools))}")
+
+
+def cmd_pools(args, extra) -> int:
+    """Show how a partition splits a lake, before 137M rows are split by it."""
+    import argparse
+    from talos.data.labelling.behavioural.pool import PARTITIONS, PartitionLoader, PoolError
+
+    p = argparse.ArgumentParser(prog="talos pools")
+    p.add_argument("--pools", default="xdg-v3", help="partition declaration")
+    p.add_argument("--total", type=int, default=0,
+                   help="row count to project expected pool sizes against")
+    a = p.parse_args(extra)
+
+    Config.load(args.config)                    # installs plug-ins from config.yml
+    try:
+        partition = PartitionLoader().load(a.pools)
+    except PoolError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print(partition.describe())
+    print(f"  origin      {PARTITIONS.origin_of(a.pools).describe()}")
+    if a.total:
+        print(f"\n{'pool':<10}{'expected rows':>16}")
+        for pool in partition:
+            print(f"{pool.name:<10}{pool.expected_flows(a.total):>16,}")
+    return 0
+
+
 def _whose(origin) -> str:
     """Nothing for a built-in, a loud suffix for anything the user substituted.
 
@@ -418,6 +567,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("extract", help="run the configured extractor over the raw zone")
     sub.add_parser("convert", help="convert extracted logs to parquet or csv", add_help=False)
     sub.add_parser("label", help="label flows by the chosen method", add_help=False)
+    sub.add_parser("audit", help="emit audit candidates, or score methods against them",
+                   add_help=False)
+    sub.add_parser("pools", help="show how a partition splits a lake", add_help=False)
 
     for name in ("discover", "eda", "compare", "render"):
         sub.add_parser(name, help=f"run the {name} stage", add_help=False)
@@ -438,6 +590,10 @@ def main(argv=None) -> int:
             return cmd_ingest(args, extra)
         if args.cmd == "extract":
             return cmd_extract(args, extra)
+        if args.cmd == "audit":
+            return cmd_audit(args, extra)
+        if args.cmd == "pools":
+            return cmd_pools(args, extra)
         if args.cmd == "convert":
             return cmd_convert(args, extra)
         if args.cmd == "label":

@@ -57,6 +57,27 @@ label:           ## attach ground truth from the attack schedule (DATASET=…)
 label-report:    ## same, but report only — writes nothing (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --no-write
 
+label-method:    ## label by a chosen method (DATASET=… METHOD=ae-v1|tabcl-v1|fused-v1)
+	$(TALOS) label --dataset $(DATASET) --method $(METHOD)
+
+label-all-methods: ## the whole Path B chain for one dataset (DATASET=…)
+	$(TALOS) label --dataset $(DATASET) --method schedule
+	$(TALOS) label --dataset $(DATASET) --method ae-v1
+	$(TALOS) label --dataset $(DATASET) --method tabcl-v1
+	$(TALOS) label --dataset $(DATASET) --method fused-v1
+
+audit:           ## emit audit candidates for a person (DATASET=… FLOOR=…)
+	$(TALOS) audit emit --dataset $(DATASET) $(if $(FLOOR),--floor $(FLOOR),)
+
+audit-page:      ## rebuild the adjudication page from an existing audit file (DATASET=…)
+	$(TALOS) audit render --dataset $(DATASET)
+
+audit-status:    ## how much of the audit file has been adjudicated (DATASET=…)
+	$(TALOS) audit status --dataset $(DATASET)
+
+benchmark:       ## score methods against the adjudicated slice (DATASET=… METHODS="a b")
+	$(TALOS) audit benchmark --dataset $(DATASET) --compare $(METHODS)
+
 discover:        ## profile the lake by log type -> reports/lake_features_report.txt
 	$(TALOS) discover --non_interactive \
 		> reports/lake_features_report.txt
