@@ -36,7 +36,7 @@ class AutoEncoderLabeller(BehaviouralMethod):
     """Reconstruct a flow; a representation that can rebuild one can describe one."""
 
     name: ClassVar[str] = "autoencoder"
-    extras: ClassVar[tuple[str, ...]] = ("recon_error", "latent_dim")
+    extras: ClassVar[tuple[str, ...]] = ("label_margin", "recon_error", "latent_dim")
 
     #: Emitted per row; the rest of `extras` are constants.
     row_extra_names: ClassVar[tuple[str, ...]] = ("recon_error",)

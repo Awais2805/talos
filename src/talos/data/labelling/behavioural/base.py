@@ -16,7 +16,7 @@ from typing import Any, ClassVar, Iterator
 import numpy as np
 
 from talos.common.provenance import ProvMeta, ProvenanceService, composite_sha
-from talos.data.feature.spec import DEFAULT_FEATURES, FeatureSetLoader
+from talos.data.feature.featureset import DEFAULT_FEATURES, FeatureSetLoader
 from talos.data.feature.vectorise import DEFAULT_BATCH, build as build_vectoriser
 from talos.data.labelling.base import (
     CORE_COLUMNS, LABELLERS, LabellingError, LabellingMethod, NO_WEIGHT,
@@ -27,6 +27,11 @@ from talos.data.labelling.space import OUT_OF_SPACE
 from talos.data.labelling.taxonomy import BENIGN
 
 CERTAIN, UNCERTAIN = "certain", "uncertain"
+
+#: Emitted by every behavioural branch: top-1 probability minus runner-up.
+#: Fusion's tie-break (Eslami & Hamouda Eq. 17) needs it, and it cannot be
+#: recovered from `label_confidence` alone once the row is written.
+MARGIN = "label_margin"
 
 #: Pools these methods expect a partition to declare.
 LARGE, SMALL = "d_l", "d_s"
@@ -126,7 +131,12 @@ class BehaviouralMethod(LabellingMethod):
     extras: ClassVar[tuple[str, ...]] = ()
 
     #: The subset of `extras` that varies per row; the rest are SQL literals.
+    #: `label_margin` is added by the base and need not be listed.
     row_extra_names: ClassVar[tuple[str, ...]] = ()
+
+    @property
+    def emitted_extras(self) -> tuple[str, ...]:
+        return (MARGIN, *self.row_extra_names)
 
     def __init__(self, cfg, lake=None, spec=None, partition=None, features=None,
                  vectoriser=None, checkpoints: Path | None = None,
@@ -310,7 +320,7 @@ class BehaviouralMethod(LabellingMethod):
 
     def _predict_into(self, duck, target, report: BehaviouralReport) -> None:
         """Predict in batches into a temp table, so memory does not scale with the lake."""
-        extras = self.row_extra_names
+        extras = self.emitted_extras
         columns = ", ".join(f'"{name}" DOUBLE' for name in extras)
         duck.sql(f"CREATE OR REPLACE TEMP TABLE preds ("
                  f"uid VARCHAR, label_class VARCHAR, label_confidence DOUBLE"
@@ -322,7 +332,10 @@ class BehaviouralMethod(LabellingMethod):
             proba = np.asarray(self.predict_proba(X), dtype=np.float64)
             chosen = proba.argmax(axis=1)
             confidence = proba.max(axis=1)
-            values = self.row_extras(X)
+            # Runner-up, for Eq. 17. Sorting the row is cheap at k = 5 classes.
+            ordered = np.sort(proba, axis=1)
+            margin = confidence - (ordered[:, -2] if proba.shape[1] > 1 else 0.0)
+            values = {MARGIN: margin, **self.row_extras(X)}
             rows = [
                 (str(keys[i]), self.space.classes[chosen[i]], float(confidence[i]),
                  *(float(values[name][i]) for name in extras))
@@ -345,7 +358,7 @@ class BehaviouralMethod(LabellingMethod):
     def select_list(self, target) -> str:
         drop = sorted(set(target.columns) & labelling_columns())
         exclude = f" EXCLUDE ({', '.join(drop)})" if drop else ""
-        extras = "".join(f",\n             p.\"{name}\"" for name in self.row_extra_names)
+        extras = "".join(f",\n             p.\"{name}\"" for name in self.emitted_extras)
         extras += "".join(f",\n             {value} AS \"{name}\""
                           for name, value in self.literal_extras().items())
         return (f"c.*{exclude},\n"

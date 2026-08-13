@@ -24,6 +24,7 @@ from talos.data.labelling.behavioural.base import (
     BehaviouralMethod, BehaviouralReport, labelling_columns,
 )
 from talos.data.labelling.behavioural import autoencoder as _autoencoder  # noqa: F401
+from talos.data.labelling.behavioural import tabcl as _tabcl              # noqa: F401
 
 __all__ = [
     "PARTITIONS", "Partition", "PartitionLoader", "Pool", "PoolError",
