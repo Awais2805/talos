@@ -140,7 +140,7 @@ class BehaviouralMethod(LabellingMethod):
 
     def __init__(self, cfg, lake=None, spec=None, partition=None, features=None,
                  vectoriser=None, checkpoints: Path | None = None,
-                 allow_untrained: bool = False, **kwargs):
+                 allow_untrained: bool = False, pools: str | None = None, **kwargs):
         super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained)
         self.settings = dict(spec.settings) if spec else {}
         self.space = spec.label_space if spec else None
@@ -150,7 +150,7 @@ class BehaviouralMethod(LabellingMethod):
                 f"classifier can express. Run it through a method declaration.")
 
         self.partition = partition or PartitionLoader().load(
-            self.settings.get("pools", "xdg-v3"))
+            pools or self.settings.get("pools", "xdg-v3"))
         self.features = features or FeatureSetLoader().load(
             self.settings.get("features", DEFAULT_FEATURES))
         self.vectoriser = vectoriser or build_vectoriser(

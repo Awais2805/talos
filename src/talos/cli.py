@@ -338,6 +338,8 @@ def cmd_label(args, extra) -> int:
                    help=f"labelling method: {', '.join(METHODS.names())}")
     p.add_argument("--method-file", default=None,
                    help="a method.yaml outside the package, e.g. your own ae-v2")
+    p.add_argument("--pools", default=None,
+                   help="override the method's declared partition (behavioural methods only)")
     p.add_argument("--feature-space", default=None,
                    help="extractor feature space (defaults to the configured extractor)")
     p.add_argument("--source", default=None, help="conn parquet glob to label instead")
@@ -355,7 +357,10 @@ def cmd_label(args, extra) -> int:
         # The DECLARATION is resolved first; it names the implementation. A
         # `--method-file` is just a declaration resolved from somewhere else.
         spec = MethodLoader().load(a.method_file or a.method)
-        method = spec.build(cfg, allow_untrained=a.allow_untrained)
+        build_kwargs = {"allow_untrained": a.allow_untrained}
+        if a.pools:
+            build_kwargs["pools"] = a.pools
+        method = spec.build(cfg, **build_kwargs)
     except LabellingError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
