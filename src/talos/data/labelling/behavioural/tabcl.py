@@ -221,11 +221,12 @@ class TabCLLabeller(BehaviouralMethod):
     def finetune(self, X, y, report) -> tuple:
         """Freeze the encoder, train the head, then both (Alg. 1 lines 8-9)."""
         torch = require_torch()
+        weight = self.class_weights(y)
 
         def loss_fn(features, target):
             latent = self.parts["encoder"].module(features)
             return torch.nn.functional.cross_entropy(
-                self.parts["classifier"].module(latent), target)
+                self.parts["classifier"].module(latent), target, weight=weight)
 
         batches = minibatches(self.batch, X, y, seed=int(self.setting("seed")))
         history: list[Epoch] = list(train(

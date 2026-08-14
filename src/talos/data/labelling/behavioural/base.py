@@ -25,6 +25,7 @@ from talos.data.labelling.base import (
 from talos.data.labelling.behavioural.pool import PartitionLoader
 from talos.data.labelling.space import OUT_OF_SPACE
 from talos.data.labelling.taxonomy import BENIGN
+from talos.parts.mlp import require_torch
 
 CERTAIN, UNCERTAIN = "certain", "uncertain"
 
@@ -301,6 +302,24 @@ class BehaviouralMethod(LabellingMethod):
                 f"{self.space.name!r}. Nothing can be fine-tuned on it.")
         y = np.array([self.space.index(label) for label in raw[keep]], dtype=np.int64)
         return X[keep], y
+
+    def class_weights(self, y):
+        """Inverse-frequency weight per class, for a fine-tune loss.
+
+        D_s mirrors the population's proportions, and in a NIDS the classes
+        that matter are the rare ones -- unweighted cross-entropy on a set
+        that is 80%+ one class makes "always predict it" the loss-minimising
+        strategy, confidently, which is exactly what was found running this
+        against real 2017 data (100% benign, mean confidence 0.84). A class
+        absent from `y` gets weight 0 rather than a division by zero; it
+        cannot appear in any batch either way, so the weight is never used.
+        """
+        torch = require_torch()
+        counts = np.bincount(y, minlength=self.space.n_classes).astype(np.float64)
+        total = counts.sum()
+        safe = np.where(counts > 0, counts, 1.0)          # never actually divided by
+        weight = np.where(counts > 0, total / (self.space.n_classes * safe), 0.0)
+        return torch.as_tensor(weight, dtype=torch.float32, device=self.device)
 
     def _target(self, duck, dataset: str, feature_space: str,
                 report: BehaviouralReport):

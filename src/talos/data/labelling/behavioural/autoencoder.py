@@ -113,10 +113,11 @@ class AutoEncoderLabeller(BehaviouralMethod):
         stage to learn anything.
         """
         torch = require_torch()
+        weight = self.class_weights(y)
 
         def loss_fn(features, target):
             logits = self.parts["classifier"].module(self.parts["encoder"].module(features))
-            return torch.nn.functional.cross_entropy(logits, target)
+            return torch.nn.functional.cross_entropy(logits, target, weight=weight)
 
         batches = minibatches(self.batch, X, y, seed=int(self.setting("seed")))
         history: list[Epoch] = list(train(
