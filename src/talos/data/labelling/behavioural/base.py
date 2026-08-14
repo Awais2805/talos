@@ -319,15 +319,30 @@ class BehaviouralMethod(LabellingMethod):
     # -------------------------------------------------------- the prediction
 
     def _predict_into(self, duck, target, report: BehaviouralReport) -> None:
-        """Predict in batches into a temp table, so memory does not scale with the lake."""
-        extras = self.emitted_extras
-        columns = ", ".join(f'"{name}" DOUBLE' for name in extras)
-        duck.sql(f"CREATE OR REPLACE TEMP TABLE preds ("
-                 f"uid VARCHAR, label_class VARCHAR, label_confidence DOUBLE"
-                 f"{', ' + columns if columns else ''})")
+        """Predict in batches, then write once, vectorised.
 
-        placeholders = ", ".join("?" * (3 + len(extras)))
+        `vectoriser.batches()` streams `target` on one long-lived DuckDB
+        cursor. Running any OTHER statement on the same connection while that
+        stream is still open silently ends it after the first batch -- found
+        by running this against 2017's real 2.1M rows, where it wrote exactly
+        one batch (65,536 rows, the configured batch size) and never touched
+        the rest, with no error, and confirmed as documented DuckDB behaviour
+        (a connection holds one active result at a time). So nothing touches
+        `duck` until the stream has fully drained. The write itself registers
+        the buffered arrays and loads them with one `CREATE TABLE AS SELECT`
+        rather than `executemany`, which DuckDB's own docs say not to use for
+        bulk loads -- confirmed ~1000x slower here (numpy/duckdb only, no new
+        dependency: pandas/pyarrow are not installed on every box this runs
+        on). Register/unregister explicitly, not by local-variable name --
+        DuckDB's auto-detection inspects the CALLER's frame, and the caller
+        here is `duck.sql`, not this method.
+        """
+        extras = self.emitted_extras
+        uids: list[str] = []
+        classes: list[str] = []
         confidences: list[float] = []
+        extra_cols: dict[str, list[float]] = {name: [] for name in extras}
+
         for keys, X in self.vectoriser.batches(target, self.batch):
             proba = np.asarray(self.predict_proba(X), dtype=np.float64)
             chosen = proba.argmax(axis=1)
@@ -336,12 +351,21 @@ class BehaviouralMethod(LabellingMethod):
             ordered = np.sort(proba, axis=1)
             margin = confidence - (ordered[:, -2] if proba.shape[1] > 1 else 0.0)
             values = {MARGIN: margin, **self.row_extras(X)}
-            rows = [
-                (str(keys[i]), self.space.classes[chosen[i]], float(confidence[i]),
-                 *(float(values[name][i]) for name in extras))
-                for i in range(len(keys))]
-            duck.con.executemany(f"INSERT INTO preds VALUES ({placeholders})", rows)
+            uids.extend(str(k) for k in keys)
+            classes.extend(self.space.classes[c] for c in chosen)
             confidences.extend(confidence.tolist())
+            for name in extras:
+                extra_cols[name].extend(np.asarray(values[name]).tolist())
+
+        buf = {
+            "uid": np.array(uids, dtype=object),
+            "label_class": np.array(classes, dtype=object),
+            "label_confidence": np.array(confidences, dtype=np.float64),
+            **{name: np.array(extra_cols[name], dtype=np.float64) for name in extras},
+        }
+        duck.con.register("preds_buf", buf)
+        duck.sql("CREATE OR REPLACE TEMP TABLE preds AS SELECT * FROM preds_buf")
+        duck.con.unregister("preds_buf")
 
         report.mean_confidence = (sum(confidences) / len(confidences)
                                   if confidences else None)
