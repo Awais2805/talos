@@ -18,6 +18,7 @@ import numpy as np
 from talos.common.provenance import ProvMeta, ProvenanceService, composite_sha
 from talos.data.feature.featureset import DEFAULT_FEATURES, FeatureSetLoader
 from talos.data.feature.vectorise import DEFAULT_BATCH, build as build_vectoriser
+from talos.data.labelling.audit.adjudication import AdjudicationTable, UNKNOWN, default_path
 from talos.data.labelling.base import (
     CORE_COLUMNS, LABELLERS, LabellingError, LabellingMethod, NO_WEIGHT,
     PREDICTED, StaleOutputError, verify_schema,
@@ -70,6 +71,7 @@ class BehaviouralReport:
     d_l_rows: int = 0
     d_s_rows: int = 0
     d_s_dropped: int = 0
+    d_s_unaudited: int = 0
     pretrain: tuple = ()
     finetune: tuple = ()
     warnings: tuple[str, ...] = ()
@@ -87,8 +89,14 @@ class BehaviouralReport:
             "trainable": self.trainable, "feature_set": self.features,
             "partition": self.partition, "d_l_rows": self.d_l_rows,
             "d_s_rows": self.d_s_rows, "d_s_dropped": self.d_s_dropped,
+            "d_s_unaudited": self.d_s_unaudited,
             "pretrain": [e.loss for e in self.pretrain],
             "finetune": [e.loss for e in self.finetune],
+            # Rows-per-epoch alongside the loss list, kept as a second key
+            # rather than reshaping `pretrain`/`finetune` -- a report reader
+            # that expects a flat list of floats there must not break.
+            "pretrain_rows": [e.rows for e in self.pretrain],
+            "finetune_rows": [e.rows for e in self.finetune],
             "warnings": list(self.warnings),
             # Named so nobody has to infer it from `trainable` being false.
             "labels_are_meaningless": not self.trainable,
@@ -168,9 +176,18 @@ class BehaviouralMethod(LabellingMethod):
 
         Re-seeding the partition changes which rows trained the model, so two
         runs that shared a `method_sha` without it would not be the same run.
+        The adjudication file is included ONLY if it already exists: hashing
+        a path that `content_sha` cannot open would crash here, before
+        `_audited_relation` gets a chance to raise the clear refusal. Before
+        the file exists no checkpoint can exist either (fine-tuning refuses
+        first), so omitting it from an as-yet-impossible hash costs nothing.
         """
         base = self.spec.inputs() if self.spec else ()
-        return (*base, self.partition.path, self.features.path)
+        extra = (self.partition.path, self.features.path)
+        audit = default_path(self.cfg, dataset)
+        if audit.exists():
+            extra = (*extra, audit)
+        return (*base, *extra)
 
     def method_sha(self, dataset: str) -> str:
         return composite_sha(*self.inputs(dataset))
@@ -289,10 +306,54 @@ class BehaviouralMethod(LabellingMethod):
         for _keys, X in self.vectoriser.batches(rel, self.batch):
             yield X
 
+    def _audited_relation(self, duck, rel, report: BehaviouralReport):
+        """`D_s`, with `label_class` replaced by a person's verdict.
+
+        No `--allow-unaudited` escape hatch: a behavioural method's fine-tune
+        set must be human-verified, unconditionally. `label_class` on the raw
+        pool is the SCHEDULE's rule-based guess, the exact thing the audit
+        process exists to check -- fine-tuning on it directly would train the
+        classifier to reproduce the schedule's own mistakes with no
+        correction step, which is what actually happened before this gate.
+        """
+        path = default_path(self.cfg, report.dataset)
+        if not path.exists():
+            raise LabellingError(
+                f"{self.run_name} needs an audited D_s and none exists at "
+                f"{path}. Run `talos audit emit --dataset {report.dataset} "
+                f"--method {self.partition.labels}`, adjudicate the CSV, then "
+                f"`talos audit status` before fine-tuning.")
+        table = AdjudicationTable(self.space, prior_method=self.partition.labels)
+        adjudication = table.read(duck, path)
+        summary = table.summarise(duck, adjudication, path)
+        if summary.outstanding:
+            raise LabellingError(
+                f"{path}: {summary.outstanding} of {summary.rows} candidates "
+                f"are still unadjudicated. D_s must be FULLY audited before "
+                f"{self.run_name} can fine-tune -- finish `talos audit "
+                f"status`, no partial runs.")
+
+        # A verdict of `unknown` is a real outcome, not a label: it says a
+        # person could not classify the flow, which is not ground truth for
+        # anything. Distinct from `state_sql`'s confirmed/corrected split,
+        # which does not separate "corrected to X" from "corrected to unknown".
+        verdicts = adjudication.filter(
+            f"analyst_class IS NOT NULL AND analyst_class <> '' "
+            f"AND analyst_class <> '{UNKNOWN}'")
+        total_pool = rel.aggregate("count(*)").fetchone()[0]
+        joined = duck.relation(
+            f"SELECT p.* EXCLUDE (label_class), a.analyst_class AS label_class\n"
+            f"      FROM ({rel.sql_query()}) p\n"
+            f"      JOIN ({verdicts.sql_query()}) a ON p.uid = a.uid")
+        audited_count = joined.aggregate("count(*)").fetchone()[0]
+        report.d_s_unaudited = int(total_pool - audited_count)
+        return joined
+
     def _supervised(self, duck, sources, report: BehaviouralReport):
-        """D_s as (X, y). Rows outside the label space are dropped and counted."""
+        """D_s as (X, y): audited rows only, then dropped outside the label space."""
         rel = self.partition.relation(duck, SMALL, sources)
-        _keys, X, raw = self.vectoriser.labelled_matrix(rel, "label_class")
+        audited = self._audited_relation(duck, rel, report)
+        _keys, X, raw = self.vectoriser.labelled_matrix(audited, "label_class")
         keep = np.array([label in self.space for label in raw], dtype=bool)
         report.d_s_rows = int(keep.sum())
         report.d_s_dropped = int((~keep).sum())
@@ -306,13 +367,17 @@ class BehaviouralMethod(LabellingMethod):
     def class_weights(self, y):
         """Inverse-frequency weight per class, for a fine-tune loss.
 
-        D_s mirrors the population's proportions, and in a NIDS the classes
-        that matter are the rare ones -- unweighted cross-entropy on a set
-        that is 80%+ one class makes "always predict it" the loss-minimising
+        ADAPTATION, NOT IN THE PAPER: Eslami & Hamouda's Eq. 3 fine-tuning
+        loss is plain unweighted cross-entropy -- confirmed against the paper
+        directly, not inferred. Their own fine-tuning data isn't skewed the
+        way a NIDS is; ours is, so unweighted cross-entropy on a set that
+        is 80%+ one class makes "always predict it" the loss-minimising
         strategy, confidently, which is exactly what was found running this
-        against real 2017 data (100% benign, mean confidence 0.84). A class
-        absent from `y` gets weight 0 rather than a division by zero; it
-        cannot appear in any batch either way, so the weight is never used.
+        against real 2017 data (100% benign, mean confidence 0.84). Kept even
+        with an audited (near-floor-balanced) D_s, since a floor is still
+        imbalanced relative to true uniformity, just far less extremely. A
+        class absent from `y` gets weight 0 rather than a division by zero;
+        it cannot appear in any batch either way, so the weight is never used.
         """
         torch = require_torch()
         counts = np.bincount(y, minlength=self.space.n_classes).astype(np.float64)

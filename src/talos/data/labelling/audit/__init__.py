@@ -7,6 +7,7 @@ must not be audited by generated expectations.
 
 from talos.data.labelling.audit.adjudication import (
     AdjudicationTable, Adjudication, CONFIRMED, CORRECTED, UNADJUDICATED, UNKNOWN,
+    default_path,
 )
 from talos.data.labelling.audit.render import AuditPage
 from talos.data.labelling.audit.benchmark import (
@@ -19,5 +20,5 @@ from talos.data.labelling.audit.candidates import (
 __all__ = [
     "AdjudicationTable", "Adjudication", "AuditError", "AuditPage", "BenchmarkReport",
     "CandidateSelector", "ClassScore", "CONFIRMED", "CORRECTED", "LabelBenchmark",
-    "MethodScore", "Selection", "Shortfall", "UNADJUDICATED", "UNKNOWN",
+    "MethodScore", "Selection", "Shortfall", "UNADJUDICATED", "UNKNOWN", "default_path",
 ]

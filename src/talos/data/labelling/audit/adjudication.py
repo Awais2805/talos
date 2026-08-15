@@ -19,6 +19,15 @@ from talos.data.labelling.audit.candidates import AuditError
 #: useful than an unexamined guess.
 UNKNOWN = "unknown"
 
+
+def default_path(cfg, dataset: str) -> Path:
+    """Where `talos audit emit` writes and everything else reads from.
+
+    One definition, used by the CLI and by anything gating on adjudication
+    (e.g. behavioural fine-tuning), so the two cannot silently drift apart.
+    """
+    return cfg.reports / "audit" / f"{dataset}.csv"
+
 #: Rows an adjudicator has not reached yet.
 UNADJUDICATED = "unadjudicated"
 CONFIRMED = "confirmed"
