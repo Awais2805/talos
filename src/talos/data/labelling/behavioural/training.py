@@ -7,12 +7,15 @@ contrastive branch's NT-Xent are both just a `loss_fn` here.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Callable, Iterator, Sequence
 
 import numpy as np
 
 from talos.parts.mlp import require_torch
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -69,7 +72,9 @@ def train(parts: Sequence, batches: Callable[[], Iterator], loss_fn: Callable,
             optimiser.step()
             total += float(loss) * len(arrays[0])
             rows += len(arrays[0])
-        history.append(Epoch(index, total / max(rows, 1), rows))
+        epoch = Epoch(index, total / max(rows, 1), rows)
+        history.append(epoch)
+        logger.info(epoch.describe())
     for module in modules:
         module.eval()
     return history
