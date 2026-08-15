@@ -9,6 +9,7 @@
     talos label           label flows (--method schedule|ae-v1|...)
     talos audit           emit audit candidates, or score methods against them
     talos pools           show how a partition splits a lake
+    talos oracle          independent evidence from Suricata (corroborate|offset)
     talos discover        profile the lake by log type
     talos eda             profile one dataset -> reports
     talos compare         rebuild comparisons from existing profiles
@@ -518,6 +519,89 @@ def _print_origins(a, partition) -> None:
           f"{_whose(PARTITIONS.origin_of(a.pools))}")
 
 
+# --------------------------------------------------------------------- oracle
+
+def cmd_oracle(args, extra) -> int:
+    """Independent evidence from Suricata, aggregated rather than joined per row.
+
+    `corroborate` prints the two rates `_oracle_join` computes but never
+    surfaces on its own (D6.5: never combined into one number). `offset`
+    prints an `OffsetProbe` verdict on which UTC offset the capture's clocks
+    actually used -- the one thing no document can settle (W2.3).
+    """
+    import argparse
+    from talos.data.labelling.oracle import Corroborator, OffsetProbe, SuricataError, SuricataOracle
+    from talos.data.labelling.schedule.manifest import MANIFESTS, ManifestError, ManifestLoader
+
+    p = argparse.ArgumentParser(prog="talos oracle")
+    p.add_argument("action", choices=("corroborate", "offset"))
+    p.add_argument("--dataset", required=True)
+    p.add_argument("--alerts", required=True, help="a Suricata eve.json")
+    p.add_argument("--method", default="schedule",
+                   help="labelled table to corroborate against (corroborate only)")
+    p.add_argument("--feature-space", default=None)
+    p.add_argument("--tolerance", type=float, default=2.0,
+                   help="seconds of slack joining an alert to a flow (corroborate only)")
+    p.add_argument("--declared", default=None,
+                   help="the manifest's own utc_offset (offset only -- see "
+                        "manifests/<dataset>.yaml; there is no single value for a "
+                        "dataset whose days: table carries different offsets per day). "
+                        "Pass as --declared=-03:00 (the '=' is required -- argparse "
+                        "reads a space-separated '-03:00' as another flag)")
+    a = p.parse_args(extra)
+
+    # Checked here, not left to DuckDB: a missing eve.json otherwise surfaces as
+    # an uncaught duckdb.IOException, which every other error in this command
+    # is deliberately turned into a clean `error: ...` line instead.
+    if not Path(a.alerts).exists():
+        print(f"error: no such alerts file: {a.alerts}", file=sys.stderr)
+        return 2
+
+    cfg = Config.load(args.config)
+    feature_space = a.feature_space or _feature_space(cfg)
+    lake, duck = cfg.lake(), cfg.lake().duck
+    oracle = SuricataOracle()
+
+    try:
+        if a.action == "corroborate":
+            labelled_uri = lake.uri("labelled", dataset=a.dataset, method=a.method,
+                                    feature_space=feature_space,
+                                    source=cfg.source_of(a.dataset), rel="conn.parquet")
+            relation = oracle.alerts_relation(duck, a.alerts)
+            alerts_total = duck.one(f"SELECT count(*) FROM ({relation.sql_query()}) t")[0]
+            report = Corroborator(tolerance=a.tolerance).build(
+                duck, a.dataset, labelled_uri, relation.sql_query(), alerts_total)
+
+            print(f"dataset       {a.dataset}")
+            print(f"method        {a.method}")
+            print(f"alerts        {a.alerts}\n")
+            print(report.summary())
+            path = ProvenanceService(cfg.reports).run_report(
+                f"oracle_corroborate_{a.dataset}_{a.method}", report.to_dict())
+            print(f"\nwritten       {path}")
+            return 0
+
+        # action == "offset"
+        if not a.declared:
+            p.error("--declared is required for `talos oracle offset` -- "
+                    "the manifest's own utc_offset, read off manifests/<dataset>.yaml")
+        manifest = ManifestLoader().load(a.dataset)
+        alerts = oracle.parse_alerts(a.alerts)
+        verdict = OffsetProbe().probe(alerts, manifest.rules, a.declared)
+
+        print(f"dataset       {a.dataset}")
+        print(f"manifest      {manifest.path}{_whose(MANIFESTS.origin_of(a.dataset))}")
+        print(f"alerts        {a.alerts}\n")
+        print(verdict.summary())
+        path = ProvenanceService(cfg.reports).run_report(
+            f"oracle_offset_{a.dataset}", verdict.to_dict())
+        print(f"\nwritten       {path}")
+        return 0
+    except (SuricataError, ManifestError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
 def cmd_pools(args, extra) -> int:
     """Show how a partition splits a lake, before 137M rows are split by it."""
     import argparse
@@ -581,6 +665,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("audit", help="emit audit candidates, or score methods against them",
                    add_help=False)
     sub.add_parser("pools", help="show how a partition splits a lake", add_help=False)
+    sub.add_parser("oracle", help="independent evidence from Suricata: corroboration "
+                   "rates, or a verdict on which UTC offset a capture used",
+                   add_help=False)
 
     for name in ("discover", "eda", "compare", "render"):
         sub.add_parser(name, help=f"run the {name} stage", add_help=False)
@@ -610,6 +697,8 @@ def main(argv=None) -> int:
             return cmd_audit(args, extra)
         if args.cmd == "pools":
             return cmd_pools(args, extra)
+        if args.cmd == "oracle":
+            return cmd_oracle(args, extra)
         if args.cmd == "convert":
             return cmd_convert(args, extra)
         if args.cmd == "label":
