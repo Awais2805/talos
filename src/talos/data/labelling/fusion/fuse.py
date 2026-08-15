@@ -95,8 +95,11 @@ class FusedLabeller(LabellingMethod):
     extras: ClassVar[tuple[str, ...]] = ("branches_agreed", "label_margin")
 
     def __init__(self, cfg, lake=None, spec=None, allow_untrained: bool = False,
-                 **kwargs):
-        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained)
+                 skip_audit_gate: bool = False, **kwargs):
+        # `skip_audit_gate` accepted and unused: fusion reconciles two already-
+        # written tables, it does not fine-tune, so it has no D_s to gate.
+        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained,
+                         skip_audit_gate=skip_audit_gate)
         self.settings = dict(spec.settings) if spec else {}
         self.space = spec.label_space if spec else None
         if self.space is None:

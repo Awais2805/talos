@@ -153,13 +153,18 @@ class LabellingMethod(ABC):
     #: per-flow id there is nothing to attach a label to.
     requires: ClassVar[tuple[str, ...]] = (CONN_BACKBONE, FLOW_ID)
 
-    def __init__(self, cfg, lake=None, spec=None, allow_untrained: bool = False):
+    def __init__(self, cfg, lake=None, spec=None, allow_untrained: bool = False,
+                 skip_audit_gate: bool = False):
         self.cfg = cfg
         self.lake = lake if lake is not None else cfg.lake()
         self.spec = spec
         #: May this method write a table it cannot vouch for? Part of the
         #: contract, so one CLI flag means the same thing whichever method ran.
         self.allow_untrained = allow_untrained
+        #: May a behavioural method fine-tune on D_s's raw (unaudited) label?
+        #: Same contract shape as `allow_untrained` -- one flag, every method,
+        #: methods that do not fine-tune (schedule, fused) accept and ignore it.
+        self.skip_audit_gate = skip_audit_gate
 
     @property
     def run_name(self) -> str:

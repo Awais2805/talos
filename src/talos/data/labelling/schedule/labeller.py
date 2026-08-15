@@ -35,7 +35,8 @@ class ScheduleLabeller(LabellingMethod):
     requires: ClassVar[tuple[str, ...]] = (CONN_BACKBONE, FLOW_ID)
 
     def __init__(self, cfg, lake=None, spec=None, manifests=None, taxonomy=None,
-                 allow_untrained: bool = False, **kwargs):
+                 allow_untrained: bool = False, skip_audit_gate: bool = False,
+                 **kwargs):
         """`spec` is the declaration; `manifests`/`taxonomy` scope a run without one.
 
         Both paths exist because a declaration is the normal route and a scoped
@@ -43,9 +44,12 @@ class ScheduleLabeller(LabellingMethod):
         given the explicit argument wins, so a test cannot be silently overridden
         by whatever the shipped declaration happens to say.
         """
-        # `allow_untrained` is accepted and unused: schedule labelling learns
-        # nothing, so there is nothing it could fail to vouch for.
-        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained)
+        # `allow_untrained`/`skip_audit_gate` are accepted and unused: schedule
+        # labelling learns nothing and has no D_s to fine-tune on, so neither
+        # flag applies -- kept as explicit params (not swept into **kwargs) so
+        # they are never forwarded to LabellingEngine, which does not expect them.
+        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained,
+                         skip_audit_gate=skip_audit_gate)
         self.taxonomy_name = taxonomy or (spec.taxonomy if spec else DEFAULT_TAXONOMY)
         self.engine = LabellingEngine(
             cfg, lake=self.lake, manifests=manifests,

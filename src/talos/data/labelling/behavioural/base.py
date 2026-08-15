@@ -72,6 +72,7 @@ class BehaviouralReport:
     d_s_rows: int = 0
     d_s_dropped: int = 0
     d_s_unaudited: int = 0
+    d_s_audited: bool = True
     pretrain: tuple = ()
     finetune: tuple = ()
     warnings: tuple[str, ...] = ()
@@ -90,6 +91,10 @@ class BehaviouralReport:
             "partition": self.partition, "d_l_rows": self.d_l_rows,
             "d_s_rows": self.d_s_rows, "d_s_dropped": self.d_s_dropped,
             "d_s_unaudited": self.d_s_unaudited,
+            # Named so nobody has to infer it from a warning string -- a
+            # --skip-audit-gate run's D_s is the raw schedule label, not a
+            # person's verdict, same spirit as `labels_are_meaningless`.
+            "d_s_audited": self.d_s_audited,
             "pretrain": [e.loss for e in self.pretrain],
             "finetune": [e.loss for e in self.finetune],
             # Rows-per-epoch alongside the loss list, kept as a second key
@@ -149,8 +154,10 @@ class BehaviouralMethod(LabellingMethod):
 
     def __init__(self, cfg, lake=None, spec=None, partition=None, features=None,
                  vectoriser=None, checkpoints: Path | None = None,
-                 allow_untrained: bool = False, pools: str | None = None, **kwargs):
-        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained)
+                 allow_untrained: bool = False, pools: str | None = None,
+                 skip_audit_gate: bool = False, **kwargs):
+        super().__init__(cfg, lake, spec=spec, allow_untrained=allow_untrained,
+                         skip_audit_gate=skip_audit_gate)
         self.settings = dict(spec.settings) if spec else {}
         self.space = spec.label_space if spec else None
         if self.space is None:
@@ -176,16 +183,17 @@ class BehaviouralMethod(LabellingMethod):
 
         Re-seeding the partition changes which rows trained the model, so two
         runs that shared a `method_sha` without it would not be the same run.
-        The adjudication file is included ONLY if it already exists: hashing
-        a path that `content_sha` cannot open would crash here, before
-        `_audited_relation` gets a chance to raise the clear refusal. Before
-        the file exists no checkpoint can exist either (fine-tuning refuses
-        first), so omitting it from an as-yet-impossible hash costs nothing.
+        The adjudication file is included ONLY if it already exists AND
+        `--skip-audit-gate` was not passed: hashing a path that `content_sha`
+        cannot open would crash here, before `_audited_relation` gets a chance
+        to raise the clear refusal, and a skipped-gate run does not actually
+        read the file even if one happens to exist, so hashing it would name
+        an input that played no part in the result.
         """
         base = self.spec.inputs() if self.spec else ()
         extra = (self.partition.path, self.features.path)
         audit = default_path(self.cfg, dataset)
-        if audit.exists():
+        if not self.skip_audit_gate and audit.exists():
             extra = (*extra, audit)
         return (*base, *extra)
 
@@ -309,13 +317,23 @@ class BehaviouralMethod(LabellingMethod):
     def _audited_relation(self, duck, rel, report: BehaviouralReport):
         """`D_s`, with `label_class` replaced by a person's verdict.
 
-        No `--allow-unaudited` escape hatch: a behavioural method's fine-tune
-        set must be human-verified, unconditionally. `label_class` on the raw
-        pool is the SCHEDULE's rule-based guess, the exact thing the audit
-        process exists to check -- fine-tuning on it directly would train the
-        classifier to reproduce the schedule's own mistakes with no
-        correction step, which is what actually happened before this gate.
+        Refuses by default: a behavioural method's fine-tune set must be
+        human-verified. `label_class` on the raw pool is the SCHEDULE's
+        rule-based guess, the exact thing the audit process exists to check --
+        fine-tuning on it directly trains the classifier to reproduce the
+        schedule's own mistakes with no correction step, which is what
+        actually happened before this gate. `--skip-audit-gate` overrides
+        this per-run (harness/already-verified-labels use), same shape as
+        `--allow-untrained`: recorded loudly in the report, never silent.
         """
+        if self.skip_audit_gate:
+            report.d_s_audited = False
+            report.warnings = (*report.warnings,
+                f"{self.run_name} ran with --skip-audit-gate: D_s is the raw "
+                f"schedule label, not a human-verified one. Fine-tuning on it "
+                f"can reproduce the schedule's own mistakes with no "
+                f"correction step.")
+            return rel
         path = default_path(self.cfg, report.dataset)
         if not path.exists():
             raise LabellingError(

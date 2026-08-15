@@ -350,6 +350,9 @@ def cmd_label(args, extra) -> int:
                    help="overwrite a table built from different inputs")
     p.add_argument("--allow-untrained", action="store_true",
                    help="write a table from parts that cannot learn (harness only)")
+    p.add_argument("--skip-audit-gate", action="store_true",
+                   help="fine-tune on D_s's raw schedule label, skipping the "
+                        "human-audit requirement (already-verified labels only)")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
@@ -358,7 +361,8 @@ def cmd_label(args, extra) -> int:
         # The DECLARATION is resolved first; it names the implementation. A
         # `--method-file` is just a declaration resolved from somewhere else.
         spec = MethodLoader().load(a.method_file or a.method)
-        build_kwargs = {"allow_untrained": a.allow_untrained}
+        build_kwargs = {"allow_untrained": a.allow_untrained,
+                        "skip_audit_gate": a.skip_audit_gate}
         if a.pools:
             build_kwargs["pools"] = a.pools
         method = spec.build(cfg, **build_kwargs)
