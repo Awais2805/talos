@@ -19,6 +19,7 @@ the module accepts still works: `talos eda --dataset X --threads 8`.
 """
 
 import argparse
+import logging
 import runpy
 import sys
 import tempfile
@@ -400,6 +401,7 @@ def cmd_audit(args, extra) -> int:
     import argparse
     from talos.data.labelling.audit import (
         AdjudicationTable, AuditError, AuditPage, CandidateSelector, LabelBenchmark,
+        default_path,
     )
     from talos.data.labelling.behavioural.pool import PartitionLoader
     from talos.data.labelling.method import MethodLoader
@@ -427,7 +429,7 @@ def cmd_audit(args, extra) -> int:
     lake, duck = cfg.lake(), cfg.lake().duck
     space = MethodLoader().load(a.method).label_space
     partition = PartitionLoader().load(a.pools)
-    base = Path(a.out) if a.out else cfg.reports / "audit" / f"{a.dataset}.csv"
+    base = Path(a.out) if a.out else default_path(cfg, a.dataset)
     table = AdjudicationTable(space, prior_method=a.method)
 
     _print_origins(a, partition)
@@ -582,6 +584,11 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 def main(argv=None) -> int:
+    # Every stage's `logger.info(...)` (extraction progress, training epochs)
+    # was silently discarded before this -- nothing ever configured a handler,
+    # so INFO-level messages had nowhere to go regardless of which subcommand
+    # ran. One call here covers all of them.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
     args, extra = parser.parse_known_args(argv)
