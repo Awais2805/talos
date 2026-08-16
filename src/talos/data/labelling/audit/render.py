@@ -41,10 +41,11 @@ class AuditPage:
             "rows": rows,
         }
         html_path.parent.mkdir(parents=True, exist_ok=True)
+        payload_json = json.dumps(payload).replace("<", "\\u003c")
         html_path.write_text(
             _PAGE.replace("__DATASET__", html.escape(self.dataset))
                  .replace("__METHOD__", html.escape(self.method))
-                 .replace("__PAYLOAD__", html.escape(json.dumps(payload))))
+                 .replace("__PAYLOAD__", payload_json))
         return html_path
 
 
