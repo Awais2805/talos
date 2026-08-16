@@ -116,27 +116,43 @@ class Corroborator:
 
         Endpoints match either way round because Suricata reports a packet's
         direction and Zeek reports the connection's originator; for a mid-stream
-        alert those need not agree.
+        alert those need not agree. Written as two directional joins UNIONed
+        together rather than one join with an `OR` across the two directions --
+        DuckDB can hash a plain equality, but an OR of two equalities plus a
+        time-range test on top gives the planner nothing to hash on, and it
+        falls back to comparing every flow against every alert (2.1M x 8.76M on
+        the real 2017 run -- measured on MLOps not finishing in 30+ minutes at
+        100% CPU on 8 cores before this fix). Each branch here is a plain
+        equi-join DuckDB hashes, costing roughly `flows + alerts` instead of
+        their product.
         """
         tol = self.tolerance
         return f"""
       WITH alerts AS ({alerts}),
       flows AS (SELECT * FROM read_parquet('{labelled_uri}', union_by_name = true)),
+      matched AS (
+        SELECT f.uid, a.ts, a.signature
+        FROM flows f JOIN alerts a
+          ON a.src_ip = f."id.orig_h" AND a.dest_ip = f."id.resp_h"
+         AND a.ts >= f.ts - {tol} AND a.ts <= f.ts + coalesce(f.duration, 0) + {tol}
+        UNION ALL
+        SELECT f.uid, a.ts, a.signature
+        FROM flows f JOIN alerts a
+          ON a.src_ip = f."id.resp_h" AND a.dest_ip = f."id.orig_h"
+         AND a.ts >= f.ts - {tol} AND a.ts <= f.ts + coalesce(f.duration, 0) + {tol}
+         -- excluded here, not just left to the branches to differ naturally:
+         -- a flow whose originator and responder are the same IP would
+         -- otherwise match an identical alert in BOTH branches and double it.
+         AND f."id.orig_h" != f."id.resp_h"
+      ),
       hit AS (
-        SELECT f.uid,
-               count(a.ts) AS alerts,
-               any_value(a.signature) AS signature
-        FROM flows f LEFT JOIN alerts a
-          ON a.ts >= f.ts - {tol}
-         AND a.ts <= f.ts + coalesce(f.duration, 0) + {tol}
-         AND ((a.src_ip = f."id.orig_h" AND a.dest_ip = f."id.resp_h")
-           OR (a.src_ip = f."id.resp_h" AND a.dest_ip = f."id.orig_h"))
-        GROUP BY f.uid
+        SELECT uid, count(ts) AS alerts, any_value(signature) AS signature
+        FROM matched GROUP BY uid
       )
       SELECT f.uid, f.label_binary, f.label_class, f.ts,
              f."id.orig_h" AS orig, f."id.resp_h" AS resp,
-             h.alerts > 0 AS alerted, h.signature
-      FROM flows f JOIN hit h USING (uid)"""
+             coalesce(h.alerts, 0) > 0 AS alerted, h.signature
+      FROM flows f LEFT JOIN hit h USING (uid)"""
 
     def build(self, duck, dataset: str, labelled_uri: str, alerts: str,
               alerts_total: int) -> CorroborationReport:
@@ -146,23 +162,30 @@ class Corroborator:
         inline VALUES table is fine for a handful of rows in a test. It used to
         be VALUES unconditionally, which at 2019 scale meant a ~300 MB query
         string.
-        """
-        joined = f"({self.join_sql(labelled_uri, alerts)})"
 
-        counts = duck.one(f"""
+        The join is materialised into a temp table rather than nested as a
+        nested (...)  in the three queries below -- otherwise each one would
+        recompute the whole join from scratch, three times the cost for no
+        reason. Same lesson `cli.py`'s own `_oracle_join` already applies for
+        `talos audit emit`.
+        """
+        duck.sql(f"CREATE OR REPLACE TEMP TABLE _corroboration_hits AS "
+                 f"{self.join_sql(labelled_uri, alerts)}")
+
+        counts = duck.one("""
             SELECT count(*) FILTER (label_binary),
                    count(*) FILTER (label_binary AND alerted),
                    count(*) FILTER (NOT label_binary),
                    count(*) FILTER (NOT label_binary AND alerted),
                    count(*) FILTER (alerted)
-            FROM {joined} t""")
+            FROM _corroboration_hits""")
 
         signatures = duck.sql(f"""
-            SELECT signature, count(*) AS n FROM {joined} t
+            SELECT signature, count(*) AS n FROM _corroboration_hits
             WHERE alerted GROUP BY 1 ORDER BY 2 DESC LIMIT {self.top_k}""")
 
         dissent = duck.sql(f"""
-            SELECT uid, ts, orig, resp, signature FROM {joined} t
+            SELECT uid, ts, orig, resp, signature FROM _corroboration_hits
             WHERE alerted AND NOT label_binary
             ORDER BY ts LIMIT {self.examples}""")
 
