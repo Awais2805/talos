@@ -405,8 +405,8 @@ def cmd_audit(args, extra) -> int:
     """Emit candidates for a person, read their decisions back, or score methods."""
     import argparse
     from talos.data.labelling.audit import (
-        AdjudicationTable, AuditError, AuditPage, CandidateSelector, LabelBenchmark,
-        default_path,
+        AdjudicationTable, AuditError, AuditPage, CandidateSelector, ContextFetcher,
+        LabelBenchmark, default_path,
     )
     from talos.data.labelling.behavioural.pool import PartitionLoader
     from talos.data.labelling.method import MethodLoader
@@ -427,6 +427,11 @@ def cmd_audit(args, extra) -> int:
                         "each candidate")
     p.add_argument("--tolerance", type=float, default=2.0,
                    help="seconds of slack when joining an alert to a flow")
+    p.add_argument("--context-window", type=float, default=600.0,
+                   help="seconds either side of a candidate to show as context "
+                        "(emit/render only; 0 disables the expandable context panel)")
+    p.add_argument("--context-limit", type=int, default=20,
+                   help="neighbouring flows shown per candidate, nearest first")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
@@ -450,8 +455,9 @@ def cmd_audit(args, extra) -> int:
                        for suffix in (".csv", ".parquet")]
             print(selection.describe())
             print(f"\npool          {selection.pool}")
+            context = _context_for(duck, sources, chosen, a)
             page = AuditPage(space, a.dataset, a.method).render(
-                duck, base.with_suffix(".csv"), base.with_suffix(".html"))
+                duck, base.with_suffix(".csv"), base.with_suffix(".html"), context)
             print(f"oracle        {'suricata ' + a.alerts if alerts else 'not consulted'}")
             for path in written + [page]:
                 print(f"written       {path}")
@@ -460,8 +466,14 @@ def cmd_audit(args, extra) -> int:
             return 0
 
         if a.action == "render":
+            sources = partition.sources(lake, feature_space, cfg)
+            candidates = duck.relation(
+                f"SELECT uid, CAST(ts AS DOUBLE) AS ts, capture, \"id.orig_h\", "
+                f"\"id.resp_h\" FROM read_csv_auto('{base}', header = true, "
+                f"all_varchar = true)")
+            context = _context_for(duck, sources, candidates, a)
             page = AuditPage(space, a.dataset, a.method).render(
-                duck, base, base.with_suffix(".html"))
+                duck, base, base.with_suffix(".html"), context)
             print(f"written       {page}")
             return 0
 
@@ -505,6 +517,21 @@ def _oracle_join(duck, cfg, lake, a, feature_space) -> str | None:
     # re-run for each of the two output formats.
     duck.sql(f"CREATE OR REPLACE TEMP TABLE oracle_hits AS {joined}")
     return "SELECT uid, alerted, signature FROM oracle_hits"
+
+
+def _context_for(duck, sources, candidates, a) -> dict:
+    """Neighbouring flows per candidate, or {} if the panel was disabled.
+
+    `--context-window 0` is the escape hatch: a very large candidate set
+    would make this the most expensive part of the run for a feature that's
+    a reading aid, not a requirement.
+    """
+    if a.context_window <= 0:
+        return {}
+    from talos.data.labelling.audit import ContextFetcher
+
+    return ContextFetcher(window=a.context_window,
+                          limit=a.context_limit).fetch(duck, sources, candidates)
 
 
 def _print_origins(a, partition) -> None:

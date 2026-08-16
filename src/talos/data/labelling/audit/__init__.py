@@ -10,6 +10,7 @@ from talos.data.labelling.audit.adjudication import (
     default_path,
 )
 from talos.data.labelling.audit.render import AuditPage
+from talos.data.labelling.audit.context import ContextFetcher
 from talos.data.labelling.audit.benchmark import (
     BenchmarkReport, ClassScore, LabelBenchmark, MethodScore,
 )
@@ -19,6 +20,7 @@ from talos.data.labelling.audit.candidates import (
 
 __all__ = [
     "AdjudicationTable", "Adjudication", "AuditError", "AuditPage", "BenchmarkReport",
-    "CandidateSelector", "ClassScore", "CONFIRMED", "CORRECTED", "LabelBenchmark",
-    "MethodScore", "Selection", "Shortfall", "UNADJUDICATED", "UNKNOWN", "default_path",
+    "CandidateSelector", "ClassScore", "CONFIRMED", "ContextFetcher", "CORRECTED",
+    "LabelBenchmark", "MethodScore", "Selection", "Shortfall", "UNADJUDICATED",
+    "UNKNOWN", "default_path",
 ]
