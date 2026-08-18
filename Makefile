@@ -67,12 +67,12 @@ label-all-methods: ## the whole Path B chain for one dataset (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --method tabcl
 	$(TALOS) label --dataset $(DATASET) --method fused
 
-screen:          ## label-free feature screen over one or more datasets (DATASETS="a b", EMIT=1, OUT=path)
-	$(TALOS) screen --dataset $(or $(DATASETS),$(DATASET)) \
+screen:          ## label-free feature screen, pre-label by default (DATASETS="a b", ZONE=parquet|labelled, EMIT=1, OUT=path)
+	$(TALOS) screen --dataset $(or $(DATASETS),$(DATASET)) --zone $(or $(ZONE),parquet) \
 		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit $(OUT),)
 
-validity:        ## rows that cannot be true of a real flow (DATASETS="a b")
-	$(TALOS) validity --dataset $(or $(DATASETS),$(DATASET))
+validity:        ## rows that cannot be true of a real flow, pre-label by default (DATASETS="a b", ZONE=parquet|labelled)
+	$(TALOS) validity --dataset $(or $(DATASETS),$(DATASET)) --zone $(or $(ZONE),parquet)
 
 relevance:       ## task relevance + domain probe -> schema v1 (DATASETS="a b", EMIT=1, OUT=path)
 	$(TALOS) relevance --dataset $(or $(DATASETS),$(DATASET)) \
