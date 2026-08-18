@@ -8,7 +8,7 @@ not interpreted — a reconstruction loss consumes them.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -39,6 +39,15 @@ OTHER = "__other"
 #: Suffix of the companion column marking that a numeric value was missing.
 MISSING = "__missing"
 
+#: A verdict a stage (`screen`, `relevance`) can mark a feature with. Marking
+#: never removes a feature from a declaration -- `FeatureSet.active()` is the
+#: only thing that excludes, and only from its own in-memory view.
+KEEP, DROP, HOLD, UNMEASURED = "keep", "drop", "hold", "unmeasured"
+VERDICTS = (KEEP, DROP, HOLD, UNMEASURED)
+
+#: What `FeatureSet.active()` excludes by default.
+EXCLUDED_BY_DEFAULT = (DROP,)
+
 
 class FeatureError(Exception):
     pass
@@ -64,10 +73,22 @@ class Numeric:
     #: log1p(x), not log1p of the median. Both absent means pass through.
     centre: float | None = None
     scale: float | None = None
+    #: A prior stage's mark, e.g. {"verdict": "drop", "check": ..., "reason": ...}.
+    #: Written only by `talos screen`/`talos relevance`; never hand-edited.
+    screen: Mapping[str, Any] | None = None
+    relevance: Mapping[str, Any] | None = None
 
     @property
     def standardised(self) -> bool:
         return self.centre is not None and self.scale is not None
+
+    @property
+    def verdict(self) -> str:
+        """The latest stage's verdict; unmarked (never screened) means keep."""
+        for mark in (self.relevance, self.screen):
+            if mark and mark.get("verdict"):
+                return mark["verdict"]
+        return KEEP
 
     def sql(self) -> str:
         """Cast, impute, transform, then standardise.
@@ -106,6 +127,17 @@ class Categorical:
     expr: str
     values: tuple[str, ...]
     note: str = ""
+    #: Same contract as `Numeric.screen`/`.relevance`; categoricals get no
+    #: centre/scale but are marked by the same two stages.
+    screen: Mapping[str, Any] | None = None
+    relevance: Mapping[str, Any] | None = None
+
+    @property
+    def verdict(self) -> str:
+        for mark in (self.relevance, self.screen):
+            if mark and mark.get("verdict"):
+                return mark["verdict"]
+        return KEEP
 
     @property
     def width(self) -> int:
@@ -169,6 +201,24 @@ class FeatureSet:
             lines.append(f"  constraint  {constraint.describe()}")
         return "\n".join(lines)
 
+    def active(self, *, exclude: Sequence[str] = EXCLUDED_BY_DEFAULT) -> "FeatureSet":
+        """This declaration's columns after excluding a verdict tier.
+
+        Nothing is removed from the FILE, only from this view: `talos screen`
+        and `talos relevance` mark every feature they score and drop none, so
+        a consumer -- a behavioural method's vectoriser today, the eventual
+        training pipeline later -- calls this to get a real matrix while the
+        underlying declaration keeps every feature and every stage's mark for
+        whoever asks next.
+        """
+        numeric = tuple(f for f in self.numeric if f.verdict not in exclude)
+        categorical = tuple(c for c in self.categorical if c.verdict not in exclude)
+        kept = {f.name for f in numeric} | {c.name for c in categorical}
+        constraints = tuple(c for c in self.constraints
+                            if {c.target, *c.operands} <= kept)
+        return replace(self, numeric=numeric, categorical=categorical,
+                       constraints=constraints)
+
 
 class FeatureSetLoader:
     """Reads a feature declaration and refuses the ways it can be wrong."""
@@ -206,7 +256,8 @@ class FeatureSetLoader:
                     indicator=bool(entry.get("indicator", False)),
                     note=str(entry.get("note", "")),
                     centre=None if centre is None else float(centre),
-                    scale=None if scale is None else float(scale)))
+                    scale=None if scale is None else float(scale),
+                    screen=entry.get("screen"), relevance=entry.get("relevance")))
         return tuple(out)
 
     @staticmethod
@@ -214,7 +265,9 @@ class FeatureSetLoader:
         return tuple(
             Categorical(name=name, expr=str((entry or {}).get("expr", name)),
                         values=tuple(str(v) for v in (entry or {}).get("values") or ()),
-                        note=str((entry or {}).get("note", "")))
+                        note=str((entry or {}).get("note", "")),
+                        screen=(entry or {}).get("screen"),
+                        relevance=(entry or {}).get("relevance"))
             for name, entry in declared.items())
 
     @staticmethod
@@ -284,6 +337,14 @@ class FeatureSetLoader:
                                    if feature.values.count(v) > 1})
                 errs.append(f"{feature.name}: repeats {', '.join(repeated)}. Each "
                             f"value is one column and the second could never fire")
+
+        for feature in (*numeric, *categorical):
+            for stage, mark in (("screen", feature.screen),
+                                ("relevance", feature.relevance)):
+                verdict = mark.get("verdict") if mark else None
+                if verdict is not None and verdict not in VERDICTS:
+                    errs.append(f"{feature.name}: {stage} verdict {verdict!r} is "
+                                f"not one of {', '.join(VERDICTS)}")
 
         known = set(names)
         for constraint in constraints:

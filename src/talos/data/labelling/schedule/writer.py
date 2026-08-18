@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from talos.common.provenance import ProvMeta, ProvenanceService
 from talos.data.labelling.base import (
-    NO_CONFIDENCE, NO_WEIGHT, StaleOutputError, verify_schema,
+    NO_CONFIDENCE, NO_WEIGHT, refuse_stale_output, verify_schema,
 )
 from talos.data.labelling.schedule.closed_world import ClosedWorldResolver
 from talos.data.labelling.schedule.execution import ExecutionClassifier
@@ -117,21 +117,6 @@ class LabelWriter:
         """The core ten plus schedule's six, present and typed."""
         verify_schema(rel, EXTRAS)
 
-    def existing_method_sha(self, lake, uri: str) -> str | None:
-        """The method hash of whatever is already at `uri`, if anything is.
-
-        One row, one column. Cheap enough to run before every write, and it is
-        the point of content-addressing: the zone can say what it was built from
-        without anybody having recorded it separately.
-        """
-        if not lake.exists(uri):
-            return None
-        try:
-            row = lake.read_parquet(uri, columns=["method_sha"]).limit(1).fetchone()
-        except Exception:                                # noqa: BLE001
-            return None                                  # unreadable: treat as absent
-        return row[0] if row else None
-
     def write(self, lake, rel, dataset: str, feature_space: str,
               method: str, method_sha: str = "", uri: str | None = None,
               source: str | None = None, force: bool = False) -> str:
@@ -147,12 +132,7 @@ class LabelWriter:
                                  feature_space=feature_space, method=method,
                                  rel="conn.parquet")
 
-        previous = self.existing_method_sha(lake, target)
-        if previous and method_sha and previous != method_sha and not force:
-            raise StaleOutputError(
-                f"{target}\n  was labelled by {method} {previous}, and this run "
-                f"used {method_sha}.\n  An input changed -- the manifest, the "
-                f"taxonomy, the label space or the declaration.\n  Overwriting "
-                f"would discard labels derived from inputs that are still on "
-                f"record.\n  Pass --force if that is intended.")
+        refuse_stale_output(lake, target, method_sha, force, method,
+                            "the manifest, the taxonomy, the label space or "
+                            "the declaration")
         return lake.write_parquet(rel, target)

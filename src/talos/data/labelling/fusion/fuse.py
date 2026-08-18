@@ -15,7 +15,7 @@ import numpy as np
 
 from talos.common.provenance import ProvMeta, ProvenanceService, composite_sha
 from talos.data.labelling.base import (
-    FUSED, LABELLERS, LabellingError, LabellingMethod, StaleOutputError,
+    FUSED, LABELLERS, LabellingError, LabellingMethod, refuse_stale_output,
     verify_schema,
 )
 from talos.data.labelling.behavioural.base import CERTAIN, UNCERTAIN, labelling_columns
@@ -344,10 +344,7 @@ class FusedLabeller(LabellingMethod):
 
         uri = self.output_uri(dataset, feature_space,
                               source=self.cfg.source_of(dataset))
-        if self.lake.exists(uri) and not force:
-            row = self.lake.read_parquet(uri, columns=["method_sha"]).limit(1).fetchone()
-            if row and row[0] and row[0] != report.method_sha:
-                raise StaleOutputError(
-                    f"{uri}\n  was fused as {row[0]}, this run used "
-                    f"{report.method_sha}. Pass --force if that is intended.")
+        refuse_stale_output(self.lake, uri, report.method_sha, force, self.run_name,
+                            "the fusion declaration, either branch's own "
+                            "method_sha, or confident learning's settings")
         return self.lake.write_parquet(rel, uri)
