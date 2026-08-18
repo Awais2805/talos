@@ -16,7 +16,7 @@ from talos.common.plugins import ConfigPlugins, Declaration
 from talos.common.provenance import Sha12
 
 FEATURES_DIR = Path(__file__).with_name("features")
-DEFAULT_FEATURES = "conn-v1"
+DEFAULT_FEATURES = "conn"
 
 #: A feature name becomes a column identifier and an index into the matrix.
 _NAME = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -27,6 +27,11 @@ TRANSFORMS = (IDENTITY, LOG1P)
 #: `ratio`: a = b / c. `sum`: a = b + c. Each is a residual a decoder is penalised on.
 RATIO, SUM = "ratio", "sum"
 FORMS = (RATIO, SUM)
+
+#: How Eq. 2's residual is reduced. `l1` is the equation; `log_square` is an
+#: adaptation for byte-scale residuals and invalidates the paper's phi.
+L1, LOG_SQUARE = "l1", "log_square"
+NORMS = (L1, LOG_SQUARE)
 
 #: Where a value outside the vocabulary goes, and where a NULL goes.
 OTHER = "__other"
@@ -54,14 +59,40 @@ class Numeric:
     missing: float = 0.0
     indicator: bool = False
     note: str = ""
+    #: Declared, never fitted, and in TRANSFORMED space -- standardisation is
+    #: applied after `transform`, so a log1p feature's centre is the median of
+    #: log1p(x), not log1p of the median. Both absent means pass through.
+    centre: float | None = None
+    scale: float | None = None
+
+    @property
+    def standardised(self) -> bool:
+        return self.centre is not None and self.scale is not None
 
     def sql(self) -> str:
-        """Cast, impute, then transform — transforming first would move the sentinel."""
+        """Cast, impute, transform, then standardise.
+
+        Imputing first keeps the sentinel where it was declared; standardising
+        last means the constants describe the values a model actually sees.
+        """
         value = f"coalesce(CAST({self.expr} AS DOUBLE), {self.missing})"
         if self.transform == LOG1P:
             # Guarded: a negative value makes log1p NaN, which spreads silently.
-            return f"ln(1 + greatest({value}, 0))"
+            value = f"ln(1 + greatest({value}, 0))"
+        if self.standardised:
+            return f"(({value}) - {self.centre}) / {self.scale}"
         return value
+
+    def clamped_sql(self) -> str:
+        """1.0 where the log1p guard fired, so a clamp is counted, never silent.
+
+        After the validity screen a clamp should be impossible; one that fires
+        anyway is a defect in the screen, and this is what makes it visible.
+        """
+        if self.transform != LOG1P:
+            return "0.0"
+        value = f"coalesce(CAST({self.expr} AS DOUBLE), {self.missing})"
+        return f"CASE WHEN ({value}) < 0 THEN 1.0 ELSE 0.0 END"
 
     def indicator_sql(self) -> str:
         return f"CASE WHEN ({self.expr}) IS NULL THEN 1.0 ELSE 0.0 END"
@@ -102,6 +133,8 @@ class Constraint:
     form: str
     target: str
     operands: tuple[str, ...]
+    #: Eq. 2's phi_m. None means "use the method's global residual_weight".
+    weight: float | None = None
 
     def describe(self) -> str:
         op = " / " if self.form == RATIO else " + "
@@ -165,12 +198,15 @@ class FeatureSetLoader:
         for source in (declared, derived):
             for name, entry in source.items():
                 entry = entry or {}
+                centre, scale = entry.get("centre"), entry.get("scale")
                 out.append(Numeric(
                     name=name, expr=str(entry.get("expr", name)),
                     transform=str(entry.get("transform", IDENTITY)),
                     missing=float(entry.get("missing", 0.0)),
                     indicator=bool(entry.get("indicator", False)),
-                    note=str(entry.get("note", ""))))
+                    note=str(entry.get("note", "")),
+                    centre=None if centre is None else float(centre),
+                    scale=None if scale is None else float(scale)))
         return tuple(out)
 
     @staticmethod
@@ -186,7 +222,9 @@ class FeatureSetLoader:
         return tuple(
             Constraint(name=str(entry.get("name", "")), form=str(entry.get("form", "")),
                        target=str(entry.get("target", "")),
-                       operands=tuple(str(o) for o in entry.get("operands") or ()))
+                       operands=tuple(str(o) for o in entry.get("operands") or ()),
+                       weight=(None if entry.get("weight") is None
+                               else float(entry["weight"])))
             for entry in declared if isinstance(entry, dict))
 
     # ---------------------------------------------------------- validation
@@ -210,10 +248,29 @@ class FeatureSetLoader:
             if not _NAME.match(name):
                 errs.append(f"feature name {name!r} must match [a-z][a-z0-9_]*")
 
+        # A name is a column wherever this schema is written, and DuckDB folds
+        # identifiers case-insensitively -- two names differing only by case
+        # would merge into one column and silently lose half the signal.
+        folded = [n.lower() for n in names]
+        collided = sorted({n for n in folded if folded.count(n) > 1})
+        if collided and not duplicated:
+            errs.append(f"{', '.join(collided)}: two features differ only by case. "
+                        f"Written to a table they would fold into one column")
+
         for feature in numeric:
             if feature.transform not in TRANSFORMS:
                 errs.append(f"{feature.name}: transform {feature.transform!r} is "
                             f"not one of {', '.join(TRANSFORMS)}")
+            if (feature.centre is None) != (feature.scale is None):
+                errs.append(
+                    f"{feature.name}: declares only "
+                    f"{'centre' if feature.scale is None else 'scale'}. "
+                    f"Standardisation needs both, and half of one is not a "
+                    f"transform anybody chose")
+            if feature.scale is not None and feature.scale == 0:
+                errs.append(f"{feature.name}: scale is 0, which divides every row "
+                            f"by zero. A constant column has no scale; drop it "
+                            f"instead of standardising it")
 
         for feature in categorical:
             if not feature.values:

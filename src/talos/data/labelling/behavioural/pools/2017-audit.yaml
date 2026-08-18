@@ -1,39 +1,40 @@
 # Talos — audit pool for the 2017-solo validation gate.
 #
-# `xdg-v3` cannot serve this audit, for two reasons worth recording rather than
+# `xdg` cannot serve this audit, for two reasons worth recording rather than
 # silently overriding in place:
 #
-#   1. `xdg-v3.d_s.share` is 0.0002 -- sized for the cross-domain study's 64.5M
+#   1. `xdg.d_s.share` is 0.0002 -- sized for the cross-domain study's 64.5M
 #      row (2017+2018) pool, not for pulling a per-class floor out of 2017's
 #      rarest class alone. 2017 botnet totals 736 flows; at 0.0002 share the
 #      expected botnet count in d_s is ~0.15 -- i.e. never. DH.7's math
 #      (floor / rarest_class_total ~= required share) is applied for real here.
-#   2. `xdg-v3.source.datasets` names BOTH cic-ids-2017 and cic-ids-2018. The
+#   2. `xdg.source.datasets` names BOTH cic-ids-2017 and cic-ids-2018. The
 #      run under audit (DH.10/DH.11, "2017-solo") only ever produced a
-#      `fused-v1` labelled table for cic-ids-2017 -- pointing this partition at
+#      `fused` labelled table for cic-ids-2017 -- pointing this partition at
 #      2018 too would either pull in an unrelated 2018 sample or fail outright
 #      reading a table that was never written.
 #
-# A new declaration, not an edit to xdg-v3: xdg-v3 is the real cross-domain
+# A new declaration, not an edit to xdg: xdg is the real cross-domain
 # training pool and its shares are load-bearing for that study's provenance
 # (pool_sha). Reusing it here would let an audit-sizing change silently move
 # the training split underneath it.
 
-name: 2017-audit-v1
+name: 2017-audit
 description: >
-  Audit-only pool for validating the 2017-solo fused-v1 pseudo-labels by hand.
+  Audit-only pool for validating the 2017-solo fused pseudo-labels by hand.
   Not used for pretraining or fine-tuning -- d_l/held exist here only because
   the partition schema requires shares to total 1, not because this study
   trains on them.
 
 source:
   datasets: [cic-ids-2017]
-  labels: fused-v1          # the method actually under audit, not schedule
+  labels: fused          # the method actually under audit, not schedule
 
 exclude:
   - out-of-space
 
 partition_by: uid
+# Original literal kept on purpose: changing a seed re-derives every bucket.
 seed: "talos-2017-audit-v1-20260816"
 buckets: 1000000
 
@@ -48,7 +49,7 @@ pools:
     share: 0.08
     role: audited
     description: >
-      Candidates for hand adjudication of the 2017-solo fused-v1 run. Sized so
+      Candidates for hand adjudication of the 2017-solo fused run. Sized so
       botnet (736 flows total in 2017) can reach a floor of ~50.
 
   d_l:

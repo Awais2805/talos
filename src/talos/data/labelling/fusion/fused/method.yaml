@@ -1,10 +1,13 @@
-# Talos — labelling method `fused-v1`.
+# Talos — labelling method `fused`. Reconciles the two behavioural branches.
 #
-# Reconciles the two behavioural branches (Eslami & Hamouda Eq. 17), then weighs
-# every row by traffic-adapted confident learning (§IV-E). Reads the branches'
-# written tables, so either can be re-run without re-running the other.
+# Version 2 (2026-08-18) — reads the consolidated `ae`/`tabcl` branches over
+# conn features. History: docs/method-versions.md
+#
+# Eslami & Hamouda Eq. 17 reconciles the branches, then traffic-adapted
+# confident learning (§IV-E) weighs every row. Reads the branches' written
+# tables, so either can be re-run without re-running the other.
 
-name: fused-v1
+name: fused
 implementation: fused
 
 label_space: core-5
@@ -14,16 +17,23 @@ settings:
   # Exactly two, and ORDER MATTERS. Eq. 17 line 4 tests `m_first >= m_second`,
   # so the FIRST wins any exact tie; the second is taken only when it strictly
   # wins on confidence, or ties on confidence and strictly wins on margin.
-  inputs: [ae-v1, tabcl-v1]
+  #
+  # Expect MANY exact ties now that both branches are comparably trained --
+  # which is the point, and it means the margin line, previously almost
+  # unreachable, starts deciding rows. `talos label --method fused --explain`
+  # counts exactly that.
+  inputs: [ae, tabcl]
 
-  features: conn-v1
+  features: conn
   vectoriser: passthrough
 
   confident_learning: true
 
-  # Eq. 18: folds, and the CV classifier from Table VII's confident-learning
-  # column. These probabilities must be out-of-sample — in-sample ones make
-  # every threshold and every MAD optimistic.
+  # Eq. 18: folds, and the CV classifier from Table VII's CONFIDENT LEARNING
+  # column -- not its Final Classifier column, which is a different component
+  # (512/256/128) and belongs to Eq. 31's C_final, unimplemented here. These
+  # probabilities must be out-of-sample: in-sample ones make every threshold
+  # and every MAD optimistic.
   folds: 5
   hidden: [128, 64]
   dropout: 0.20

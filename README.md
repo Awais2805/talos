@@ -58,7 +58,7 @@ Levels 1 and 2 will use XGBoost. Levels 3 and 4 belong to a second-layer NN that
 | Zeek logs   Parquet (1:1 tree mirror)            |   Working       | `data/conversion/convert.py`, streaming, memory-safe      |
 | Lake schema discovery / drift check              |   Working       | `data/discovery/lake_feature_discovery.py`, footers       |
 | Statistical profiling + cross-dataset comparison |   Working       | `talos/eda/`; reads the labelled zone, reports regenerated |
-| **Labelling module**                             |   Built, untrained | All four methods land end to end: `schedule`, `ae-v1`, `tabcl-v1`, `fused-v1`, plus the audit and the three-way benchmark. The **torch path has never executed** — no macOS x86_64 wheel for the dev machine — so every behavioural result so far comes from the `inert` parts. Runs on the EC2 box are the outstanding evidence. |
+| **Labelling module**                             |   Built, untrained | All four methods land end to end: `schedule`, `ae`, `tabcl`, `fused`, plus the audit and the three-way benchmark. The **torch path has never executed** — no macOS x86_64 wheel for the dev machine — so every behavioural result so far comes from the `inert` parts. Runs on the EC2 box are the outstanding evidence. |
 | Canonical `mapped` zone                          |   Not started   | Blocked on labelling                                     |
 | Feature registry / schema lock                   |   Designed only | Methodology settled, no code                             |
 | Training + cross-domain evaluation               |   Not started   | Blocked on canonical zone                                |
@@ -169,7 +169,7 @@ from). A dataset an experiment does not mention is `unassigned`, never `train` �
 defaulting the other way would let a dataset dropped into the lake join a
 training pool because nobody wrote a line about it.
 
-Roles below are those declared by `xdg-v3`, the reference experiment.
+Roles below are those declared by `xdg`, the reference experiment.
 
 | Dataset | Role | conn flows | Classes present |
 | --- | --- | --- | --- |
@@ -238,14 +238,14 @@ fusion, EDA, the benchmark and training read one shape and never ask who wrote i
 | method | what it does | key columns it adds |
 | --- | --- | --- |
 | `schedule` | Path A — attack schedule joined by time and endpoint | `label_raw` `rule_id` `label_executed` |
-| `ae-v1` | autoencoder branch, constraint-consistent reconstruction | `recon_error` `label_margin` |
-| `tabcl-v1` | contrastive branch, class-conditioned augmentation | `view_agreement` `label_margin` |
-| `fused-v1` | reconciles the two, then confident learning | `branches_agreed` `label_weight` |
+| `ae` | autoencoder branch, constraint-consistent reconstruction | `recon_error` `label_margin` |
+| `tabcl` | contrastive branch, class-conditioned augmentation | `view_agreement` `label_margin` |
+| `fused` | reconciles the two, then confident learning | `branches_agreed` `label_weight` |
 
 ```bash
-talos label --dataset cic-ids-2017 --method schedule    # then ae-v1, tabcl-v1, fused-v1
+talos label --dataset cic-ids-2017 --method schedule    # then ae, tabcl, fused
 talos audit emit --dataset cic-ids-2017                 # candidates -> CSV + parquet
-talos audit benchmark --dataset cic-ids-2017 --compare schedule ae-v1 fused-v1
+talos audit benchmark --dataset cic-ids-2017 --compare schedule ae fused
 ```
 
 **Where this departs from the paper.** The method is adapted, not copied, and the
@@ -304,7 +304,7 @@ Layer 2 is a neural anomaly model taking the flow vector concatenated with layer
 ├── pyproject.toml                # package metadata, deps, optional extras
 ├── config.yml                    # lake zones, dataset roles, Zeek settings
 ├── requirements.txt              # fallback dependency lock
-├── experiments/                  # experiment configs (e.g., xdg-v3) and run histories
+├── experiments/                  # experiment configs (e.g., xdg) and run histories
 ├── docs/                         # architecture diagrams and documentation
 ├── reports/                      # generated reports (e.g., lake_features_report.txt)
 ├── results/                      # output evaluation artifacts
@@ -353,7 +353,7 @@ eval "$(aws configure export-credentials --format env)"
 | `make extract` | Zeek over the raw pcaps (run on EC2; `RAW_ONLY= ` to scope) |
 | `make convert DATASET=cic-ids-2017` | Mirror one dataset's Zeek logs to Parquet 1:1 |
 | `make label DATASET=cic-ids-2017` | Attach ground truth labels (defaults to `schedule` method) |
-| `talos label --dataset cic-ids-2017 --method <name>` | Label flows using the specified method (e.g., `schedule`, `ae-v1`) |
+| `talos label --dataset cic-ids-2017 --method <name>` | Label flows using the specified method (e.g., `schedule`, `ae`) |
 | `make discover` | Profile the lake by log type   `reports/lake_features_report.txt` |
 | `make eda-smoke` | 200k-row dry run of every dataset - for testing the pipeline flow |
 | `make eda DATASET=cic-ids-2017` | Profile one dataset, then regenerate every comparison |

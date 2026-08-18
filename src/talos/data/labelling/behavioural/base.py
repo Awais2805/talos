@@ -44,7 +44,7 @@ def labelling_columns() -> set[str]:
 
     Path B reads a table another method wrote, so its input already carries a
     full set of labels. They are replaced, not merged: a `rule_id` sitting in an
-    `ae-v1` table would describe a rule that had nothing to do with the row.
+    `ae` table would describe a rule that had nothing to do with the row.
     """
     owned = set(CORE_COLUMNS)
     for name in LABELLERS.names():
@@ -166,7 +166,7 @@ class BehaviouralMethod(LabellingMethod):
                 f"classifier can express. Run it through a method declaration.")
 
         self.partition = partition or PartitionLoader().load(
-            pools or self.settings.get("pools", "xdg-v3"))
+            pools or self.settings.get("pools", "xdg"))
         self.features = features or FeatureSetLoader().load(
             self.settings.get("features", DEFAULT_FEATURES))
         self.vectoriser = vectoriser or build_vectoriser(
@@ -211,7 +211,8 @@ class BehaviouralMethod(LabellingMethod):
         """The parts this branch needs, given the matrix width."""
 
     @abstractmethod
-    def pretrain(self, batches, report: BehaviouralReport) -> tuple:
+    def pretrain(self, batches, report: BehaviouralReport,
+                 supervised: tuple | None = None, keyed=None, duck=None) -> tuple:
         """Self-supervised stage over D_l. Returns the epoch history."""
 
     @abstractmethod
@@ -280,9 +281,19 @@ class BehaviouralMethod(LabellingMethod):
             return
 
         report.d_l_rows = self._count(duck, sources, LARGE)
-        report.pretrain = self.pretrain(
-            lambda: self._batches(duck, sources, LARGE), report)
+        # D_s is resolved BEFORE pretraining: Algorithm 2 line 1 bootstraps the
+        # pseudo-labels its augmentation conditions on from a classifier trained
+        # on D_s, and lines 4-5 refresh them from a probe over D_s embeddings.
+        # A branch that does not need it (the AE) simply ignores the argument.
         X, y = self._supervised(duck, sources, report)
+        report.pretrain = self.pretrain(
+            lambda: self._batches(duck, sources, LARGE), report, supervised=(X, y),
+            keyed=lambda: self._keyed_batches(duck, sources, LARGE), duck=duck)
+        # Which loss produced these numbers, on the row beside them: weighted
+        # and unweighted fine-tuning give very different per-class results and
+        # the two are not otherwise distinguishable in a report.
+        report.extra["class_weighting"] = bool(
+            self.settings.get("class_weighting", False))
         report.finetune = self.finetune(X, y, report)
 
         directory.mkdir(parents=True, exist_ok=True)
@@ -313,6 +324,16 @@ class BehaviouralMethod(LabellingMethod):
         rel = self.partition.relation(duck, pool, sources)
         for _keys, X in self.vectoriser.batches(rel, self.batch):
             yield X
+
+    def _keyed_batches(self, duck, sources, pool: str) -> Iterator:
+        """The same batches, with the key each row joins back on.
+
+        Alg. 2 line 5 reclassifies all of D_l and stops on the label-change
+        FRACTION, which can only be counted by matching rows between rounds.
+        A scan has no order guarantee, so the match is by uid, not by position.
+        """
+        rel = self.partition.relation(duck, pool, sources)
+        yield from self.vectoriser.batches(rel, self.batch)
 
     def _audited_relation(self, duck, rel, report: BehaviouralReport):
         """`D_s`, with `label_class` replaced by a person's verdict.
@@ -383,7 +404,14 @@ class BehaviouralMethod(LabellingMethod):
         return X[keep], y
 
     def class_weights(self, y):
-        """Inverse-frequency weight per class, for a fine-tune loss.
+        """Inverse-frequency weight per class, or None when declared off.
+
+        Eq. 3 is plain unweighted cross-entropy and that is now the default.
+        An audited D_s is near-balanced by construction -- `CandidateSelector`
+        draws per class up to a floor -- so the inverse-frequency weighting that
+        once compensated for an unaudited, 80%-benign D_s is not needed when the
+        audit gate is honoured. `class_weighting: true` keeps it available as
+        the comparison arm.
 
         ADAPTATION, NOT IN THE PAPER: Eslami & Hamouda's Eq. 3 fine-tuning
         loss is plain unweighted cross-entropy -- confirmed against the paper
@@ -397,6 +425,8 @@ class BehaviouralMethod(LabellingMethod):
         class absent from `y` gets weight 0 rather than a division by zero;
         it cannot appear in any batch either way, so the weight is never used.
         """
+        if not self.settings.get("class_weighting", False):
+            return None
         torch = require_torch()
         counts = np.bincount(y, minlength=self.space.n_classes).astype(np.float64)
         total = counts.sum()

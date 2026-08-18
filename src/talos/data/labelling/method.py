@@ -4,7 +4,7 @@ Two different things wear the word "method" and keeping them apart is the point
 of this module:
 
     the IMPLEMENTATION   a class, registered in `LABELLERS`, e.g. `autoencoder`
-    the DECLARATION      a `method.yaml`, e.g. `ae-v1` and `ae-v2`
+    the DECLARATION      a `method.yaml`, e.g. `ae` and `tabcl`
 
 
 Declarations ship inside the package, beside the code that reads them, exactly as

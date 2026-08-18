@@ -294,7 +294,7 @@ class ConfigPlugins(PluginPoint):
 
         Method declarations ship beside the code that reads them, and that code
         is in more than one package -- `schedule/method.yaml` and
-        `behavioural/ae-v1/method.yaml`. All of them are equally shipped, so all
+        `behavioural/ae/method.yaml`. All of them are equally shipped, so all
         of them report as BUILT_IN.
         """
         super().__init__(kind, error, addressable=addressable)

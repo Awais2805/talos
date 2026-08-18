@@ -6,7 +6,7 @@
     talos ingest          put captures into a source's raw zone
     talos extract         run the configured extractor over the raw zone
     talos convert         convert extracted logs to parquet or csv
-    talos label           label flows (--method schedule|ae-v1|...)
+    talos label           label flows (--method schedule|ae|tabcl|fused)
     talos audit           emit audit candidates, or score methods against them
     talos pools           show how a partition splits a lake
     talos oracle          independent evidence from Suricata (corroborate|offset)
@@ -339,7 +339,7 @@ def cmd_label(args, extra) -> int:
     p.add_argument("--method", default="schedule",
                    help=f"labelling method: {', '.join(METHODS.names())}")
     p.add_argument("--method-file", default=None,
-                   help="a method.yaml outside the package, e.g. your own ae-v2")
+                   help="a method.yaml outside the package, e.g. your own ae variant")
     p.add_argument("--pools", default=None,
                    help="override the method's declared partition (behavioural methods only)")
     p.add_argument("--feature-space", default=None,
@@ -354,6 +354,9 @@ def cmd_label(args, extra) -> int:
     p.add_argument("--skip-audit-gate", action="store_true",
                    help="fine-tune on D_s's raw schedule label, skipping the "
                         "human-audit requirement (already-verified labels only)")
+    p.add_argument("--explain", action="store_true",
+                   help="fusion methods only: count which line of Eq. 17 decided "
+                        "each row, and write nothing")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
@@ -377,6 +380,23 @@ def cmd_label(args, extra) -> int:
           f"({spec.label_space.n_classes} classes, "
           f"{len(spec.label_space.excluded)} excluded)")
     print(f"feature space {feature_space}")
+
+    if a.explain:
+        if not hasattr(method, "explain"):
+            print(f"error: --explain is for fusion methods; {spec.name!r} "
+                  f"({spec.implementation}) does not reconcile branches.",
+                  file=sys.stderr)
+            return 2
+        try:
+            report = method.explain(a.dataset, feature_space)
+        except LabellingError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"inputs        {' + '.join(report.inputs)}  (order is Eq. 17's)\n")
+        print(report.table())
+        print(f"\n{report.summary()}")
+        return 0
+
     try:
         report = method.label(a.dataset, feature_space, source=a.source,
                               write=not a.no_write, force=a.force)
@@ -414,7 +434,7 @@ def cmd_audit(args, extra) -> int:
     p = argparse.ArgumentParser(prog="talos audit")
     p.add_argument("action", choices=("emit", "render", "status", "benchmark"))
     p.add_argument("--dataset", required=True)
-    p.add_argument("--pools", default="xdg-v3", help="partition declaring the audit pool")
+    p.add_argument("--pools", default="xdg", help="partition declaring the audit pool")
     p.add_argument("--method", default="schedule", help="method whose labels are the prior")
     p.add_argument("--space", default="core-5")
     p.add_argument("--feature-space", default=None)
@@ -629,13 +649,314 @@ def cmd_oracle(args, extra) -> int:
         return 2
 
 
+def cmd_screen(args, extra) -> int:
+    """Screen the candidate features on everything judgeable without a label."""
+    import argparse
+    from talos.common.provenance import ProvenanceService
+    from talos.data.preprocess.screen import (
+        CORRELATION, DOMINANT_SHARE, METHODS, MAX, NULL_SHARE, FeatureScreener,
+        ScreenError, candidates, describe, sources,
+    )
+
+    p = argparse.ArgumentParser(prog="talos screen")
+    p.add_argument("--dataset", required=True, nargs="+",
+                   help="one or more datasets; the verdict is taken over their "
+                        "union, because a column dead in one domain and alive "
+                        "in another must survive")
+    p.add_argument("--zone", default="labelled", choices=("parquet", "labelled"),
+                   help="which zone to screen (default: labelled)")
+    p.add_argument("--method", default=MAX, choices=METHODS,
+                   help="which correlation drives clustering (all are reported)")
+    p.add_argument("--feature-space", default=None)
+    p.add_argument("--label-method", default="schedule",
+                   help="which labelled table, when --zone labelled")
+    p.add_argument("--source", default=None, help="a parquet glob to screen instead")
+    p.add_argument("--dominant", type=float, default=DOMINANT_SHARE,
+                   help="drop a column one value covers this share of")
+    p.add_argument("--null-share", type=float, default=NULL_SHARE,
+                   help="drop a column this NULL, unless it declares an indicator")
+    p.add_argument("--correlation", type=float, default=CORRELATION,
+                   help="cluster columns whose correlation exceeds this")
+    p.add_argument("--indicated", default="", help="comma-separated columns whose "
+                   "missingness is declared to be information")
+    p.add_argument("--features", default=None,
+                   help="base feature set to screen against and emit from")
+    p.add_argument("--emit", nargs="?", const="", default=None, metavar="PATH",
+                   help="write the surviving schema as a loadable feature set")
+    a = p.parse_args(extra)
+
+    cfg = Config.load(args.config)
+    feature_space = a.feature_space or _feature_space(cfg)
+    lake = cfg.lake()
+    globs = []
+    if a.source:
+        globs = [a.source]
+    else:
+        for dataset in a.dataset:
+            scope = {"feature_space": feature_space,
+                     "source": cfg.source_of(dataset)}
+            if a.zone == "labelled":
+                scope["method"] = a.label_method
+            glob = lake.uri(a.zone, dataset=dataset, rel="conn.parquet", **scope)
+            if not lake.exists(glob):
+                print(f"error: nothing to screen: {glob} does not exist.",
+                      file=sys.stderr)
+                return 2
+            globs.append(glob)
+
+    from talos.data.feature.featureset import FeatureError, FeatureSetLoader
+    from talos.data.preprocess.screen import feature_source, preflight
+
+    duck = lake.duck
+    name = "+".join(a.dataset)
+    base = None
+    try:
+        source = sources(globs)
+        if a.features:
+            # Screen what a model sees, not what the table happens to hold:
+            # `orig_rate` and the history counts are expressions, not columns.
+            base = FeatureSetLoader().load(a.features)
+            preflight(base, describe(duck, source))
+            source, numeric, categorical = feature_source(base, source)
+            origin = f"feature set {base.name} (sha {base.sha})"
+        else:
+            numeric, categorical = candidates(describe(duck, source))
+            origin = "the table's own columns"
+        print(f"datasets      {name}  ({len(globs)} table(s), screened as one)")
+        print(f"zone          {a.zone}")
+        print(f"candidates    {len(numeric)} numeric, "
+              f"{len(categorical)} categorical, from {origin}\n")
+        report = FeatureScreener(
+            duck, dominant=a.dominant, null_share=a.null_share,
+            correlation=a.correlation, method=a.method,
+            indicated=[c for c in a.indicated.split(",") if c],
+        ).screen(name, source, numeric, categorical)
+        report.datasets = tuple(a.dataset)
+    except (ScreenError, FeatureError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print(report.table())
+    print(f"\n{report.shape_table()}")
+    print(f"\n{report.summary()}")
+
+    payload = report.to_dict()
+    if base is not None and getattr(base, "constraints", ()):
+        from talos.data.preprocess.screen import suggested_phi
+
+        phi = suggested_phi(report, base)
+        payload["suggested_phi"] = phi
+        print(f"\n{'constraint':<30}{'target':<20}{'p50':>14}{'phi':>14}")
+        for cname, entry in phi.items():
+            value = "-" if entry["phi"] is None else f"{entry['phi']:.3e}"
+            p50 = "-" if entry["target_p50"] is None else f"{entry['target_p50']:,.3f}"
+            print(f"{cname:<30}{entry['target']:<20}{p50:>14}{value:>14}")
+        print("              Eq. 2's phi_m at this data's scale; Table VII's 0.5 "
+              "does not transfer (see docs/paper-deviations.md)")
+
+    path = ProvenanceService(cfg.reports).run_report(f"screen_{name}", payload)
+    print(f"\nreport        {path}")
+
+    if a.emit is not None:
+        from pathlib import Path
+        from talos.data.feature.featureset import DEFAULT_FEATURES
+        from talos.data.preprocess.screen import emit_declaration
+
+        if base is None:
+            try:
+                base = FeatureSetLoader().load(a.features or DEFAULT_FEATURES)
+            except FeatureError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 2
+        emitted = f"{base.name}-screened"
+        out = Path(a.emit) if a.emit else cfg.reports / "schema" / f"{emitted}.yaml"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(emit_declaration(report, base, emitted))
+        print(f"schema        {out}")
+        # It only counts as a schema if it loads; a generated file that cannot
+        # is worse than none, and the orphaned-constraint case is easy to hit.
+        try:
+            check = FeatureSetLoader().load(out)
+            print(f"              loads: {len(check.numeric)} numeric, "
+                  f"{len(check.categorical)} categorical, "
+                  f"{len(check.constraints)} constraint(s)")
+        except FeatureError as exc:
+            print(f"error: emitted schema does not load: {exc}", file=sys.stderr)
+            return 2
+    return 0
+
+
+def cmd_relevance(args, extra) -> int:
+    """Task relevance against the domain probe: the label-dependent screen."""
+    import argparse
+    from talos.common.provenance import ProvenanceService
+    from talos.data.feature.featureset import (
+        DEFAULT_FEATURES, FeatureError, FeatureSetLoader,
+    )
+    from talos.data.preprocess.relevance import (
+        DOMAIN_AUC_HIGH, MI_BINS, RelevanceAnalyst,
+    )
+    from talos.data.preprocess.screen import (
+        ScreenError, describe, feature_source, preflight, sources,
+    )
+
+    p = argparse.ArgumentParser(prog="talos relevance")
+    p.add_argument("--dataset", required=True, nargs="+",
+                   help="two or more datasets; the domain probe needs a domain "
+                        "to discriminate, and one dataset has none")
+    p.add_argument("--features", default=DEFAULT_FEATURES,
+                   help="feature set to score (normally the screened schema)")
+    p.add_argument("--label", default="label_class")
+    p.add_argument("--domain", default="dataset")
+    p.add_argument("--label-method", default="schedule")
+    p.add_argument("--feature-space", default=None)
+    p.add_argument("--bins", type=int, default=MI_BINS)
+    p.add_argument("--domain-high", type=float, default=DOMAIN_AUC_HIGH)
+    p.add_argument("--emit", nargs="?", const="", default=None, metavar="PATH",
+                   help="write schema v1 as a loadable feature set")
+    a = p.parse_args(extra)
+
+    cfg = Config.load(args.config)
+    lake = cfg.lake()
+    globs = []
+    for dataset in a.dataset:
+        glob = lake.uri("labelled", dataset=dataset, rel="conn.parquet",
+                        feature_space=a.feature_space or _feature_space(cfg),
+                        method=a.label_method, source=cfg.source_of(dataset))
+        if not lake.exists(glob):
+            print(f"error: nothing to score: {glob} does not exist.",
+                  file=sys.stderr)
+            return 2
+        globs.append(glob)
+
+    duck = lake.duck
+    name = "+".join(a.dataset)
+    try:
+        base = FeatureSetLoader().load(a.features)
+        raw = sources(globs)
+        preflight(base, describe(duck, raw))
+        # The label and the domain are not features; they ride through the
+        # projection so no join can misalign them against the rows they describe.
+        source, numeric, categorical = feature_source(
+            base, raw, carry=(a.label, a.domain))
+    except (ScreenError, FeatureError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"datasets      {name}")
+    print(f"features      {base.name}  sha {base.sha}")
+    print(f"scoring       {len(numeric)} numeric, {len(categorical)} categorical\n")
+    report = RelevanceAnalyst(duck, bins=a.bins,
+                              domain_high=a.domain_high).analyse(
+        name, source, numeric, categorical, label=a.label, domain=a.domain)
+    report.datasets = tuple(a.dataset) if not report.datasets else report.datasets
+
+    print(report.table())
+    print(f"\n{report.summary()}")
+    path = ProvenanceService(cfg.reports).run_report(
+        f"relevance_{name}", report.to_dict())
+    print(f"\nreport        {path}")
+
+    if a.emit is not None:
+        from pathlib import Path
+        from talos.data.preprocess.screen import Rejection, ScreenReport
+        from talos.data.preprocess.screen import emit_declaration
+
+        # Only `drop` leaves. HELD features stay in schema v1 by definition --
+        # the post-training stage is what decides them.
+        rejections = tuple(
+            Rejection(column=f.name, check="domain-leak", reason=f.reason,
+                      evidence={"domain_auc": f.domain_auc,
+                                "relevance": f.mi_normalised})
+            for f in report.features if f.verdict == "drop")
+        shim = ScreenReport(dataset=name, datasets=report.datasets,
+                            rows=report.rows, rejections=rejections,
+                            thresholds={"domain_auc_high": a.domain_high,
+                                        "relevance_cut": report.relevance_cut})
+        emitted = f"{base.name}-v1"
+        out = Path(a.emit) if a.emit else cfg.reports / "schema" / f"{emitted}.yaml"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(emit_declaration(shim, base, emitted))
+        try:
+            check = FeatureSetLoader().load(out)
+        except FeatureError as exc:
+            print(f"error: emitted schema does not load: {exc}", file=sys.stderr)
+            return 2
+        print(f"schema v1     {out}")
+        print(f"              loads: {len(check.numeric)} numeric, "
+              f"{len(check.categorical)} categorical")
+    return 0
+
+
+def cmd_validity(args, extra) -> int:
+    """Count rows that cannot be true of a real flow. Flags, never drops."""
+    import argparse
+    from talos.common.provenance import ProvenanceService
+    from talos.data.preprocess.screen import ScreenError, describe, sources
+    from talos.data.preprocess.validity import (
+        INVARIANTS, ValidityAuditor, history_alphabet,
+    )
+
+    p = argparse.ArgumentParser(prog="talos validity")
+    p.add_argument("--dataset", required=True, nargs="+",
+                   help="one or more datasets, audited as one relation")
+    p.add_argument("--zone", default="labelled", choices=("parquet", "labelled"))
+    p.add_argument("--feature-space", default=None)
+    p.add_argument("--label-method", default="schedule")
+    p.add_argument("--source", default=None, help="a parquet glob to audit instead")
+    p.add_argument("--history", default="history",
+                   help="column to enumerate the state alphabet from")
+    a = p.parse_args(extra)
+
+    cfg = Config.load(args.config)
+    lake = cfg.lake()
+    globs = []
+    if a.source:
+        globs = [a.source]
+    else:
+        for dataset in a.dataset:
+            scope = {"feature_space": a.feature_space or _feature_space(cfg),
+                     "source": cfg.source_of(dataset)}
+            if a.zone == "labelled":
+                scope["method"] = a.label_method
+            glob = lake.uri(a.zone, dataset=dataset, rel="conn.parquet", **scope)
+            if not lake.exists(glob):
+                print(f"error: nothing to audit: {glob} does not exist.",
+                      file=sys.stderr)
+                return 2
+            globs.append(glob)
+
+    duck = lake.duck
+    name = "+".join(a.dataset)
+    try:
+        source = sources(globs)
+    except ScreenError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    columns = describe(duck, source)
+    print(f"datasets      {name}  ({len(globs)} table(s), audited as one)")
+    print(f"invariants    {len(INVARIANTS)} declared\n")
+
+    report = ValidityAuditor(duck).audit(name, source, columns)
+    report.extra["datasets"] = list(a.dataset)
+    if a.history in columns:
+        report.alphabet = history_alphabet(duck, source, a.history)
+
+    print(report.table())
+    print(f"\n{report.summary()}")
+    path = ProvenanceService(cfg.reports).run_report(
+        f"validity_{name}", report.to_dict())
+    print(f"\nreport        {path}")
+    return 0
+
+
 def cmd_pools(args, extra) -> int:
     """Show how a partition splits a lake, before 137M rows are split by it."""
     import argparse
     from talos.data.labelling.behavioural.pool import PARTITIONS, PartitionLoader, PoolError
 
     p = argparse.ArgumentParser(prog="talos pools")
-    p.add_argument("--pools", default="xdg-v3", help="partition declaration")
+    p.add_argument("--pools", default="xdg", help="partition declaration")
     p.add_argument("--total", type=int, default=0,
                    help="row count to project expected pool sizes against")
     a = p.parse_args(extra)
@@ -692,6 +1013,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("audit", help="emit audit candidates, or score methods against them",
                    add_help=False)
     sub.add_parser("pools", help="show how a partition splits a lake", add_help=False)
+    sub.add_parser("screen", help="screen candidate features without using a label",
+                   add_help=False)
+    sub.add_parser("validity", help="count rows that cannot be true of a real flow",
+                   add_help=False)
+    sub.add_parser("relevance", help="score features against the label and the "
+                   "domain probe", add_help=False)
     sub.add_parser("oracle", help="independent evidence from Suricata: corroboration "
                    "rates, or a verdict on which UTC offset a capture used",
                    add_help=False)
@@ -724,6 +1051,12 @@ def main(argv=None) -> int:
             return cmd_audit(args, extra)
         if args.cmd == "pools":
             return cmd_pools(args, extra)
+        if args.cmd == "screen":
+            return cmd_screen(args, extra)
+        if args.cmd == "validity":
+            return cmd_validity(args, extra)
+        if args.cmd == "relevance":
+            return cmd_relevance(args, extra)
         if args.cmd == "oracle":
             return cmd_oracle(args, extra)
         if args.cmd == "convert":

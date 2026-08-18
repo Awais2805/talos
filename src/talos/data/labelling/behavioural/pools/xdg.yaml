@@ -9,13 +9,13 @@
 # Re-deriving is free and exact, so a pool is reproducible from this file plus
 # the labelled tables it names — and `pool_sha` is this file's content hash.
 
-name: xdg-v3
+name: xdg
 description: >
   Pools for the cross-domain generalisation study. Drawn only from the two
   training-role domains; cic-ddos-2019 is a holdout and never enters a pool.
 
 source:
-  # 2019 is deliberately absent. Its role is holdout in experiments/xdg-v3, and
+  # 2019 is deliberately absent. Its role is holdout in experiments/xdg, and
   # a pool that quietly included it would defeat the guard the role exists for.
   datasets: [cic-ids-2017, cic-ids-2018]
   labels: schedule           # which labelled table; a method declaration name
@@ -39,6 +39,8 @@ partition_by: uid
 
 # Changing this reshuffles every pool. It is part of the hash, so a result can
 # always name the split that produced it.
+# Keeps its original literal deliberately -- the seed is a value, not a name,
+# and editing it re-derives every bucket and moves every pool boundary.
 seed: "talos-xdg-v3-20260812"
 
 buckets: 1000000

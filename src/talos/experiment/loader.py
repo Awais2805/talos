@@ -86,7 +86,7 @@ class ExperimentLoader:
         labels = doc.get("labels", DEFAULT_LABELS)
         if not isinstance(labels, str) or not labels.strip():
             errs.append("labels must name one labelling method declaration, "
-                        "e.g. `labels: fused-v1`")
+                        "e.g. `labels: fused`")
         elif "/" in labels:
             errs.append(f"labels {labels!r} becomes a directory in the labelled "
                         f"zone, so it may not contain a path separator")

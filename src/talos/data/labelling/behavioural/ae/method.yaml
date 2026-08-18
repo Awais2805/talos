@@ -1,0 +1,65 @@
+# Talos — labelling method `ae`. Path B, autoencoder branch.
+#
+# Version 2 (2026-08-18) — Table VII hyperparameters, conn features, unweighted
+# Eq. 3 head. Version history and every superseded value: docs/method-versions.md
+#
+# Pretrains on D_l with constraint-consistent reconstruction, then fine-tunes a
+# head on the audited D_s. Hashed together with the label space, taxonomy, pools
+# and feature set into `method_sha`. Every value below is Eslami & Hamouda
+# Table VII, Autoencoder column, or is marked NOT PUBLISHED.
+
+name: ae
+implementation: autoencoder
+
+label_space: core-5
+taxonomy: default
+
+settings:
+  # Which pools and which columns. Both are hashed into method_sha, because both
+  # decide what the model saw.
+  pools: xdg
+  features: conn
+  vectoriser: passthrough
+
+  # --- Table VII, Autoencoder column -------------------------------------
+  latent_dim: 128
+  hidden: [256, 128, 64]
+  dropout: 0.10
+  lr: 0.0005
+  batch: 128
+  epochs: 100
+  weight_decay: 0.00001
+
+  # ADAPTED SCALE, NOT A DIFFERENT EQUATION. Table VII names phi = 0.5, tuned
+  # against features that were standardised but NOT log-transformed, so its
+  # residuals were near unit scale. Ours are in original units -- the transform
+  # has to be undone or a ratio identity is scored in log space, where it does
+  # not hold -- so a residual is O(1e5) while reconstruction is O(1).
+  #
+  # phi is exactly the knob for this: Eq. 2 makes it per-constraint and Table IV
+  # tunes it by grid search. 0.5 is a PLACEHOLDER and must be re-derived from
+  # measured residual magnitudes before this run is quoted. Same class of
+  # blocker as D1.
+  residual_weight: 0.5
+
+  # Eq. 2 is an L1 norm. Declared rather than defaulted: this declaration's sha
+  # is load-bearing, so what it relies on should be visible in it.
+  residual_norm: l1
+
+  # NOT PUBLISHED. Table VII lists 100 epochs for pretraining and gives no
+  # separate fine-tuning schedule; these are ours.
+  freeze_epochs: 2
+  finetune_epochs: 5
+
+  # Eq. 3, verbatim: plain unweighted cross-entropy. An audited D_s is
+  # near-balanced by construction, so the inverse-frequency weighting that once
+  # compensated for an unaudited 80%-benign D_s is not needed. The weighted
+  # comparison arm is a one-key override; docs/method-versions.md carries it.
+  class_weighting: false
+
+  seed: 0
+
+  # `cpu` and not `auto`: auto resolves per machine, and cuda, mps and cpu are
+  # not bitwise identical even under one seed. A declaration whose numbers get
+  # quoted has to name the device that produced them.
+  device: cpu

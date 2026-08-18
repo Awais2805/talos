@@ -147,6 +147,7 @@ class FusedLabeller(LabellingMethod):
                     f"nothing to fuse: {uri} does not exist. Run "
                     f"`talos label --method {method} --dataset {dataset}` first.")
         self._check_spaces(duck, uris)
+        self._check_inputs_agree()
 
         chosen = self.fusion_sql()
         # Intersected with what the table actually has: EXCLUDE on an absent
@@ -162,6 +163,27 @@ class FusedLabeller(LabellingMethod):
                    greatest(a.label_margin, b.label_margin) AS label_margin
             FROM read_parquet('{uris[0]}') a
             JOIN read_parquet('{uris[1]}') b ON a.uid = b.uid""")
+
+    def explain(self, dataset: str, feature_space: str) -> Any:
+        """Count which line of Eq. 17 decided each row. Writes nothing."""
+        from talos.data.labelling.fusion.explain import FusionExplainer
+
+        duck = self.lake.duck
+        uris = [self._uri(dataset, feature_space, method)
+                for method in self.inputs_declared]
+        for method, uri in zip(self.inputs_declared, uris):
+            if not self.lake.exists(uri):
+                raise FusionError(
+                    f"nothing to explain: {uri} does not exist. Run "
+                    f"`talos label --method {method} --dataset {dataset}` first.")
+        self._check_spaces(duck, uris)
+        self._check_inputs_agree()
+
+        report = FusionExplainer(self.inputs_declared).run(duck, dataset, uris)
+        report.extra["method_sha"] = self.method_sha(dataset)
+        report.extra["feature_space"] = feature_space
+        self.provenance.run_report(f"fusion_explain_{dataset}", report.to_dict())
+        return report
 
     def _uri(self, dataset: str, feature_space: str, method: str) -> str:
         return self.lake.uri("labelled", dataset=dataset, feature_space=feature_space,
@@ -184,6 +206,41 @@ class FusedLabeller(LabellingMethod):
                     f"{uri} contains class(es) outside label space "
                     f"{self.space.name!r}: {', '.join(outside)}. Two branches "
                     f"labelled over different spaces cannot be fused.")
+
+    def _check_inputs_agree(self) -> None:
+        """Both branches must have read the SAME features and the same pools.
+
+        Eq. 17 decides by comparing one branch's confidence against the other's.
+        That comparison is meaningless if the two models saw different columns
+        or trained on different splits -- a confidence is only interpretable
+        relative to what produced it. Checked from the declarations, since the
+        feature set is folded into `method_sha` and cannot be read back out.
+        """
+        from talos.data.labelling.method import MethodError, MethodLoader
+
+        loader, seen = MethodLoader(), {}
+        for name in self.inputs_declared:
+            try:
+                settings = loader.load(name).settings
+            except MethodError as exc:
+                raise FusionError(
+                    f"cannot resolve input {name!r} to check it against the "
+                    f"other branch: {exc}") from None
+            seen[name] = {key: settings.get(key)
+                          for key in ("features", "pools", "vectoriser")}
+
+        first, second = self.inputs_declared
+        differing = sorted(k for k in seen[first]
+                           if seen[first][k] != seen[second][k])
+        if differing:
+            detail = "; ".join(
+                f"{k}: {first} has {seen[first][k]!r}, {second} has "
+                f"{seen[second][k]!r}" for k in differing)
+            raise FusionError(
+                f"{first} and {second} disagree on {', '.join(differing)}. "
+                f"Eq. 17 compares one branch's confidence against the other's, "
+                f"which says nothing when the two saw different inputs. "
+                f"{detail}")
 
     # ------------------------------------------------------------------- run
 
@@ -222,7 +279,7 @@ class FusedLabeller(LabellingMethod):
                                 "label_weight is NULL",)
             return False
 
-        probabilities, labels = self._probabilities(duck, report)
+        uids, probabilities, labels = self._probabilities(duck, report)
         if probabilities is None:
             return False
 
@@ -235,16 +292,19 @@ class FusedLabeller(LabellingMethod):
         report.noise = noise
 
         duck.sql("CREATE OR REPLACE TEMP TABLE weights (uid VARCHAR, w DOUBLE)")
-        uids = [row[0] for row in duck.sql("SELECT uid FROM fused ORDER BY uid")]
+        # The uids come back from the SAME scan that produced the probabilities.
+        # Re-querying them and zipping positionally would rely on two scans
+        # agreeing on order, and a duplicate uid would misassign every weight
+        # after it -- silently, since the join still succeeds.
         duck.con.executemany(
             "INSERT INTO weights VALUES (?, ?)",
-            [(uid, float(w)) for uid, w in zip(uids, values)])
+            [(str(uid), float(w)) for uid, w in zip(uids, values)])
         return True
 
     def _probabilities(self, duck, report: FusionReport):
         """Out-of-sample probabilities for every fused row (Eq. 18).
 
-        Returns `(None, None)` when they cannot be produced, rather than
+        Returns all-None when they cannot be produced, rather than
         substituting the branches' own confidences: those are in-sample by
         construction and would make every threshold and every MAD optimistic.
         """
@@ -255,7 +315,7 @@ class FusedLabeller(LabellingMethod):
             if not self.allow_untrained:
                 raise
             report.warnings += (f"{exc} label_weight is NULL for every row.",)
-            return None, None
+            return None, None, None
 
     # ----------------------------------------------------------- the writing
 

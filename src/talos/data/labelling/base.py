@@ -47,7 +47,7 @@ CORE_COLUMNS = (
     "label_binary",       # attack or not
     "label_class",        # canonical class, benign included
     "label_source",       # HOW this row got its label -- see LABEL_SOURCES
-    "label_method",       # WHICH method -- 'schedule', 'ae-v1', 'fused-v1'
+    "label_method",       # WHICH method -- 'schedule', 'ae', 'fused'
     "method_sha",         # composite hash of everything that determined it
     "label_confidence",   # NULL when the method cannot measure one
     "label_weight",       # NULL until confident learning assigns one
@@ -170,10 +170,11 @@ class LabellingMethod(ABC):
     def run_name(self) -> str:
         """What scopes the output path and lands in `label_method`.
 
-        The DECLARATION's name, not the implementation's. `ae-v1` and `ae-v2` are
-        one class with two latent widths and must produce two tables side by
-        side; if the implementation name won, the second would overwrite the
-        first and `label_method` would not say which had run.
+        The DECLARATION's name, not the implementation's. One implementation
+        serves many declarations -- `ae` and any `--method-file` variant of it
+        are one class with different settings and must produce separate tables;
+        if the implementation name won, the second would overwrite the first and
+        `label_method` would not say which had run.
         """
         return self.spec.name if self.spec is not None else self.name
 

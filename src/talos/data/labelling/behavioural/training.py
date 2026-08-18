@@ -40,12 +40,16 @@ def as_tensor(X, device: str):
 
 def train(parts: Sequence, batches: Callable[[], Iterator], loss_fn: Callable,
           *, epochs: int = 5, lr: float = 1e-3, device: str = "cpu",
-          also: Sequence = ()) -> list[Epoch]:
+          also: Sequence = (), weight_decay: float = 0.0) -> list[Epoch]:
     """Adam over `parts`, `loss_fn(*batch_tensors) -> scalar`.
 
     `batches` is a callable, not an iterator: a DuckDB stream is consumed once,
     so each epoch has to ask for a fresh one. `also` runs in train mode without
     being optimised — that is what freezing an encoder means.
+
+    `weight_decay` defaults to 0, which is what every run before it did; the
+    paper's Table VII declares 1e-5 for both branches and could not be expressed
+    at all until this existed.
     """
     torch = require_torch()
     modules = [part.module for part in parts if getattr(part, "module", None)]
@@ -53,19 +57,23 @@ def train(parts: Sequence, batches: Callable[[], Iterator], loss_fn: Callable,
     if not parameters:
         raise ValueError("nothing to train: no part exposed any parameters")
 
-    optimiser = torch.optim.Adam(parameters, lr=lr)
+    optimiser = torch.optim.Adam(parameters, lr=lr, weight_decay=weight_decay)
     frozen = [part.module for part in also if getattr(part, "module", None)]
     history: list[Epoch] = []
     for index in range(1, epochs + 1):
-        for module in modules:
-            module.train()
-        for module in frozen:
-            module.eval()
         total, rows = 0.0, 0
         for batch in batches():
             arrays = batch if isinstance(batch, tuple) else (batch,)
             if not len(arrays[0]):
                 continue
+            # Per BATCH, not per epoch: a loss that calls `predict_proba`
+            # (TabCL's does, to condition its augmentation) puts the encoder
+            # back into eval() through `TorchPart._forward`, and from the next
+            # batch onward its dropout would silently stop applying.
+            for module in modules:
+                module.train()
+            for module in frozen:
+                module.eval()
             optimiser.zero_grad()
             loss = loss_fn(*(as_tensor(a, device) for a in arrays))
             loss.backward()
@@ -90,6 +98,22 @@ def minibatches(size: int, *arrays, shuffle: bool = True, seed: int = 0):
             index = order[start:start + size]
             yield tuple(a[index] for a in arrays)
     return go
+
+
+def binary_cross_entropy_flags(X, X_hat, flags, torch) -> object:
+    """Cross-entropy per 0/1 flag column, summed.
+
+    Eq. 1's CE covers "all categorical fields, each with an appropriate
+    softmax". A missingness flag is a two-class field, and a two-class softmax
+    is binary cross-entropy — so it is scored here rather than by the squared
+    error meant for continuous attributes.
+    """
+    total = None
+    for column in flags:
+        term = torch.nn.functional.binary_cross_entropy_with_logits(
+            X_hat[:, column], X[:, column])
+        total = term if total is None else total + term
+    return total if total is not None else torch.zeros((), device=X.device)
 
 
 def cross_entropy_blocks(X, X_hat, blocks, torch) -> object:

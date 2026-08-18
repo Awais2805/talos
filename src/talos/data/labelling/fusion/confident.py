@@ -156,6 +156,29 @@ def balanced_retention(weights, labels, joint, n_classes: int,
     return out, rho, factors
 
 
+def symmetric_cross_entropy(probabilities, labels, weights, n_classes: int,
+                            alpha: float = 0.3, beta: float = 2.0,
+                            epsilon: float = 0.01, xp=np):
+    """Eq. 31-33: per-sample weighted SCE, `w'_i [alpha*CE + beta*RCE]`.
+
+    Supplied here because it is paper mathematics, not a design choice, and
+    whichever layer becomes `C_final` needs it. Nothing in the labelling stage
+    calls it: Eq. 31 trains the FINAL classifier, which Talos places in the ML
+    pipeline. Defaults are Table VII's alpha and beta.
+    """
+    probabilities = xp.asarray(probabilities, dtype=np.float64) if xp is np \
+        else probabilities
+    rows = len(labels)
+    # Eq. 32: the label smoothed off a hard one-hot, so RCE's log is finite.
+    target = xp.full((rows, n_classes), epsilon / (n_classes - 1))
+    target[xp.arange(rows), labels] = 1.0 - epsilon
+
+    safe = xp.clip(probabilities, 1e-12, 1.0)
+    cross = -(target * xp.log(safe)).sum(axis=1)
+    reverse = -(probabilities * xp.log(target)).sum(axis=1)
+    return xp.asarray(weights) * (alpha * cross + beta * reverse)
+
+
 @dataclass(frozen=True)
 class NoiseReport:
     """What the noise estimate found, per class."""
@@ -214,6 +237,33 @@ class ConfidentLearning:
         self.q, self.gamma, self.w_min = float(q), float(gamma), float(w_min)
         self.balanced = bool(balanced)
         self.epsilon = float(epsilon)
+
+    def search(self, probabilities, labels, score, grid=None) -> tuple:
+        """Alg. 4 lines 3-10: pick `(q, w_min, gamma)` by a supplied objective.
+
+        The objective is INJECTED because the paper's is `C_final`'s macro-F1
+        (line 11 sits inside this loop), and `C_final` lives in the ML pipeline.
+        Supplying a scorer here rather than choosing one keeps the search
+        faithful: whoever owns the final classifier owns the criterion.
+
+        `score(weights) -> float`, higher is better. Returns the best triple and
+        the full table, so a selection is always reported with what it beat.
+        """
+        grid = grid or {"q": (0.6, 0.7, 0.8),
+                        "w_min": (0.1, 0.2, 0.3),
+                        "gamma": (4.0, 6.0, 8.0)}
+        table = []
+        for q in grid["q"]:
+            for w_min in grid["w_min"]:
+                for gamma in grid["gamma"]:
+                    trial = ConfidentLearning(
+                        self.space, q=q, gamma=gamma, w_min=w_min,
+                        balanced=self.balanced, epsilon=self.epsilon)
+                    values, _noise = trial.weights(probabilities, labels)
+                    table.append({"q": q, "w_min": w_min, "gamma": gamma,
+                                  "score": float(score(values))})
+        best = max(table, key=lambda row: row["score"])
+        return (best["q"], best["w_min"], best["gamma"]), tuple(table)
 
     def weights(self, probabilities, labels) -> tuple:
         """`(weights, NoiseReport)`. Nothing is removed — only attenuated."""

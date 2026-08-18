@@ -1,0 +1,73 @@
+# Talos — labelling method `tabcl`. Path B, contrastive branch.
+#
+# Version 2 (2026-08-18) — conn features and the Table VII weight decay the code
+# could not express until `train()` took it. History: docs/method-versions.md
+#
+# Values are Eslami & Hamouda Table VII, the self-generated/ISCX column, except
+# where marked ADAPTED or NOT PUBLISHED. Hashed with the label space, taxonomy,
+# pools and feature set into `method_sha`.
+
+name: tabcl
+implementation: tabcl
+
+label_space: core-5
+taxonomy: default
+
+settings:
+  pools: xdg
+  # Both branches MUST read the same feature set, or a representation change is
+  # confounded with a capacity change and Eq. 17's comparison means nothing.
+  features: conn
+  vectoriser: passthrough
+
+  # --- Table VII, TabCL column -------------------------------------------
+  # NOT PUBLISHED for TabCL: Table VII's "Latent dimension" row is filled only
+  # in the Autoencoder column. 128 is ours, and it keeps the two branches equal
+  # in capacity, which is what Eq. 17 needs.
+  latent_dim: 128
+  hidden: [256, 128, 64]
+  dropout: 0.10
+
+  # Projection heads. Only the output dim is published; depth and width are not,
+  # so the shipped MLPHead default (one hidden layer) applies.
+  projection_dim: 128
+  replace_rate: 0.15          # r, Eq. 4
+  tau_cont: 0.5               # Eq. 7, continuous head
+  tau_cat: 0.2                # Eq. 7, categorical head
+  lam: 0.5                    # Eq. 11 mixing weight
+
+  lr: 0.0005
+  batch: 256
+  epochs: 100
+  refresh_every: 10
+
+  # Listed in Table VII for both branches.
+  weight_decay: 0.00001
+
+  # ADAPTED. The paper draws replacements from the exact class-conditional
+  # marginal over the whole pool; at lake scale that is unstorable, so this is
+  # the reservoir size per class the marginal is estimated from.
+  reservoir: 4096
+
+  # NOT PUBLISHED by the paper — freeze duration and fine-tuning epochs are
+  # listed as tuned but no value appears in any table. These are ours.
+  freeze_epochs: 2
+  finetune_epochs: 5
+
+  # Algorithm 2 lines 1 and 5. The paper specifies a bootstrap classifier, a
+  # refresh tolerance and a round cap, and publishes none of their values.
+  bootstrap_epochs: 20
+  probe_epochs: 10
+  refresh_tolerance: 0.01
+  max_refresh_rounds: 10
+
+  # Eq. 3, verbatim. Matches `ae` so the two branches differ only where the
+  # paper does. The weighted comparison arm is a one-key override;
+  # docs/method-versions.md carries it.
+  class_weighting: false
+
+  seed: 0
+
+  # cpu, not auto: cuda/mps/cpu are not bitwise identical under one seed, and a
+  # declaration whose numbers get quoted has to name the device that made them.
+  device: cpu

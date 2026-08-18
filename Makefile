@@ -24,6 +24,7 @@ DATASETS = cic-ids-2017 cic-ids-2018 cic-ddos-2019
 # ---------------------------------------------------------------------------
 
 .PHONY: help install test init config ingest extract convert label label-report discover \
+        screen validity relevance explain \
         eda eda-all eda-smoke eda-compare eda-render
 
 help:            ## show available targets
@@ -57,14 +58,28 @@ label:           ## attach ground truth from the attack schedule (DATASET=…)
 label-report:    ## same, but report only — writes nothing (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --no-write
 
-label-method:    ## label by a chosen method (DATASET=… METHOD=ae-v1|tabcl-v1|fused-v1)
+label-method:    ## label by a chosen method (DATASET=… METHOD=ae|tabcl|fused)
 	$(TALOS) label --dataset $(DATASET) --method $(METHOD)
 
 label-all-methods: ## the whole Path B chain for one dataset (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --method schedule
-	$(TALOS) label --dataset $(DATASET) --method ae-v1
-	$(TALOS) label --dataset $(DATASET) --method tabcl-v1
-	$(TALOS) label --dataset $(DATASET) --method fused-v1
+	$(TALOS) label --dataset $(DATASET) --method ae
+	$(TALOS) label --dataset $(DATASET) --method tabcl
+	$(TALOS) label --dataset $(DATASET) --method fused
+
+screen:          ## label-free feature screen over one or more datasets (DATASETS="a b")
+	$(TALOS) screen --dataset $(or $(DATASETS),$(DATASET)) \
+		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit,)
+
+validity:        ## rows that cannot be true of a real flow (DATASETS="a b")
+	$(TALOS) validity --dataset $(or $(DATASETS),$(DATASET))
+
+relevance:       ## task relevance + domain probe -> schema v1 (DATASETS="a b")
+	$(TALOS) relevance --dataset $(or $(DATASETS),$(DATASET)) \
+		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit,)
+
+explain:         ## which line of Eq. 17 decided each row (DATASET=… METHOD=fused)
+	$(TALOS) label --dataset $(DATASET) --method $(or $(METHOD),fused) --explain
 
 audit:           ## emit audit candidates for a person (DATASET=… FLOOR=…)
 	$(TALOS) audit emit --dataset $(DATASET) $(if $(FLOOR),--floor $(FLOOR),)

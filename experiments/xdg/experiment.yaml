@@ -1,6 +1,6 @@
 # Cross-domain generalisation study — the reference experiment.
 
-name: xdg-v3
+name: xdg
 description: >
   Does training on domain-diverse network flows reinforce cross-domain
   generalisation, given a consistent feature format across datasets? Detection
@@ -15,9 +15,9 @@ lake: null
 extractor: zeek
 
 # WHICH LABELLED TABLE THIS STUDY CONSUMES, by method declaration name. Not a
-# family ("schedule" vs "behavioural") but one specific declaration, because
-# `ae-v1` and `ae-v2` are two runs of one implementation and a study has to say
-# which of them produced the labels it drew conclusions from. Resolves to
+# family ("schedule" vs "behavioural") but one specific declaration, because a
+# method is re-versioned in place and a study has to say which run produced the
+# labels it drew conclusions from -- see docs/method-versions.md. Resolves to
 # sources/{source}/labelled/{feature_space}/{labels}/{dataset}.
 labels: schedule
 

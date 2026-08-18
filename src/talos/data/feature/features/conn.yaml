@@ -1,0 +1,279 @@
+# Talos — feature set `conn`. The LABELLER's input, not a selected schema.
+#
+# Version 2 (2026-08-18) — per-letter `history` counts, declared standardisation
+# constants, full Zeek state alphabet. History: docs/method-versions.md
+#
+# Hand-declared so Path B has something to train on; the README's selection
+# process (domain probe, SHAP, RFECV) scores relevance against the label and so
+# cannot run until labelling is done. It will produce a different declaration.
+
+name: conn
+description: >
+  Behavioural features over the Zeek conn backbone, shared by every domain.
+  Volume, rate, direction, connection outcome and connection state history;
+  no identity.
+
+# STANDARDISATION (D1) IS NOT SET HERE YET.
+#
+# `centre` and `scale` are declared per feature, never fitted -- a scale fitted
+# on 2017 makes the same flow encode differently in 2018, which is the failure
+# this whole file exists to prevent. They are applied AFTER `transform`, so the
+# constants live in log space: the centre of a log1p feature is the median of
+# log1p(x), not log1p of the median.
+#
+# A feature naming neither passes through unstandardised, which is what every
+# numeric does today. Fill them from `talos screen`'s measured distributions
+# once it has run on real data; inventing them now would be exactly the
+# plausible-but-unjustified number this rebuild exists to avoid.
+
+numeric:
+  duration:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+    note: >
+      Zeek leaves this null for a connection with no observed teardown. The
+      indicator matters: gate 5 had to distinguish orig_bytes = 0 (a connection
+      attempt) from orig_bytes IS NULL (Zeek could not say), and the Engelen et
+      al. attempted-attack criterion turns on exactly that.
+
+  orig_bytes:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+
+  resp_bytes:
+    transform: log1p
+    missing: 0.0
+    indicator: true
+
+  orig_pkts:
+    transform: log1p
+    missing: 0.0
+
+  resp_pkts:
+    transform: log1p
+    missing: 0.0
+
+  orig_ip_bytes:
+    transform: log1p
+    missing: 0.0
+
+  resp_ip_bytes:
+    transform: log1p
+    missing: 0.0
+
+  missed_bytes:
+    transform: log1p
+    missing: 0.0
+    note: >
+      Capture loss, kept as a feature rather than only as a quality flag: heavy
+      loss is itself characteristic of a flood.
+
+# Rates and shapes — where flood, scan and session traffic separate — and the
+# connection-state history, decomposed.
+derived:
+  orig_rate:
+    expr: "orig_bytes / nullif(duration, 0)"
+    transform: log1p
+    missing: 0.0
+    note: Bytes per second from the originator.
+
+  resp_rate:
+    expr: "resp_bytes / nullif(duration, 0)"
+    transform: log1p
+    missing: 0.0
+
+  bytes_per_pkt_orig:
+    expr: "orig_bytes / nullif(orig_pkts, 0)"
+    transform: log1p
+    missing: 0.0
+    note: Payload shape. Separates a scan's empty SYNs from a real transfer.
+
+  bytes_per_pkt_resp:
+    expr: "resp_bytes / nullif(resp_pkts, 0)"
+    transform: log1p
+    missing: 0.0
+
+  ratio_orig_resp:
+    expr: "(orig_bytes + 1.0) / (resp_bytes + 1.0)"
+    transform: log1p
+    missing: 1.0
+    note: >
+      Directional asymmetry. +1 on both sides so a silent responder is a large
+      finite number rather than a division by zero.
+
+  overhead_orig:
+    expr: "orig_ip_bytes - orig_bytes"
+    transform: log1p
+    missing: 0.0
+    note: >
+      Header bytes. High overhead with near-zero payload is the signature of a
+      scan or a SYN flood. The validity screen refuses a negative value here
+      rather than letting log1p clamp it to zero.
+
+  # ---------------------------------------------------------------- history
+  #
+  # COUNTS, not presence: the real 2017 table contains ShADadFfRR, Arr and FrF,
+  # so a letter genuinely repeats and two resets are not one reset.
+  #
+  # Names spell the direction rather than following Zeek's own case convention.
+  # `hist_S` and `hist_s` would be the natural transcription and are exactly
+  # what must not be written: DuckDB folds identifiers case-insensitively, so
+  # the two would merge into one column and silently lose half the signal.
+  #
+  # The whole documented alphabet is declared, not only the letters 2017 emits.
+  # A letter with no column is a letter with nowhere to go, and 2018 need not
+  # emit what 2017 did. The unemitted ones are constant and the 0-variance
+  # screen removes them -- on the UNION of every domain, never one alone.
+
+  history_len:
+    expr: "coalesce(length(history), 0)"
+    note: How many state events the connection produced at all.
+
+  hist_orig_syn:
+    expr: "length(history) - length(replace(history, 'S', ''))"
+    note: Originator SYN without an ACK — a bare scan probe looks like this.
+  hist_resp_syn:
+    expr: "length(history) - length(replace(history, 's', ''))"
+    note: Responder SYN without an ACK.
+
+  hist_orig_synack:
+    expr: "length(history) - length(replace(history, 'H', ''))"
+    note: Originator SYN-ACK.
+  hist_resp_synack:
+    expr: "length(history) - length(replace(history, 'h', ''))"
+    note: Responder SYN-ACK — its absence is what makes a scan a scan.
+
+  hist_orig_ack:
+    expr: "length(history) - length(replace(history, 'A', ''))"
+    note: Originator pure ACK.
+  hist_resp_ack:
+    expr: "length(history) - length(replace(history, 'a', ''))"
+    note: Responder pure ACK.
+
+  hist_orig_data:
+    expr: "length(history) - length(replace(history, 'D', ''))"
+    note: Originator payload — its absence is the attempted-attack signature.
+  hist_resp_data:
+    expr: "length(history) - length(replace(history, 'd', ''))"
+    note: Responder payload.
+
+  hist_orig_fin:
+    expr: "length(history) - length(replace(history, 'F', ''))"
+    note: Originator FIN, a clean close.
+  hist_resp_fin:
+    expr: "length(history) - length(replace(history, 'f', ''))"
+    note: Responder FIN.
+
+  hist_orig_rst:
+    expr: "length(history) - length(replace(history, 'R', ''))"
+    note: Originator RST, an abrupt close.
+  hist_resp_rst:
+    expr: "length(history) - length(replace(history, 'r', ''))"
+    note: Responder RST — Sr is 2017's dominant portscan pattern.
+
+  hist_orig_checksum:
+    expr: "length(history) - length(replace(history, 'C', ''))"
+    note: >
+      Originator bad checksum. Zeek is run with -C, so any count here
+      contradicts the documented extraction and is a finding, not a feature.
+  hist_resp_checksum:
+    expr: "length(history) - length(replace(history, 'c', ''))"
+    note: Responder bad checksum. Same contradiction as its uppercase twin.
+
+  hist_orig_gap:
+    expr: "length(history) - length(replace(history, 'G', ''))"
+    note: >
+      Originator content gap. A capture-loss artefact, so a strong candidate
+      for the domain probe to reject.
+  hist_resp_gap:
+    expr: "length(history) - length(replace(history, 'g', ''))"
+    note: Responder content gap. Same domain-leak risk.
+
+  hist_orig_retransmit:
+    expr: "length(history) - length(replace(history, 'T', ''))"
+    note: >
+      Originator retransmission. Reflects the capture network's loss, not the
+      attack, so the probe should be allowed to see and reject it.
+  hist_resp_retransmit:
+    expr: "length(history) - length(replace(history, 't', ''))"
+    note: Responder retransmission. Same domain-leak risk.
+
+  hist_orig_zero_window:
+    expr: "length(history) - length(replace(history, 'W', ''))"
+    note: Originator advertised a zero window.
+  hist_resp_zero_window:
+    expr: "length(history) - length(replace(history, 'w', ''))"
+    note: Responder advertised a zero window.
+
+  hist_orig_inconsistent:
+    expr: "length(history) - length(replace(history, 'I', ''))"
+    note: Originator inconsistent packet.
+  hist_resp_inconsistent:
+    expr: "length(history) - length(replace(history, 'i', ''))"
+    note: Responder inconsistent packet.
+
+  hist_orig_multiflag:
+    expr: "length(history) - length(replace(history, 'Q', ''))"
+    note: Originator multi-flag packet.
+  hist_resp_multiflag:
+    expr: "length(history) - length(replace(history, 'q', ''))"
+    note: Responder multi-flag packet.
+
+  hist_flip:
+    expr: "length(history) - length(replace(history, '^', ''))"
+    note: Direction flipped mid-connection; Zeek reversed its view of the flow.
+
+# Every vocabulary is closed; unknown values and NULLs share the `__other` column.
+categorical:
+  proto:
+    values: [tcp, udp, icmp]
+    note: Zeek emits no others for these captures.
+
+  conn_state:
+    values: [S0, S1, SF, REJ, S2, S3, RSTO, RSTR, RSTOS0, RSTRH, SH, SHR, OTH]
+    note: >
+      A coarser projection of the same information the history letters carry.
+      Kept so the screen can measure whether it is redundant against them
+      rather than the question being settled by assumption.
+
+  local_orig:
+    expr: "CAST(local_orig AS VARCHAR)"
+    values: ["true", "false"]
+    note: >
+      Direction relative to the monitored network. Carries no address. Dead if
+      Site::local_nets was never set, which the screen decides on the measured
+      dominant-value share rather than on belief.
+
+  local_resp:
+    expr: "CAST(local_resp AS VARCHAR)"
+    values: ["true", "false"]
+
+# Relations true of any real record. Residuals are computed in original units:
+# standardisation is undone before the transform, because it was applied after.
+constraints:
+  - name: orig_rate_definition
+    form: ratio
+    target: orig_rate
+    operands: [orig_bytes, duration]
+
+  - name: resp_rate_definition
+    form: ratio
+    target: resp_rate
+    operands: [resp_bytes, duration]
+
+  - name: orig_payload_shape
+    form: ratio
+    target: bytes_per_pkt_orig
+    operands: [orig_bytes, orig_pkts]
+
+  - name: resp_payload_shape
+    form: ratio
+    target: bytes_per_pkt_resp
+    operands: [resp_bytes, resp_pkts]
+
+  - name: orig_ip_bytes_decomposition
+    form: sum
+    target: orig_ip_bytes
+    operands: [orig_bytes, overhead_orig]

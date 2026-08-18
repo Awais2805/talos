@@ -61,6 +61,22 @@ class ColumnSpec:
     transforms: Mapping[int, str] = field(default_factory=dict)
     #: Feature column -> its missingness indicator, where one was declared.
     indicators: Mapping[int, int] = field(default_factory=dict)
+    #: Column index -> (centre, scale), where the feature was standardised.
+    scaling: Mapping[int, tuple[float, float]] = field(default_factory=dict)
+    #: Constraint name -> Eq. 2's phi_m, where one was declared.
+    constraint_weights: Mapping[str, float] = field(default_factory=dict)
+
+    def undo(self, index: int, column, xp=np):
+        """Recover the original quantity from a matrix column.
+
+        Standardisation is undone before the transform, because it was applied
+        after it. Getting this order wrong makes every constraint residual wrong
+        without making any of them fail.
+        """
+        centre, scale = self.scaling.get(index, (None, None))
+        if centre is not None:
+            column = column * scale + centre
+        return untransform(column, self.transforms.get(index, IDENTITY), xp)
 
     @property
     def width(self) -> int:
@@ -106,9 +122,12 @@ class Vectoriser(ABC):
         names: list[str] = []
         transforms: dict[int, str] = {}
         indicators: dict[int, int] = {}
+        scaling: dict[int, tuple[float, float]] = {}
         for feature in self.features.numeric:
             position = len(names)
             transforms[position] = feature.transform
+            if feature.standardised:
+                scaling[position] = (feature.centre, feature.scale)
             names.append(feature.name)
             if feature.indicator:
                 indicators[position] = len(names)
@@ -124,7 +143,11 @@ class Vectoriser(ABC):
         return ColumnSpec(names=tuple(names), numeric=numeric,
                           categorical=tuple(blocks),
                           constraints=self._constraint_indices(tuple(names)),
-                          transforms=transforms, indicators=indicators)
+                          transforms=transforms, indicators=indicators,
+                          scaling=scaling,
+                          constraint_weights={
+                              c.name: c.weight for c in self.features.constraints
+                              if c.weight is not None})
 
     def _constraint_indices(
             self, names: tuple[str, ...]
@@ -248,12 +271,26 @@ class Residual:
             return 0.0
         return (self.value ** 2).sum() / self.n_applicable
 
+    def mean_abs(self, xp=np):
+        """Eq. 2's `‖·‖₁`, averaged over applicable rows.
+
+        Mean rather than sum so the term does not scale with batch size; that
+        is the only departure from the equation as written, and it is what makes
+        the paper's φ comparable across batch sizes.
+        """
+        if not self.n_applicable:
+            return 0.0
+        return abs(self.value).sum() / self.n_applicable
+
     def mean_log_square(self, xp=np):
-        """The training reduction: squared `log1p|residual|`.
+        """ADAPTED, NOT IN THE PAPER: squared `log1p|residual|`.
 
         A residual on bytes-per-second spans as many orders of magnitude as the
-        feature does, so a plain square optimises entirely for the single worst
-        row in the batch — the same argument that puts `log1p` on the features.
+        feature does, so a plain L1 optimises almost entirely for the single
+        worst row in the batch — the same argument that puts `log1p` on the
+        features. Available as a declared alternative, but note that Table VII's
+        φ = 0.5 was tuned against Eq. 2's L1 and does NOT carry over to a
+        differently-scaled quantity.
         """
         if not self.n_applicable:
             return 0.0
@@ -263,7 +300,18 @@ class Residual:
 def residuals(X, spec: ColumnSpec, xp=np, mask_from=None) -> dict[str, Residual]:
     """Departure from each declared constraint, in ORIGINAL units.
 
-    The transform is undone first: `log1p(a / b)` is not `log1p(a) / log1p(b)`.
+    The transform is undone first, and it has to be: in log space `a = b / c`
+    becomes a DIFFERENCE, not a division, so `â - b̂/ĉ` scores a relation that
+    does not hold. A valid flow (1000 bytes / 10 s = 100 B/s) reads as residual
+    0 undone and 1.74 in log space — the penalty would fall on correct
+    reconstructions.
+
+    This puts the term in raw units while reconstruction stays near 1. That is
+    a SCALE problem, and Eq. 2 already carries its own remedy: φ_m is
+    per-constraint and the paper tunes it (Table IV grids φ from 0.0 to 2.0).
+    Table VII's φ = 0.5 was tuned against unlogged, standardised features and
+    does NOT transfer to ours — see docs/paper-deviations.md.
+
     A constraint does not apply where an operand was imputed or a denominator is
     zero — undefined there, not violated. `mask_from` supplies applicability when
     `X` is a reconstruction: whether a value was absent is a fact about the input.
@@ -274,8 +322,7 @@ def residuals(X, spec: ColumnSpec, xp=np, mask_from=None) -> dict[str, Residual]
     out: dict[str, Residual] = {}
     for name, form, target, operands in spec.constraints:
         fields = (target, *operands)
-        want, left, right = (untransform(X[:, i], spec.transforms.get(i, IDENTITY), xp)
-                             for i in fields)
+        want, left, right = (spec.undo(i, X[:, i], xp) for i in fields)
 
         applicable = xp.ones_like(want) > 0
         for column in fields:

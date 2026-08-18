@@ -34,7 +34,7 @@ class OutOfSampleProbe:
             self.settings.get("vectoriser", "passthrough"), self.features)
 
     def run(self, duck, report):
-        """`(probabilities, labels)` aligned to `fused` ordered by uid."""
+        """`(keys, probabilities, labels)`, all from the one scan that built them."""
         if not torch_available():
             raise LabellingError(
                 "confident learning needs out-of-sample probabilities, which "
@@ -42,7 +42,7 @@ class OutOfSampleProbe:
         torch = require_torch()
 
         rel = duck.relation("SELECT * FROM fused ORDER BY uid")
-        _keys, X, raw = self.vectoriser.labelled_matrix(rel, "label_class")
+        keys, X, raw = self.vectoriser.labelled_matrix(rel, "label_class")
         labels = np.array([self.space.index(str(c)) for c in raw], dtype=np.int64)
 
         folds = int(self.settings["folds"])
@@ -64,7 +64,7 @@ class OutOfSampleProbe:
             probabilities[held] = classifier.predict_proba(X[held])
 
         report.extra["oos_folds"] = folds
-        return probabilities, labels
+        return keys, probabilities, labels
 
     def _folds(self, rows: int, folds: int):
         """Deterministic fold assignment, seeded from the declaration."""
