@@ -24,7 +24,7 @@ DATASETS = cic-ids-2017 cic-ids-2018 cic-ddos-2019
 # ---------------------------------------------------------------------------
 
 .PHONY: help install test init config ingest extract convert label label-report discover \
-        screen validity relevance explain \
+        screen verify relevance explain \
         eda eda-all eda-smoke eda-compare eda-render
 
 help:            ## show available targets
@@ -67,12 +67,14 @@ label-all-methods: ## the whole Path B chain for one dataset (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --method tabcl
 	$(TALOS) label --dataset $(DATASET) --method fused
 
-screen:          ## label-free feature screen, pre-label by default (DATASETS="a b", ZONE=parquet|labelled, EMIT=1, OUT=path)
+screen:          ## label-free feature screen, pre-label by default (DATASETS="a b", ZONE=parquet|labelled, CAPTURES="Monday Tuesday", EMIT=1, OUT=path)
 	$(TALOS) screen --dataset $(or $(DATASETS),$(DATASET)) --zone $(or $(ZONE),parquet) \
+		$(if $(CAPTURES),--captures $(CAPTURES),) \
 		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit $(OUT),)
 
-validity:        ## rows that cannot be true of a real flow, pre-label by default (DATASETS="a b", ZONE=parquet|labelled)
-	$(TALOS) validity --dataset $(or $(DATASETS),$(DATASET)) --zone $(or $(ZONE),parquet)
+verify:          ## rows that cannot be true of a real flow, pre-label by default (DATASETS="a b", ZONE=parquet|labelled, CAPTURES="Monday Tuesday")
+	$(TALOS) verify --dataset $(or $(DATASETS),$(DATASET)) --zone $(or $(ZONE),parquet) \
+		$(if $(CAPTURES),--captures $(CAPTURES),)
 
 relevance:       ## task relevance + domain probe -> schema v1 (DATASETS="a b", EMIT=1, OUT=path)
 	$(TALOS) relevance --dataset $(or $(DATASETS),$(DATASET)) \
