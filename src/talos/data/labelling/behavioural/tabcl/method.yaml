@@ -17,7 +17,7 @@ settings:
   pools: xdg
   # Both branches MUST read the same feature set, or a representation change is
   # confounded with a capacity change and Eq. 17's comparison means nothing.
-  features: conn
+  features: conn-screened
   vectoriser: passthrough
 
   # --- Table VII, TabCL column -------------------------------------------

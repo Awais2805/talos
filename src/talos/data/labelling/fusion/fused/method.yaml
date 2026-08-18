@@ -24,7 +24,7 @@ settings:
   # counts exactly that.
   inputs: [ae, tabcl]
 
-  features: conn
+  features: conn-screened
   vectoriser: passthrough
 
   confident_learning: true

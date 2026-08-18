@@ -18,7 +18,7 @@ settings:
   # Which pools and which columns. Both are hashed into method_sha, because both
   # decide what the model saw.
   pools: xdg
-  features: conn
+  features: conn-screened
   vectoriser: passthrough
 
   # --- Table VII, Autoencoder column -------------------------------------
