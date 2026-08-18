@@ -104,6 +104,33 @@ class StaleOutputError(LabellingError):
     """
 
 
+def refuse_stale_output(lake, uri: str, method_sha: str, force: bool,
+                        run_name: str, changed: str) -> None:
+    """Never silently replace a table built from different inputs.
+
+    Content-addressed by `method_sha`, so the zone can say what it was built
+    from without anyone recording it separately: read the existing table's own
+    hash back and compare. `changed` names the inputs THIS method hashes, so
+    the message tells an operator what to go check rather than just that
+    something did. Shared by every writer (`schedule`, the behavioural branches,
+    `fused`) — three copies of this same read-compare-raise had drifted apart
+    on wording before they were one function.
+    """
+    if force or not method_sha or not lake.exists(uri):
+        return
+    try:
+        row = lake.read_parquet(uri, columns=["method_sha"]).limit(1).fetchone()
+    except Exception:                                  # noqa: BLE001
+        return
+    previous = row[0] if row else None
+    if previous and previous != method_sha:
+        raise StaleOutputError(
+            f"{uri}\n  was labelled by {run_name} {previous}, and this run "
+            f"used {method_sha}.\n  An input changed -- {changed}.\n  "
+            f"Overwriting would discard labels derived from inputs that are "
+            f"still on record.\n  Pass --force if that is intended.")
+
+
 def verify_schema(rel, extras: tuple[str, ...] = ()) -> None:
     """Every core column present and correctly typed, plus a method's own extras.
 
