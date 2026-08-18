@@ -590,7 +590,7 @@ def compare_one(dataset, profiles, spec):
     return {
         "compare_version": COMPARE_VERSION,
         "meta": {
-            "dataset": dataset, "role": me["meta"]["role"],
+            "dataset": dataset,
             "compared_against": sorted(p["meta"]["dataset"] for p in others),
             "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "spec_sha": me["meta"]["spec_sha"], "spec_version": me["meta"]["spec_version"],
@@ -656,10 +656,23 @@ def regenerate(directory=EDA_DIR, only=None):
     Every dataset's report is rewritten, not just the new one: "the rest" has a
     different meaning for each of them now, so leaving the others in place
     would leave stale reports that still look current.
+
+    Below two profiles there is no "rest" to compare against, for every
+    dataset uniformly -- not attempted, rather than written with every
+    rest-side field silently null. `compare_one` degrades cleanly on an empty
+    peer set (`pool([])` returns `None`, which propagates through every
+    downstream statistic rather than computing on empty data), so this is not
+    a correctness guard against garbage numbers -- it is refusing a report
+    that would be indistinguishable, at a glance, from a real "no drift
+    found" comparison. Any comparison already on disk from a larger pool is
+    removed for the same reason: a lingering one-vs-two report after a peer
+    profile is deleted would still read as current.
     """
     directory = Path(directory)
     profiles = load_profiles(directory)
-    if not profiles:
+    if len(profiles) < 2:
+        for stale in directory.glob("compare_*.json"):
+            stale.unlink()
         return []
     spec = Spec()
     written = []
@@ -670,6 +683,28 @@ def regenerate(directory=EDA_DIR, only=None):
         out.write_text(json.dumps(compare_one(ds, profiles, spec), indent=1) + "\n")
         written.append(out)
     return written
+
+
+def compare_pair(dataset, other, directory=EDA_DIR):
+    """`dataset` against exactly `other`, ignoring the rest of the directory.
+
+    `compare_one` treats every entry in its `profiles` dict besides `dataset`
+    as "the rest" -- restricting that dict to just these two before calling it
+    is what makes "the rest" mean exactly the named peer. Written to its own
+    `compare_<dataset>_vs_<other>.json`, distinct from the pool-wide
+    `compare_<dataset>.json`, so the two kinds of report can never be
+    mistaken for each other on disk.
+    """
+    directory = Path(directory)
+    profiles = load_profiles(directory)
+    missing = [ds for ds in (dataset, other) if ds not in profiles]
+    if missing:
+        sys.exit(f"no profile for {', '.join(missing)} in {directory} "
+                 f"— run `talos eda --dataset {missing[0]}` first")
+    doc = compare_one(dataset, {dataset: profiles[dataset], other: profiles[other]}, Spec())
+    out = directory / f"compare_{dataset}_vs_{other}.json"
+    out.write_text(json.dumps(doc, indent=1) + "\n")
+    return out
 
 
 def main():

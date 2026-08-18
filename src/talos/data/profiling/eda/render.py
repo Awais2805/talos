@@ -627,7 +627,7 @@ exist in one capture only — they cannot be evaluated per-capture.</div>
 {table(['field', 'value'], [(k, f"<span class=mono>{e(v)}</span>") for k, v in
     [('source', meta['source']), ('generated (UTC)', meta['generated_utc']),
      ('spec', f"v{meta['spec_version']} sha {meta['spec_sha']}"),
-     ('duckdb', meta['duckdb']), ('role', meta['role'])]])}
+     ('duckdb', meta['duckdb'])]])}
 <p class=sub><a href="index.html">← all EDA reports</a> ·
 <a href="compare_{e(ds)}.html">one-vs-rest comparison →</a></p>"""
     return page(f"EDA · {ds}",
@@ -869,7 +869,7 @@ def render_index(profiles, compares):
         p, c = profiles[ds], compares.get(ds)
         o = c["overview"] if c else {}
         rows.append((
-            f"<b>{e(ds)}</b>", f"<span class=tag>{e(p['meta']['role'])}</span>",
+            f"<b>{e(ds)}</b>",
             fnum(p["meta"]["rows"]),
             pct(o.get("attack_ratio_self")) if c else "–",
             str(len(p["by_class"])),
@@ -903,7 +903,7 @@ def render_index(profiles, compares):
     body = f"""<div class=note>Each dataset has an individual profile and a one-against-all
 comparison. The comparisons are derived from the profiles alone, so adding a dataset
 re-derives every comparison in seconds without re-reading the lake.</div>
-{table(['dataset', 'role', 'flows', 'attack', 'classes', 'domain fingerprint',
+{table(['dataset', 'flows', 'attack', 'classes', 'domain fingerprint',
         'concept shift', 'biased / transferable', 'reports'], rows)}
 {matrix}"""
     return page("Talos · EDA reports", body,

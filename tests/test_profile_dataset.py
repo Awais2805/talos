@@ -89,7 +89,7 @@ def run_profile(config_path, tmp_path, name, *extra):
     out = tmp_path / f"{name}.json"
     old = sys.argv
     sys.argv = ["profile_dataset", "--dataset", "toy", "--config", str(config_path),
-               "--no-cascade", "--out", str(out), *extra]
+               "--out", str(out), *extra]
     try:
         profile_dataset.main()
     finally:

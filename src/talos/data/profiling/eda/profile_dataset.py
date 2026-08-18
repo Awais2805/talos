@@ -22,7 +22,8 @@ Usage:
     eval "$(aws configure export-credentials --format env)"
     python -m talos.eda.profile_dataset --dataset cic-ids-2017
     python -m talos.eda.profile_dataset --dataset cic-ddos-2019 --sample 2
-    python -m talos.eda.profile_dataset --dataset cic-ids-2018 --no-cascade
+    python -m talos.eda.profile_dataset --dataset cic-ids-2018 --compare-all
+    python -m talos.eda.profile_dataset --dataset cic-ids-2018 --compare-with cic-ids-2017
 """
 
 import argparse
@@ -64,9 +65,21 @@ def parse_args():
                         "pipeline. Biased (it is the head of the file, so the earliest "
                         "flows), so the profile is marked partial and must not be reported")
     p.add_argument("--out", default=None, help="profile JSON path")
-    p.add_argument("--no-cascade", action="store_true",
-                   help="do not regenerate the comparison reports afterwards")
-    p.add_argument("--no-render", action="store_true", help="write JSON only, no HTML")
+    # Comparison is opt-in, not a side effect of profiling: a profile alone
+    # (e.g. the first-ever run, or the only dataset profiled so far) needs no
+    # peer to be useful, and a comparison silently computed against whatever
+    # else happens to be sitting in the directory is exactly the "is this even
+    # comparing the right things" risk this pair of flags exists to remove.
+    cascade = p.add_mutually_exclusive_group()
+    cascade.add_argument("--compare-with", default=None, metavar="DATASET",
+                         help="after profiling, compare against exactly this "
+                              "one other profile already on disk (pairwise, "
+                              "not the whole directory)")
+    cascade.add_argument("--compare-all", action="store_true",
+                         help="after profiling, regenerate comparisons across "
+                              "every profile in the directory")
+    p.add_argument("--no-render", action="store_true",
+                   help="with --compare-all, write JSON only, no HTML")
     # Default to None so the machine's resource profile decides. A flag here
     # is a deliberate per-run override, not a guess baked in at import time.
     p.add_argument("--memory-limit", default=None, help="override DuckDB memory limit")
@@ -343,11 +356,15 @@ def main():
     summarise(profile)
     print(f"\nscanned in {elapsed:,.1f}s -> {out}")
 
-    # ---- the inverse dependency -------------------------------------------
+    # ---- comparison, only if asked for -------------------------------------
     # A new dataset changes what "the rest" means for every dataset already in
     # the pool, so every comparison is stale the moment this file lands. They
-    # are regenerated from JSON alone -- no lake access, seconds not hours.
-    if not a.no_cascade:
+    # are regenerated from JSON alone -- no lake access, seconds not hours --
+    # but only when the caller names which comparison they want.
+    if a.compare_with:
+        made = compare.compare_pair(a.dataset, a.compare_with, eda_out)
+        print(f"comparison written: {made.name}")
+    elif a.compare_all:
         from talos.data.profiling.eda import render
         made = compare.regenerate(eda_out)
         print(f"comparisons regenerated: {', '.join(m.name for m in made) or '(none)'}")

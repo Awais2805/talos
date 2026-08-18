@@ -102,15 +102,16 @@ discover:        ## profile the lake by log type -> reports/lake_features_report
 eda-smoke:       ## 200k-row dry run of every dataset -> /tmp, proves the pipeline in seconds
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
 		$(TALOS) eda --dataset $$d --limit 200000 \
-			--out /tmp/eda_smoke_$$d.json --no-cascade || exit 1; done
+			--out /tmp/eda_smoke_$$d.json || exit 1; done
 	@echo "smoke ok — schema, spec and query all agree with the lake; now: make eda-all"
 
-eda:             ## profile one dataset -> its report + regen every comparison (DATASET=…)
-	$(TALOS) eda --dataset $(DATASET)
+eda:             ## profile one dataset, no comparison by default (DATASET=…; WITH=<dataset> for pairwise, ALL=1 for the whole directory)
+	$(TALOS) eda --dataset $(DATASET) \
+		$(if $(WITH),--compare-with $(WITH),) $(if $(ALL),--compare-all,)
 
-eda-all:         ## profile every dataset, then rebuild all reports once at the end
+eda-all:         ## profile every dataset, then rebuild all comparisons once at the end
 	@for d in $(DATASETS); do echo "=== $$d ==="; \
-		$(TALOS) eda --dataset $$d --no-cascade \
+		$(TALOS) eda --dataset $$d \
 			|| exit 1; done
 	$(TALOS) compare --render
 
