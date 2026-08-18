@@ -95,6 +95,28 @@ INVARIANTS: tuple[Invariant, ...] = (
 )
 
 
+def valid_sql(columns, invariants: Sequence[Invariant] = INVARIANTS,
+              alias: str = "") -> str:
+    """SQL that is TRUE for a row no invariant rejects, for use as a filter.
+
+    `coalesce(..., TRUE)` because NULL is never a violation -- absence is the
+    missingness screen's business. An invariant whose columns are absent is
+    skipped, exactly as `ValidityAuditor._check` skips it, so a filter never
+    silently rejects every row of a table that cannot be checked.
+    """
+    present = {c.lower() for c in dict(columns)}
+    terms = []
+    for invariant in invariants:
+        if any(c.lower() not in present for c in invariant.columns):
+            continue
+        predicate = invariant.predicate
+        if alias:
+            for column in invariant.columns:
+                predicate = predicate.replace(f'"{column}"', f'{alias}."{column}"')
+        terms.append(f"coalesce({predicate}, TRUE)")
+    return " AND ".join(terms) if terms else "TRUE"
+
+
 @dataclass(frozen=True)
 class Violation:
     """One invariant, and how much of the table breaks it."""

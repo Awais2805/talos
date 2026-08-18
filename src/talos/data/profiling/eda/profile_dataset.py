@@ -49,10 +49,14 @@ def parse_args():
     p.add_argument("--dataset", required=True, help="dataset name as it appears in the lake")
     p.add_argument("--source", default=None,
                    help="parquet glob to profile (default: the dataset's labelled conn flows)")
-    # Defaults to `parquet` because the labelled zone was cleared when labelling
-    # was removed; put this back to "labelled" once that zone is repopulated.
-    p.add_argument("--zone", default="parquet", choices=["parquet", "labelled", "canonical"],
+    # `labelled`, because `group_by: label_class` is the whole design and the
+    # parquet zone has no such column -- profiling it collapses every flow into
+    # one `(unlabelled)` group, so class imbalance is silently not measured.
+    p.add_argument("--zone", default="labelled", choices=["parquet", "labelled", "canonical"],
                    help="lake zone to read when --source is not given")
+    p.add_argument("--include-invalid", action="store_true",
+                   help="profile every row, including those a validity invariant "
+                        "rejects (default: exclude them, as the training pools do)")
     p.add_argument("--sample", type=float, default=None,
                    help="profile a random %% of rows (recorded in the profile)")
     p.add_argument("--limit", type=int, default=None,
@@ -76,7 +80,7 @@ def parse_args():
 
 # --------------------------------------------------------------- query build
 
-def scan_clause(src, sample, limit):
+def scan_clause(src, sample, limit, valid=""):
     """The source expression both queries read from.
 
     LIMIT is pushed into the scan, so a smoke test stops after N rows instead of
@@ -84,8 +88,13 @@ def scan_clause(src, sample, limit):
     five seconds and finding out twenty minutes into 2019 that a column is not
     the type the spec assumed. SAMPLE still reads everything; it trades
     aggregation work for statistical validity, which is the opposite trade.
+
+    `valid` filters to the rows the training pools draw from, so a distribution
+    the report shows is a distribution of what a model actually sees.
     """
     sql = f"SELECT * FROM read_parquet('{src}', union_by_name = true)"
+    if valid:
+        sql += f" WHERE {valid}"
     if sample:
         sql += f" USING SAMPLE {sample} PERCENT (bernoulli)"
     if limit:
@@ -93,7 +102,8 @@ def scan_clause(src, sample, limit):
     return sql
 
 
-def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample, limit):
+def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample,
+                      limit, valid=""):
     """One pass, one GROUP BY, every heavy statistic.
 
     The `f` CTE projects each feature exactly once (raw value + transformed
@@ -143,12 +153,12 @@ def build_stats_query(src, spec, num, cat, ident, nulls, group_expr, sample, lim
         agg.append("[" + ", ".join(f"count(*) FILTER (nz{k} IS NULL)::DOUBLE"
                                    for k in range(len(nulls))) + "] AS nul")
 
-    return (f"WITH src AS (\n  {scan_clause(src, sample, limit)}\n"
+    return (f"WITH src AS (\n  {scan_clause(src, sample, limit, valid)}\n"
             f"), f AS (\n  SELECT " + ",\n         ".join(proj) + "\n  FROM src\n)\n"
             "SELECT " + ",\n       ".join(agg) + "\nFROM f GROUP BY grp ORDER BY n DESC")
 
 
-def build_capture_query(src, group_expr, sample, limit):
+def build_capture_query(src, group_expr, sample, limit, valid=""):
     """Domain sub-structure: flows and time span per capture x class.
 
     Cheap next to the main pass -- parquet column pruning means it reads three
@@ -157,7 +167,7 @@ def build_capture_query(src, group_expr, sample, limit):
     """
     return (f"WITH src AS (\n"
             f"  SELECT capture, ts, {group_expr} AS grp "
-            f"FROM ({scan_clause(src, sample, limit)})\n)\n"
+            f"FROM ({scan_clause(src, sample, limit, valid)})\n)\n"
             f"SELECT capture, grp, count(*)::DOUBLE AS n, "
             f"min(ts)::DOUBLE AS t0, max(ts)::DOUBLE AS t1 "
             f"FROM src GROUP BY 1, 2 ORDER BY 3 DESC")
@@ -267,16 +277,28 @@ def main():
           f"{f', {len(skipped)} skipped' if skipped else ''}")
     print("\nscanning (one pass) ...", flush=True)
 
+    # The same rows the training pools draw from: a distribution the report
+    # shows should be a distribution of what a model actually sees.
+    valid = ""
+    if not a.include_invalid:
+        from talos.data.preprocess.validity import valid_sql
+        valid = valid_sql(cols)
+        if valid == "TRUE":
+            valid = ""
+    if valid:
+        print("rows      excluding flows that break a validity invariant "
+              "(--include-invalid to keep them)")
+
     t0 = time.time()
     rows = lake.sql(build_stats_query(src, spec, num, cat, ident, nulls, group_expr,
-                                      a.sample, a.limit))
+                                      a.sample, a.limit, valid))
     by_class = dict(parse_row(r, spec, num, cat, ident, nulls) for r in rows)
     elapsed = time.time() - t0
 
     captures = []
     if "capture" in cols and "ts" in cols:
         for cap, grp, n, t_0, t_1 in lake.sql(
-                build_capture_query(src, group_expr, a.sample, a.limit)):
+                build_capture_query(src, group_expr, a.sample, a.limit, valid)):
             captures.append({"capture": cap, "class": grp, "n": int(n),
                              "ts_min": t_0, "ts_max": t_1})
 
@@ -287,6 +309,9 @@ def main():
             "source": src, "zone": a.zone,
             "generated_utc": started, "scan_seconds": round(elapsed, 1),
             "spec_version": spec.version, "spec_sha": spec.sha,
+            # Which population this describes; a profile over a different one is
+            # not comparable with this, however identical the ruler.
+            "excludes_invalid": bool(valid),
             # A partial profile is still a valid profile -- it just describes a
             # slice. It is carried through to both reports as a banner so a
             # smoke-test run can never be mistaken for the real thing.

@@ -13,11 +13,43 @@ measure instead of crashing or silently omitting it.
 """
 
 import hashlib
+import re
 from pathlib import Path
 
 import yaml
 
 SPEC_PATH = Path(__file__).with_name("spec.yaml")
+
+
+#: SQL callables and type names that look like identifiers but are not columns.
+_NOT_A_COLUMN = frozenset({
+    "coalesce", "nullif", "cast", "as", "length", "replace", "greatest", "least",
+    "ln", "log", "case", "when", "then", "else", "end", "and", "or", "not",
+    "is", "null", "double", "varchar", "bigint", "integer", "boolean", "abs",
+    "lpad", "hour", "to_timestamp", "count", "sum", "avg", "min", "max",
+})
+
+_IDENT = re.compile(r'"([^"]+)"|\b([a-z_][a-z0-9_]*)\b', re.IGNORECASE)
+
+
+def columns_in(expr):
+    """Bare column names an expression reads, for `requires`.
+
+    Derived rather than declared a second time: a feature added to the feature
+    set must not need a matching hand-written entry here, or the two drift and
+    the profiler silently stops covering what the model consumes.
+    """
+    # Strip string literals first: `replace(history, 'S', '')` reads one column,
+    # not three, and 'S' would otherwise be required of every source.
+    expr = re.sub(r"'(?:[^']|'')*'", " ", expr)
+    out = []
+    for quoted_name, bare in _IDENT.findall(expr):
+        name = quoted_name or bare
+        if quoted_name:
+            out.append(name)
+        elif name.lower() not in _NOT_A_COLUMN and not name.replace("_", "").isdigit():
+            out.append(name)
+    return sorted(set(out))
 
 
 def _q(col):
@@ -120,12 +152,44 @@ class Spec:
         self.numeric = [Feature(n, c, "numeric") for n, c in doc["numeric"].items()]
         self.categorical = [Feature(n, c, "categorical")
                             for n, c in doc["categorical"].items()]
+        # Everything the MODEL sees, profiled on the same definitions it is fed.
+        # Declared once, in the feature set; only the bin edges are EDA's own.
+        self.features = doc.get("features")
+        if self.features:
+            self._adopt_feature_set(doc.get("edges") or {})
         self.identity = list(doc.get("identity", []))
         self.null_checks = list(doc.get("null_checks", []))
         self.quantiles = list(doc["quantiles"])
         self.top_k = int(doc["top_k"])
         self.thresholds = dict(doc["thresholds"])
         self.joint_pairs = [tuple(p) for p in doc.get("joint_pairs", [])]
+
+    def _adopt_feature_set(self, edges):
+        """Add the model's features to what is profiled, skipping name clashes.
+
+        A locally-declared feature wins: EDA may want a different display policy
+        (`coalesce(proto, '(null)')`) for a column the model reads bare.
+        """
+        from talos.data.feature.featureset import LOG1P, FeatureSetLoader
+
+        declared = {f.name for f in self.numeric} | {f.name for f in self.categorical}
+        loaded = FeatureSetLoader().load(self.features)
+        self.features_sha = str(loaded.sha)
+        for feature in loaded.numeric:
+            if feature.name in declared:
+                continue
+            self.numeric.append(Feature(feature.name, {
+                "expr": feature.expr,
+                "requires": columns_in(feature.expr),
+                "transform": "log1p" if feature.transform == LOG1P else "none",
+                "edges": edges.get(feature.name) or edges.get("__default__") or [],
+            }, "numeric"))
+        for feature in loaded.categorical:
+            if feature.name in declared:
+                continue
+            self.categorical.append(Feature(feature.name, {
+                "expr": feature.expr, "requires": columns_in(feature.expr),
+            }, "categorical"))
 
     def contract(self, numeric_spec=None):
         """The part of the spec two profiles must agree on to be comparable.

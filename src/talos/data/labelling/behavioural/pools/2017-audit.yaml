@@ -33,6 +33,13 @@ source:
 exclude:
   - out-of-space
 
+# Rows no real flow could produce -- a negative byte count, IP bytes below the
+# payload they carry, a near-zero duration dividing a real byte count into
+# ~1e18 B/s. `talos validity` measures them per dataset; this is one rule for
+# all of them, so 2018 is filtered exactly as 2017 is. Excluded from training,
+# never deleted: the labelled table stays the whole dataset.
+exclude_invalid: true
+
 partition_by: uid
 # Original literal kept on purpose: changing a seed re-derives every bucket.
 seed: "talos-2017-audit-v1-20260816"

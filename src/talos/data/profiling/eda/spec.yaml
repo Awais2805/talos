@@ -12,7 +12,30 @@
 # Changing anything below invalidates every existing profile -- bump `version`
 # and re-run `make eda-all`.
 
-version: 2
+version: 3
+
+# ------------------------------------------------------- the model's features
+# Every feature the labelling and training stages consume is profiled here too,
+# on the SAME definition they are fed -- pulled from the feature set rather than
+# re-declared, so adding one there cannot leave it unprofiled here. Before this,
+# 31 of 44 model features (every per-letter `hist_*` count and every derived
+# rate) had no distribution, no outlier check and no correlation in any report.
+#
+# Only the BIN EDGES are EDA's own: a fixed ruler is what makes two datasets
+# comparable, and it is a profiling concern with no place in a model's input
+# declaration. A locally-declared feature below wins over the same name here.
+features: conn
+
+edges:
+  # Per-letter connection-state counts: small integers, long right tail.
+  __default__: [0, 1, 2, 3, 4, 5, 8, 16, 32]
+  orig_rate: [0, 1, 64, 1024, 16384, 262144, 4194304, 67108864, 1073741824]
+  resp_rate: [0, 1, 64, 1024, 16384, 262144, 4194304, 67108864, 1073741824]
+  bytes_per_pkt_orig: [0, 1, 40, 64, 128, 256, 512, 1024, 1500, 9000]
+  bytes_per_pkt_resp: [0, 1, 40, 64, 128, 256, 512, 1024, 1500, 9000]
+  ratio_orig_resp: [0.001, 0.01, 0.1, 0.5, 1, 2, 10, 100, 1000]
+  overhead_orig: [0, 40, 80, 160, 320, 640, 2560, 10240, 102400]
+  history_len: [0, 1, 2, 3, 4, 6, 8, 12, 20, 40]
 
 # ---------------------------------------------------------------- row scope
 # The grouping key of every heavy aggregate. Everything downstream (attack vs

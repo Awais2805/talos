@@ -13,18 +13,20 @@ description: >
   Volume, rate, direction, connection outcome and connection state history;
   no identity.
 
-# STANDARDISATION (D1) IS NOT SET HERE YET.
+# STANDARDISATION (D1) IS DELIBERATELY ABSENT FROM THIS FILE.
 #
-# `centre` and `scale` are declared per feature, never fitted -- a scale fitted
-# on 2017 makes the same flow encode differently in 2018, which is the failure
-# this whole file exists to prevent. They are applied AFTER `transform`, so the
-# constants live in log space: the centre of a log1p feature is the median of
-# log1p(x), not log1p of the median.
+# `centre` and `scale` belong to the SCREENED declaration `talos screen --emit`
+# generates, not to the base: measured once over the union of every domain, then
+# declared. A scale fitted per dataset makes the same flow encode differently in
+# 2018 than in 2017, which is the failure this whole file exists to prevent.
+#
+# They are applied AFTER `transform`, so a log1p feature's constants live in log
+# space -- the mean of log1p(x), not log1p of the mean. z-score is ours: the
+# paper (Sec. IV-A) says only that numeric fields are "standardized/normalized"
+# and names no statistic. See docs/paper-deviations.md.
 #
 # A feature naming neither passes through unstandardised, which is what every
-# numeric does today. Fill them from `talos screen`'s measured distributions
-# once it has run on real data; inventing them now would be exactly the
-# plausible-but-unjustified number this rebuild exists to avoid.
+# numeric here does. Do not fill them in by hand -- re-run the screen.
 
 numeric:
   duration:
