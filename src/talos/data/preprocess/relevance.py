@@ -313,3 +313,19 @@ class RelevanceAnalyst:
             report.joint_note = (f"one domain ({domains[0] if domains else 'none'}); "
                                  f"a probe needs at least two")
         return report
+
+
+def emit_declaration(report: RelevanceReport, base, name: str) -> str:
+    """Relevance's verdict, layered onto the base declaration.
+
+    `base` is normally already `screen`-annotated (a `conn-screened` feature
+    set); that annotation survives untouched here, since `annotate_declaration`
+    only ever adds this stage's own block. A training pipeline reading the
+    result sees both stages' marks and can apply either policy, or its own.
+    """
+    from talos.data.preprocess.screen import annotate_declaration
+
+    verdicts = {f.name: {"verdict": f.verdict, "reason": f.reason,
+                          "mi": f.mi_normalised, "domain_auc": f.domain_auc}
+                for f in report.features}
+    return annotate_declaration(base, name, "relevance", verdicts)

@@ -677,6 +677,9 @@ def cmd_screen(args, extra) -> int:
                    help="drop a column this NULL, unless it declares an indicator")
     p.add_argument("--correlation", type=float, default=CORRELATION,
                    help="cluster columns whose correlation exceeds this")
+    p.add_argument("--include-invalid", action="store_true",
+                   help="measure over every row, including those a validity "
+                        "invariant rejects (default: exclude them)")
     p.add_argument("--indicated", default="", help="comma-separated columns whose "
                    "missingness is declared to be information")
     p.add_argument("--features", default=None,
@@ -705,13 +708,19 @@ def cmd_screen(args, extra) -> int:
             globs.append(glob)
 
     from talos.data.feature.featureset import FeatureError, FeatureSetLoader
-    from talos.data.preprocess.screen import feature_source, preflight
+    from talos.data.preprocess.screen import (
+        declared_indicators, exclude_invalid, feature_source, preflight)
 
     duck = lake.duck
     name = "+".join(a.dataset)
     base = None
     try:
         source = sources(globs)
+        # Scale is measured on the rows a model will actually train on; a
+        # physically impossible flow would otherwise set max/p99 for its column.
+        excluded, total = 0, 0
+        if not a.include_invalid:
+            source, excluded, total = exclude_invalid(duck, source)
         if a.features:
             # Screen what a model sees, not what the table happens to hold:
             # `orig_rate` and the history counts are expressions, not columns.
@@ -724,12 +733,17 @@ def cmd_screen(args, extra) -> int:
             origin = "the table's own columns"
         print(f"datasets      {name}  ({len(globs)} table(s), screened as one)")
         print(f"zone          {a.zone}")
+        if excluded:
+            print(f"excluded      {excluded:,} of {total:,} rows "
+                  f"({100 * excluded / total:.4f}%) broke a validity invariant")
         print(f"candidates    {len(numeric)} numeric, "
               f"{len(categorical)} categorical, from {origin}\n")
+        indicated = {c for c in a.indicated.split(",") if c}
+        if base is not None:
+            indicated |= declared_indicators(base)
         report = FeatureScreener(
             duck, dominant=a.dominant, null_share=a.null_share,
-            correlation=a.correlation, method=a.method,
-            indicated=[c for c in a.indicated.split(",") if c],
+            correlation=a.correlation, method=a.method, indicated=sorted(indicated),
         ).screen(name, source, numeric, categorical)
         report.datasets = tuple(a.dataset)
     except (ScreenError, FeatureError) as exc:
@@ -859,24 +873,14 @@ def cmd_relevance(args, extra) -> int:
 
     if a.emit is not None:
         from pathlib import Path
-        from talos.data.preprocess.screen import Rejection, ScreenReport
-        from talos.data.preprocess.screen import emit_declaration
+        from talos.data.preprocess.relevance import emit_declaration
 
-        # Only `drop` leaves. HELD features stay in schema v1 by definition --
-        # the post-training stage is what decides them.
-        rejections = tuple(
-            Rejection(column=f.name, check="domain-leak", reason=f.reason,
-                      evidence={"domain_auc": f.domain_auc,
-                                "relevance": f.mi_normalised})
-            for f in report.features if f.verdict == "drop")
-        shim = ScreenReport(dataset=name, datasets=report.datasets,
-                            rows=report.rows, rejections=rejections,
-                            thresholds={"domain_auc_high": a.domain_high,
-                                        "relevance_cut": report.relevance_cut})
+        # Every verdict (keep/drop/hold/unmeasured) is annotated, none removed
+        # -- `screen:` marks the base already carries survive untouched.
         emitted = f"{base.name}-v1"
         out = Path(a.emit) if a.emit else cfg.reports / "schema" / f"{emitted}.yaml"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(emit_declaration(shim, base, emitted))
+        out.write_text(emit_declaration(report, base, emitted))
         try:
             check = FeatureSetLoader().load(out)
         except FeatureError as exc:

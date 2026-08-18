@@ -10,7 +10,7 @@ from __future__ import annotations
 import itertools
 import math
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -105,6 +105,35 @@ def feature_source(features, source: str,
                   for c in features.categorical]
     projected += [quoted(c) for c in carry if c not in numeric + categorical]
     return f"(SELECT {', '.join(projected)} FROM {source})", numeric, categorical
+
+
+def exclude_invalid(duck, source: str) -> tuple[str, int, int]:
+    """Restrict a source to rows no validity invariant rejects.
+
+    Returns `(source, excluded, total)`. Scale is measured on the population a
+    model actually trains on: a near-zero duration dividing a real byte count
+    gives ~1e18 B/s, a finite double that would otherwise set `max/p99` for its
+    whole column.
+    """
+    from talos.data.preprocess.validity import valid_sql
+
+    total = duck.one(f"SELECT count(*) FROM {source}")[0]
+    predicate = valid_sql(describe(duck, source))
+    if predicate == "TRUE":
+        return source, 0, int(total)
+    filtered = f"(SELECT * FROM {source} WHERE {predicate})"
+    kept = duck.one(f"SELECT count(*) FROM {filtered}")[0]
+    return filtered, int(total) - int(kept), int(total)
+
+
+def declared_indicators(features) -> set[str]:
+    """Features whose absence is already carried by a missingness indicator.
+
+    Read off the declaration rather than re-typed on the command line: the
+    missingness rule would otherwise delete the very features whose NULLs are
+    the signal -- `duration`, `orig_bytes` and `resp_bytes` in `conn`.
+    """
+    return {f.name for f in getattr(features, "numeric", ()) if f.indicator}
 
 
 def describe(duck, source: str) -> dict:
@@ -488,62 +517,111 @@ def suggested_phi(report: ScreenReport, base, ratio: float = PHI_RATIO) -> dict:
 EPSILON_PHI = 1e-9
 
 
-def emit_declaration(report: ScreenReport, base, name: str) -> str:
-    """The base declaration with the screen's rejections removed.
+#: Fewer digits than a double carries, so a re-run does not move `method_sha`
+#: on floating-point noise. Six is far finer than any scale this measures.
+CONSTANT_DIGITS = 6
 
-    A normal feature set, so it loads, hashes and plugs in like any other and a
-    method just names it. Constraints referencing a dropped feature are dropped
-    too: the loader refuses one naming an undeclared feature, and a generated
-    file that cannot load is worse than no file.
+
+def standardisation(report: ScreenReport, base) -> dict[str, dict]:
+    """Each numeric feature's `centre`/`scale`, in the space it is standardised in.
+
+    The paper says only that "numeric fields are standardized/normalized"
+    (Sec. IV-A) and names no statistic, so z-score is chosen as the plain
+    reading of "standardized" -- recorded as ADAPTED in docs/paper-deviations.md.
+    Constants live in TRANSFORMED space because `Numeric.sql` applies them after
+    the transform, so a `log1p` feature is measured on `log1p(x)`.
+    """
+    from talos.data.feature.featureset import LOG1P
+
+    shapes = {s.name: s for s in report.stats}
+    out: dict[str, dict] = {}
+    for feature in getattr(base, "numeric", ()):
+        stat = shapes.get(feature.name)
+        if stat is None:
+            continue
+        logged = feature.transform == LOG1P
+        shape = stat.logged if logged else stat.raw
+        space = "log1p" if logged else "original"
+        if shape is None or shape.mean is None or not shape.stddev:
+            out[feature.name] = {
+                "centre": None, "scale": None, "space": space,
+                "why": ("standard deviation is zero or unmeasured, so the "
+                        "column is constant and has no scale")}
+            continue
+        out[feature.name] = {
+            "centre": round(shape.mean, CONSTANT_DIGITS),
+            "scale": round(shape.stddev, CONSTANT_DIGITS),
+            "space": space, "why": f"mean and standard deviation of {space} values"}
+    return out
+
+
+def annotate_declaration(base, name: str, stage: str,
+                         verdicts: Mapping[str, Mapping[str, Any]],
+                         constants: Mapping[str, Mapping[str, Any]] = {}) -> str:
+    """The base declaration, ANNOTATED with one stage's verdict -- nothing removed.
+
+    Every feature the base declares stays in the file. A rejected one gets a
+    `{stage}: {verdict: drop, ...}` block instead of being deleted, so a later
+    stage -- or the eventual training pipeline -- still has the column to apply
+    its own policy to. A feature absent from `verdicts` defaults to `keep`
+    (e.g. VIF, which is reported and never verdicted). `FeatureSet.active()` is
+    what a consumer actually filters through; this function only records.
     """
     import yaml
 
-    dropped = {r.column for r in report.rejections}
     doc = {k: v for k, v in dict(base.doc).items()}
     doc["name"] = name
-
     for block in ("numeric", "derived", "categorical"):
         declared = doc.get(block) or {}
-        doc[block] = {k: v for k, v in declared.items() if k not in dropped}
-        if not doc[block]:
-            doc.pop(block)
-
-    orphaned = []
-    kept_constraints = []
-    for constraint in doc.get("constraints") or []:
-        fields = {constraint.get("target"), *(constraint.get("operands") or ())}
-        if fields & dropped:
-            orphaned.append(constraint.get("name", "<unnamed>"))
-        else:
-            kept_constraints.append(constraint)
-    if kept_constraints:
-        doc["constraints"] = kept_constraints
-    else:
-        doc.pop("constraints", None)
+        if not declared:
+            continue
+        annotated = {}
+        for key, entry in declared.items():
+            entry = dict(entry or {})
+            fitted = constants.get(key) if block != "categorical" else None
+            if fitted and fitted.get("centre") is not None:
+                entry["centre"] = fitted["centre"]
+                entry["scale"] = fitted["scale"]
+            entry[stage] = dict(verdicts.get(key) or {"verdict": "keep"})
+            annotated[key] = entry
+        doc[block] = annotated
+    # Constraints are never pruned here -- nothing is removed from the
+    # declaration, so no operand can go missing. `FeatureSet.active()` excludes
+    # one from its own filtered view if a marked-drop feature would orphan it.
 
     header = [
-        f"# Talos -- feature set `{name}`. GENERATED by `talos screen`; edit the",
-        "# base declaration and re-run rather than editing this by hand.",
+        f"# Talos -- feature set `{name}`. GENERATED by `talos {stage}`; edit",
+        "# the base declaration and re-run rather than editing this by hand.",
         "#",
         f"# base        {getattr(base, 'name', '?')}  sha {getattr(base, 'sha', '?')}",
-        f"# screened    {', '.join(report.datasets) or report.dataset}",
-        f"# rows        {report.rows:,}",
-        f"# correlation {report.method} at {report.thresholds.get('correlation')}",
         "#",
-        "# Every rejection below carries its evidence in the run report; this",
-        "# header records what went and why, so the file is readable alone.",
+        "# ANNOTATED, NOT PRUNED: every feature the base declares is still here.",
+        f"# a `{stage}:` block below records this stage's verdict per feature;",
+        "# nothing is removed at this layer. A consumer -- a labelling method's",
+        "# vectoriser today, the training pipeline later -- calls",
+        "# `FeatureSet.active()` to apply its own policy over every stage's marks.",
         "#",
     ]
-    for rejection in report.rejections:
-        header.append(f"#   {rejection.column:<22} {rejection.check:<14} "
-                      f"{rejection.reason.splitlines()[0][:78]}")
-    if orphaned:
-        header += ["#",
-                   f"#   constraints dropped with their features: "
-                   f"{', '.join(orphaned)}"]
+    marked = {k: v for k, v in verdicts.items() if v.get("verdict", "keep") != "keep"}
+    for column, mark in sorted(marked.items()):
+        reason = str(mark.get("reason", "")).splitlines()[0][:78] if mark.get("reason") else ""
+        header.append(f"#   {column:<22} {stage}={mark.get('verdict'):<10} {reason}")
     header.append("")
     return "\n".join(header) + yaml.safe_dump(doc, sort_keys=False,
                                               default_flow_style=False)
+
+
+def emit_declaration(report: ScreenReport, base, name: str) -> str:
+    """The screen's verdict, layered onto the base declaration.
+
+    A normal feature set once loaded, so it hashes and plugs in like any
+    other and a method just names it. See `annotate_declaration` for the
+    mark-not-drop contract this and `talos relevance`'s emit share.
+    """
+    verdicts = {r.column: {"verdict": "drop", "check": r.check, "reason": r.reason}
+                for r in report.rejections}
+    return annotate_declaration(base, name, "screen", verdicts,
+                                standardisation(report, base))
 
 
 def _corr(value) -> float:

@@ -131,6 +131,9 @@ class Partition:
     datasets: tuple[str, ...]
     labels: str
     exclude: tuple[str, ...]
+    #: Drop rows no real flow could produce, per docs/paper-deviations.md. One
+    #: rule for every dataset -- evidence is per-dataset, the predicate is not.
+    exclude_invalid: bool
     key: str
     seed: str
     buckets: int
@@ -191,9 +194,24 @@ class Partition:
     def relation(self, duck, pool: str, sources: Sequence[str], alias: str = "p"):
         """The rows of one pool, as a lazy relation."""
         listed = ", ".join(_quote(uri) for uri in sources)
+        table = f"read_parquet([{listed}], union_by_name = true)"
+        tests = [self.where(pool, alias)]
+        if self.exclude_invalid:
+            tests.append(self.validity_sql(duck, table, alias))
         return duck.relation(
-            f"SELECT * FROM read_parquet([{listed}], union_by_name = true) {alias} "
-            f"WHERE {self.where(pool, alias)}")
+            f"SELECT * FROM {table} {alias} WHERE {' AND '.join(tests)}")
+
+    def validity_sql(self, duck, table: str, alias: str = "") -> str:
+        """The declared row invariants, as a filter over this partition's tables.
+
+        Read off the table so an invariant whose column is absent is skipped
+        rather than rejecting every row -- the same rule the auditor applies.
+        """
+        from talos.data.preprocess.validity import valid_sql
+
+        columns = {row[0]: row[1]
+                   for row in duck.sql(f"DESCRIBE SELECT * FROM {table}")}
+        return valid_sql(columns, alias=alias)
 
     # -------------------------------------------------------------- reporting
 
@@ -233,7 +251,9 @@ class PartitionLoader:
             name=doc.get("name", declaration.name), pools=pools,
             datasets=tuple(source.get("datasets") or ()),
             labels=source.get("labels", "schedule"),
-            exclude=exclude, key=key, seed=seed, buckets=buckets,
+            exclude=exclude,
+            exclude_invalid=bool(doc.get("exclude_invalid", True)),
+            key=key, seed=seed, buckets=buckets,
             sha=declaration.sha, path=declaration.path, doc=doc)
 
     # ------------------------------------------------------------ allocation

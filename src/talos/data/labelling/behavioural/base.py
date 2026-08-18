@@ -21,7 +21,7 @@ from talos.data.feature.vectorise import DEFAULT_BATCH, build as build_vectorise
 from talos.data.labelling.audit.adjudication import AdjudicationTable, UNKNOWN, default_path
 from talos.data.labelling.base import (
     CORE_COLUMNS, LABELLERS, LabellingError, LabellingMethod, NO_WEIGHT,
-    PREDICTED, StaleOutputError, verify_schema,
+    PREDICTED, refuse_stale_output, verify_schema,
 )
 from talos.data.labelling.behavioural.pool import PartitionLoader
 from talos.data.labelling.space import OUT_OF_SPACE
@@ -168,7 +168,7 @@ class BehaviouralMethod(LabellingMethod):
         self.partition = partition or PartitionLoader().load(
             pools or self.settings.get("pools", "xdg"))
         self.features = features or FeatureSetLoader().load(
-            self.settings.get("features", DEFAULT_FEATURES))
+            self.settings.get("features", DEFAULT_FEATURES)).active()
         self.vectoriser = vectoriser or build_vectoriser(
             self.settings.get("vectoriser", "passthrough"), self.features)
         self.batch = int(self.settings.get("batch", DEFAULT_BATCH))
@@ -538,21 +538,7 @@ class BehaviouralMethod(LabellingMethod):
 
         uri = self.output_uri(dataset, feature_space,
                               source=self.cfg.source_of(dataset))
-        self._refuse_stale(uri, report.method_sha, force)
+        refuse_stale_output(self.lake, uri, report.method_sha, force, self.run_name,
+                            "the declaration, the label space, the feature set "
+                            "or the pools")
         return self.lake.write_parquet(rel, uri)
-
-    def _refuse_stale(self, uri: str, method_sha: str, force: bool) -> None:
-        """Never silently replace a table built from different inputs."""
-        if force or not self.lake.exists(uri):
-            return
-        try:
-            row = self.lake.read_parquet(uri, columns=["method_sha"]).limit(1).fetchone()
-        except Exception:                                # noqa: BLE001
-            return
-        previous = row[0] if row else None
-        if previous and previous != method_sha:
-            raise StaleOutputError(
-                f"{uri}\n  was labelled by {self.run_name} {previous}, and this run "
-                f"used {method_sha}.\n  An input changed -- the declaration, the "
-                f"label space, the feature set or the pools.\n  Pass --force if "
-                f"that is intended.")
