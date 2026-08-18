@@ -285,7 +285,8 @@ class TabCLLabeller(BehaviouralMethod):
 
     # -------------------------------------------------------------- stages
 
-    def pretrain(self, batches, report, supervised=None) -> tuple:
+    def pretrain(self, batches, report, supervised=None, keyed=None,
+                 duck=None) -> tuple:
         """Contrastive pretraining with periodic pseudo-label refresh (Alg. 2).
 
         Training is split into spans of `refresh_every` epochs so lines 4-5 can
