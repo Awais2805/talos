@@ -67,16 +67,16 @@ label-all-methods: ## the whole Path B chain for one dataset (DATASET=…)
 	$(TALOS) label --dataset $(DATASET) --method tabcl
 	$(TALOS) label --dataset $(DATASET) --method fused
 
-screen:          ## label-free feature screen over one or more datasets (DATASETS="a b")
+screen:          ## label-free feature screen over one or more datasets (DATASETS="a b", EMIT=1, OUT=path)
 	$(TALOS) screen --dataset $(or $(DATASETS),$(DATASET)) \
-		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit,)
+		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit $(OUT),)
 
 validity:        ## rows that cannot be true of a real flow (DATASETS="a b")
 	$(TALOS) validity --dataset $(or $(DATASETS),$(DATASET))
 
-relevance:       ## task relevance + domain probe -> schema v1 (DATASETS="a b")
+relevance:       ## task relevance + domain probe -> schema v1 (DATASETS="a b", EMIT=1, OUT=path)
 	$(TALOS) relevance --dataset $(or $(DATASETS),$(DATASET)) \
-		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit,)
+		$(if $(FEATURES),--features $(FEATURES),) $(if $(EMIT),--emit $(OUT),)
 
 explain:         ## which line of Eq. 17 decided each row (DATASET=… METHOD=fused)
 	$(TALOS) label --dataset $(DATASET) --method $(or $(METHOD),fused) --explain
