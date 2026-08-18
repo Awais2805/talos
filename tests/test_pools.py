@@ -308,21 +308,21 @@ def test_a_pool_name_that_could_not_be_an_identifier_is_refused(partitions):
 # ------------------------------------------------------ the shipped partition
 
 def test_the_shipped_partition_loads_and_totals_one():
-    partition = PartitionLoader().load("xdg-v3")
+    partition = PartitionLoader().load("xdg")
     assert set(partition.pools) == {"d_s", "d_l", "held"}
     assert list(partition)[-1].hi == partition.buckets
 
 
 def test_the_holdout_domain_is_absent_from_every_pool():
-    """cic-ddos-2019 is `role: holdout` in experiments/xdg-v3. A pool that
+    """cic-ddos-2019 is `role: holdout` in experiments/xdg. A pool that
     quietly included it would defeat the guard that role exists for."""
-    partition = PartitionLoader().load("xdg-v3")
+    partition = PartitionLoader().load("xdg")
     assert "cic-ddos-2019" not in partition.datasets
     assert set(partition.datasets) == {"cic-ids-2017", "cic-ids-2018"}
 
 
 def test_the_shipped_partition_excludes_out_of_space_but_keeps_uncertain():
-    partition = PartitionLoader().load("xdg-v3")
+    partition = PartitionLoader().load("xdg")
     assert partition.exclude == ("out-of-space",)
 
 
