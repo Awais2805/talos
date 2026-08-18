@@ -1,4 +1,4 @@
-"""Gates 0.3/0.4 — row validity and the history alphabet, on planted violations.
+"""Gates 0.3/0.4 — row verification and the history alphabet, on planted violations.
 
 Each invariant gets a row that breaks it and rows that do not, so a check that
 silently stopped running would show as zero rather than as the planted count.
@@ -11,8 +11,8 @@ from __future__ import annotations
 import duckdb
 import pytest
 
-from talos.data.preprocess.validity import (
-    INVARIANTS, LINE_RATE, ValidityAuditor, history_alphabet,
+from talos.data.preprocess.verify import (
+    INVARIANTS, LINE_RATE, RowVerifier, history_alphabet,
 )
 
 
@@ -56,7 +56,7 @@ def duck():
 
 
 def audit(duck):
-    return ValidityAuditor(duck).audit("toy", "flows", duck.columns("flows"))
+    return RowVerifier(duck).audit("toy", "flows", duck.columns("flows"))
 
 
 def rows_for(report, name):
@@ -121,7 +121,7 @@ def test_a_clean_row_breaks_nothing(duck):
 def test_a_check_with_no_column_is_reported_as_skipped_not_passed(duck):
     """A silently un-run check reads exactly like a passing one."""
     duck.con.execute("CREATE TABLE thin AS SELECT 'u' AS uid, 1.0 AS duration")
-    report = ValidityAuditor(duck).audit("toy", "thin", duck.columns("thin"))
+    report = RowVerifier(duck).audit("toy", "thin", duck.columns("thin"))
     skipped = [v for v in report.violations if not v.checked]
     assert skipped
     for violation in skipped:
@@ -143,7 +143,7 @@ def test_nan_and_infinity_are_counted(duck):
     duck.con.execute("""CREATE TABLE odd AS SELECT * FROM (VALUES
         (CAST('NaN' AS DOUBLE)), (CAST('Infinity' AS DOUBLE)), (1.0)
     ) AS t(orig_bytes)""")
-    report = ValidityAuditor(duck).audit("toy", "odd", duck.columns("odd"))
+    report = RowVerifier(duck).audit("toy", "odd", duck.columns("odd"))
     assert report.non_finite["orig_bytes"] == 2
 
 
@@ -167,7 +167,7 @@ def test_a_checksum_letter_would_be_surfaced(duck):
     """Zeek is documented as running -C, so a 'C' contradicts the pipeline."""
     duck.con.execute("""CREATE TABLE bad AS SELECT * FROM (VALUES
         ('ShACadFf'), ('Sr')) AS t(history)""")
-    report = ValidityAuditor(duck).audit("toy", "bad", duck.columns("bad"))
+    report = RowVerifier(duck).audit("toy", "bad", duck.columns("bad"))
     report.alphabet = history_alphabet(duck, "bad")
     assert "C" in report.alphabet
     assert "-C" in report.summary()
@@ -190,7 +190,7 @@ COLS = {"orig_bytes": "BIGINT", "resp_bytes": "BIGINT", "duration": "DOUBLE",
 
 
 def _kept(rows_sql: str) -> list:
-    from talos.data.preprocess.validity import valid_sql
+    from talos.data.preprocess.verify import valid_sql
     con = duckdb.connect()
     con.execute(f"CREATE TABLE t AS {rows_sql}")
     columns = {r[0]: r[1] for r in con.execute("DESCRIBE t").fetchall()}
@@ -225,18 +225,18 @@ def test_a_faster_than_line_rate_flow_is_rejected():
 
 def test_an_uncheckable_table_keeps_every_row():
     """A skipped check must not reject everything; that is the same silence inverted."""
-    from talos.data.preprocess.validity import valid_sql
+    from talos.data.preprocess.verify import valid_sql
     assert valid_sql({"uid": "VARCHAR"}) == "TRUE"
 
 
 def test_the_predicate_can_be_aliased_for_a_joined_relation():
-    from talos.data.preprocess.validity import valid_sql
+    from talos.data.preprocess.verify import valid_sql
     sql = valid_sql(COLS, alias="p")
     assert 'p."orig_bytes"' in sql and '"orig_bytes" >= 0' not in sql.replace('p."orig_bytes"', "")
 
 
 def test_every_declared_invariant_reaches_the_predicate():
     """A new invariant that the filter silently ignores is the defect this catches."""
-    from talos.data.preprocess.validity import INVARIANTS, valid_sql
+    from talos.data.preprocess.verify import INVARIANTS, valid_sql
     sql = valid_sql(COLS)
     assert sql.count("coalesce(") == len(INVARIANTS)

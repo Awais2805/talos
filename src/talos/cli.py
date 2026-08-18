@@ -655,7 +655,7 @@ def cmd_screen(args, extra) -> int:
     from talos.common.provenance import ProvenanceService
     from talos.data.preprocess.screen import (
         CORRELATION, DOMINANT_SHARE, METHODS, MAX, NULL_SHARE, FeatureScreener,
-        ScreenError, candidates, describe, sources,
+        ScreenError, candidates, describe, resolve_globs, sources,
     )
 
     p = argparse.ArgumentParser(prog="talos screen")
@@ -671,6 +671,9 @@ def cmd_screen(args, extra) -> int:
     p.add_argument("--label-method", default="schedule",
                    help="which labelled table, when --zone labelled")
     p.add_argument("--source", default=None, help="a parquet glob to screen instead")
+    p.add_argument("--captures", nargs="+", default=None,
+                   help="restrict --zone parquet to named capture subfolders "
+                        "(e.g. Monday Tuesday); default is every capture found")
     p.add_argument("--dominant", type=float, default=DOMINANT_SHARE,
                    help="drop a column one value covers this share of")
     p.add_argument("--null-share", type=float, default=NULL_SHARE,
@@ -691,21 +694,14 @@ def cmd_screen(args, extra) -> int:
     cfg = Config.load(args.config)
     feature_space = a.feature_space or _feature_space(cfg)
     lake = cfg.lake()
-    globs = []
-    if a.source:
-        globs = [a.source]
-    else:
-        for dataset in a.dataset:
-            scope = {"feature_space": feature_space,
-                     "source": cfg.source_of(dataset)}
-            if a.zone == "labelled":
-                scope["method"] = a.label_method
-            glob = lake.uri(a.zone, dataset=dataset, rel="conn.parquet", **scope)
-            if not lake.exists(glob):
-                print(f"error: nothing to screen: {glob} does not exist.",
-                      file=sys.stderr)
-                return 2
-            globs.append(glob)
+    try:
+        globs = resolve_globs(cfg, lake, a.dataset, a.zone,
+                              feature_space=feature_space,
+                              label_method=a.label_method, source=a.source,
+                              captures=a.captures)
+    except ScreenError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     from talos.data.feature.featureset import FeatureError, FeatureSetLoader
     from talos.data.preprocess.screen import (
@@ -892,43 +888,37 @@ def cmd_relevance(args, extra) -> int:
     return 0
 
 
-def cmd_validity(args, extra) -> int:
+def cmd_verify(args, extra) -> int:
     """Count rows that cannot be true of a real flow. Flags, never drops."""
     import argparse
     from talos.common.provenance import ProvenanceService
-    from talos.data.preprocess.screen import ScreenError, describe, sources
-    from talos.data.preprocess.validity import (
-        INVARIANTS, ValidityAuditor, history_alphabet,
-    )
+    from talos.data.preprocess.screen import ScreenError, describe, resolve_globs, sources
+    from talos.data.preprocess.verify import INVARIANTS, RowVerifier, history_alphabet
 
-    p = argparse.ArgumentParser(prog="talos validity")
+    p = argparse.ArgumentParser(prog="talos verify")
     p.add_argument("--dataset", required=True, nargs="+",
-                   help="one or more datasets, audited as one relation")
+                   help="one or more datasets, checked as one relation")
     p.add_argument("--zone", default="labelled", choices=("parquet", "labelled"))
     p.add_argument("--feature-space", default=None)
     p.add_argument("--label-method", default="schedule")
-    p.add_argument("--source", default=None, help="a parquet glob to audit instead")
+    p.add_argument("--source", default=None, help="a parquet glob to check instead")
+    p.add_argument("--captures", nargs="+", default=None,
+                   help="restrict --zone parquet to named capture subfolders "
+                        "(e.g. Monday Tuesday); default is every capture found")
     p.add_argument("--history", default="history",
                    help="column to enumerate the state alphabet from")
     a = p.parse_args(extra)
 
     cfg = Config.load(args.config)
     lake = cfg.lake()
-    globs = []
-    if a.source:
-        globs = [a.source]
-    else:
-        for dataset in a.dataset:
-            scope = {"feature_space": a.feature_space or _feature_space(cfg),
-                     "source": cfg.source_of(dataset)}
-            if a.zone == "labelled":
-                scope["method"] = a.label_method
-            glob = lake.uri(a.zone, dataset=dataset, rel="conn.parquet", **scope)
-            if not lake.exists(glob):
-                print(f"error: nothing to audit: {glob} does not exist.",
-                      file=sys.stderr)
-                return 2
-            globs.append(glob)
+    try:
+        globs = resolve_globs(cfg, lake, a.dataset, a.zone,
+                              feature_space=a.feature_space or _feature_space(cfg),
+                              label_method=a.label_method, source=a.source,
+                              captures=a.captures)
+    except ScreenError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     duck = lake.duck
     name = "+".join(a.dataset)
@@ -938,10 +928,10 @@ def cmd_validity(args, extra) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     columns = describe(duck, source)
-    print(f"datasets      {name}  ({len(globs)} table(s), audited as one)")
+    print(f"datasets      {name}  ({len(globs)} table(s), checked as one)")
     print(f"invariants    {len(INVARIANTS)} declared\n")
 
-    report = ValidityAuditor(duck).audit(name, source, columns)
+    report = RowVerifier(duck).audit(name, source, columns)
     report.extra["datasets"] = list(a.dataset)
     if a.history in columns:
         report.alphabet = history_alphabet(duck, source, a.history)
@@ -949,7 +939,7 @@ def cmd_validity(args, extra) -> int:
     print(report.table())
     print(f"\n{report.summary()}")
     path = ProvenanceService(cfg.reports).run_report(
-        f"validity_{name}", report.to_dict())
+        f"verify_{name}", report.to_dict())
     print(f"\nreport        {path}")
     return 0
 
@@ -1019,7 +1009,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("pools", help="show how a partition splits a lake", add_help=False)
     sub.add_parser("screen", help="screen candidate features without using a label",
                    add_help=False)
-    sub.add_parser("validity", help="count rows that cannot be true of a real flow",
+    sub.add_parser("verify", help="count rows that cannot be true of a real flow",
                    add_help=False)
     sub.add_parser("relevance", help="score features against the label and the "
                    "domain probe", add_help=False)
@@ -1057,8 +1047,8 @@ def main(argv=None) -> int:
             return cmd_pools(args, extra)
         if args.cmd == "screen":
             return cmd_screen(args, extra)
-        if args.cmd == "validity":
-            return cmd_validity(args, extra)
+        if args.cmd == "verify":
+            return cmd_verify(args, extra)
         if args.cmd == "relevance":
             return cmd_relevance(args, extra)
         if args.cmd == "oracle":

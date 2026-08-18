@@ -20,7 +20,7 @@ LINE_RATE = 1.25e10
 _FLOAT_TYPES = ("DOUBLE", "FLOAT", "REAL")
 
 
-class ValidityError(Exception):
+class VerifyError(Exception):
     pass
 
 
@@ -101,7 +101,7 @@ def valid_sql(columns, invariants: Sequence[Invariant] = INVARIANTS,
 
     `coalesce(..., TRUE)` because NULL is never a violation -- absence is the
     missingness screen's business. An invariant whose columns are absent is
-    skipped, exactly as `ValidityAuditor._check` skips it, so a filter never
+    skipped, exactly as `RowVerifier._check` skips it, so a filter never
     silently rejects every row of a table that cannot be checked.
     """
     present = {c.lower() for c in dict(columns)}
@@ -137,7 +137,7 @@ class Violation:
 
 
 @dataclass
-class ValidityReport:
+class VerifyReport:
     """What could not be true, and how often."""
 
     dataset: str
@@ -197,7 +197,7 @@ class ValidityReport:
         return "\n".join(lines)
 
 
-class ValidityAuditor:
+class RowVerifier:
     """Counts rows that break a declared invariant. Changes nothing."""
 
     def __init__(self, duck, invariants: Sequence[Invariant] = INVARIANTS,
@@ -206,10 +206,10 @@ class ValidityAuditor:
         self.invariants = tuple(invariants)
         self.line_rate = float(line_rate)
 
-    def audit(self, dataset: str, source: str, columns) -> ValidityReport:
+    def audit(self, dataset: str, source: str, columns) -> VerifyReport:
         present = {c.lower(): c for c in dict(columns)}
         rows = self.duck.one(f"SELECT count(*) FROM {source}")[0]
-        report = ValidityReport(dataset=dataset, source=source, rows=rows)
+        report = VerifyReport(dataset=dataset, source=source, rows=rows)
         report.violations = tuple(
             self._check(invariant, source, present, rows)
             for invariant in self.invariants)

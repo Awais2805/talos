@@ -281,7 +281,7 @@ def main():
     # shows should be a distribution of what a model actually sees.
     valid = ""
     if not a.include_invalid:
-        from talos.data.preprocess.validity import valid_sql
+        from talos.data.preprocess.verify import valid_sql
         valid = valid_sql(cols)
         if valid == "TRUE":
             valid = ""

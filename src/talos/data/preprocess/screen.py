@@ -68,6 +68,44 @@ def sources(globs: Sequence[str]) -> str:
     return f"read_parquet([{listed}], union_by_name = true)"
 
 
+def resolve_globs(cfg, lake, datasets: Sequence[str], zone: str, *,
+                   feature_space: str, label_method: str = "schedule",
+                   source: str | None = None,
+                   captures: Sequence[str] | None = None) -> list[str]:
+    """Datasets -> parquet globs, one call site shared by every CLI reader.
+
+    The `parquet` zone mirrors Zeek's per-capture folder tree (`Monday`,
+    `Friday-WorkingHours`, ...) -- one `conn.parquet` per folder, not one
+    directly under the dataset root -- exactly as `LabellingEngine._source`
+    already reads it. A literal `rel="conn.parquet"` glob (what this used to
+    be) only ever matched a single-file fixture; against a real multi-capture
+    dataset it silently resolves to a path that never exists. `labelled` is
+    already one consolidated file per dataset (the schedule writer joins every
+    capture before writing), so it stays a literal name.
+
+    `lake.exists()` cannot check a glob containing `**` -- it is not a literal
+    path -- so existence is checked against the un-globbed dataset directory
+    (`lake.list`, which recurses) before the glob is built.
+    """
+    if source:
+        return [source]
+    globs = []
+    for dataset in datasets:
+        scope = {"feature_space": feature_space, "source": cfg.source_of(dataset)}
+        if zone == "labelled":
+            scope["method"] = label_method
+        base = lake.uri(zone, dataset=dataset, **scope)
+        if not lake.list(base):
+            raise ScreenError(f"nothing to read: {base} has no files.")
+        if zone != "parquet":
+            globs.append(f"{base}/conn.parquet")
+        elif captures:
+            globs.extend(f"{base}/{c}/conn.parquet" for c in captures)
+        else:
+            globs.append(f"{base}/**/conn.parquet")
+    return globs
+
+
 def preflight(features, columns) -> None:
     """Refuse a table missing a column the feature set reads.
 
@@ -115,7 +153,7 @@ def exclude_invalid(duck, source: str) -> tuple[str, int, int]:
     gives ~1e18 B/s, a finite double that would otherwise set `max/p99` for its
     whole column.
     """
-    from talos.data.preprocess.validity import valid_sql
+    from talos.data.preprocess.verify import valid_sql
 
     total = duck.one(f"SELECT count(*) FROM {source}")[0]
     predicate = valid_sql(describe(duck, source))
