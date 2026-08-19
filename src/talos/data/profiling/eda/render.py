@@ -863,70 +863,111 @@ Comparability is enforced by the spec hash <span class=mono>{e(m['spec_sha'])}</
 
 # ---------------------------------------------------------------- index
 
+def _view_of(doc):
+    """A profile's or comparison's population, for grouping the index."""
+    meta = doc["meta"]
+    if meta.get("view"):
+        return meta["view"]
+    zone, method = meta.get("zone"), meta.get("method")
+    if zone == "labelled":
+        return f"postlabel-{method}" if method else "postlabel"
+    return "prelabel" if zone == "parquet" else (zone or "unknown")
+
+
 def render_index(profiles, compares):
+    """One table, grouped by view, plus one domain-distance matrix per view.
+
+    Keyed by slug, because a dataset appears once per view -- raw flows, then
+    once per labelling method that has run over them. Showing the view is not
+    decoration: `postlabel-schedule` and `postlabel-ae` differ only in who
+    assigned `label_class`, so a row without it is unattributable.
+    """
     rows = []
-    for ds in sorted(profiles):
-        p, c = profiles[ds], compares.get(ds)
+    for slug in sorted(profiles):
+        p, c = profiles[slug], compares.get(slug)
         o = c["overview"] if c else {}
+        meta = p["meta"]
         rows.append((
-            f"<b>{e(ds)}</b>",
-            fnum(p["meta"]["rows"]),
+            f"<b>{e(meta['dataset'])}</b>",
+            f"<span class=tag>{e(_view_of(p))}</span>",
+            fnum(meta["rows"]),
             pct(o.get("attack_ratio_self")) if c else "–",
             str(len(p["by_class"])),
             fnum(o.get("domain_fingerprint")) if c else "–",
             fnum(o.get("concept_shift")) if c else "–",
             f"{o.get('n_domain_biased', '–')} / {o.get('n_transfers', '–')}",
-            f"<a href='profile_{e(ds)}.html'>profile</a> · "
-            f"<a href='compare_{e(ds)}.html'>vs rest</a>",
+            f"<a href='profile_{e(slug)}.html'>profile</a>" +
+            (f" · <a href='compare_{e(slug)}.html'>vs rest</a>" if c else ""),
         ))
+
     # Every comparison already measured this dataset against each peer
     # separately, so the full domain-distance matrix falls out for free -- and
     # it says in one picture what no single "vs rest" number can: which
-    # environments resemble each other, and which one stands apart.
-    names = sorted(profiles)
-    dist, ok = [], False
-    for a in names:
-        row = []
-        peers = {p["dataset"]: p for p in (compares.get(a) or {}).get("per_peer", [])}
-        for b in names:
-            v = 0.0 if a == b else (peers.get(b, {}).get("domain_fingerprint") or 0.0)
-            ok = ok or bool(v)
-            row.append(v)
-        dist.append(row)
+    # environments resemble each other, and which one stands apart. One matrix
+    # PER VIEW: a distance between a raw profile and a labelled one, or between
+    # two different labellers' output, is not a domain distance at all.
+    by_view = {}
+    for slug, p in profiles.items():
+        by_view.setdefault(_view_of(p), []).append((p["meta"]["dataset"], slug))
+    matrices = []
+    for view in sorted(by_view):
+        members = sorted(by_view[view])
+        names = [ds for ds, _ in members]
+        dist, ok = [], False
+        for _, slug in members:
+            row = []
+            peers = {q["dataset"]: q
+                     for q in (compares.get(slug) or {}).get("per_peer", [])}
+            for other, _ in members:
+                v = (0.0 if other == profiles[slug]["meta"]["dataset"]
+                     else (peers.get(other, {}).get("domain_fingerprint") or 0.0))
+                ok = ok or bool(v)
+                row.append(v)
+            dist.append(row)
+        if ok:
+            matrices.append(
+                f"<h2>Domain distance · {e(view)}</h2>"
+                f"<div class=chart>{matrix_heat(names, names, dist, fmt='{:.3f}')}</div>")
     note = ("Mean benign-vs-benign Jensen-Shannon divergence between each pair of "
             "datasets, every peer counted once. Darker is further apart; the diagonal "
             "is zero by definition.")
-    matrix = (f"<h2>Domain distance</h2><div class=note>{note}</div>"
-              f"<div class=chart>{matrix_heat(names, names, dist, fmt='{:.3f}')}</div>"
-              if ok else "")
+    matrix = (f"<div class=note>{note}</div>" + "".join(matrices)) if matrices else ""
 
-    body = f"""<div class=note>Each dataset has an individual profile and a one-against-all
-comparison. The comparisons are derived from the profiles alone, so adding a dataset
-re-derives every comparison in seconds without re-reading the lake.</div>
-{table(['dataset', 'flows', 'attack', 'classes', 'domain fingerprint',
+    body = f"""<div class=note>Each dataset has one profile per <b>view</b> — the raw flows
+(<span class=mono>prelabel</span>), then one per labelling method that has run over them
+(<span class=mono>postlabel-&lt;method&gt;</span>). Comparisons are only ever drawn within a
+view, and are derived from the profiles alone, so adding a dataset re-derives every
+comparison in seconds without re-reading the lake.</div>
+{table(['dataset', 'view', 'flows', 'attack', 'classes', 'domain fingerprint',
         'concept shift', 'biased / transferable', 'reports'], rows)}
 {matrix}"""
     return page("Talos · EDA reports", body,
-                f"{len(profiles)} dataset(s) in the pool")
+                f"{len(profiles)} profile(s), {len(by_view)} view(s)")
 
 
 def render_all(directory=EDA_DIR):
-    """Rebuild every page from whatever JSON is on disk. Returns paths written."""
+    """Rebuild every page from whatever JSON is on disk. Returns paths written.
+
+    Keyed by the file's own SLUG (`postlabel-schedule_cic-ids-2017`), never by
+    the dataset alone: one dataset has as many profiles as it has views, and
+    keying on the dataset would render the last one read over all the others
+    and show a single arbitrary winner in the index.
+    """
     directory = Path(directory)
     written = []
     profiles, compares = {}, {}
     for path in sorted(directory.glob("profile_*.json")):
         doc = json.loads(path.read_text())
-        ds = doc["meta"]["dataset"]
-        profiles[ds] = doc
-        out = directory / f"profile_{ds}.html"
+        slug = path.stem[len("profile_"):]
+        profiles[slug] = doc
+        out = directory / f"profile_{slug}.html"
         out.write_text(render_profile(doc))
         written.append(out)
     for path in sorted(directory.glob("compare_*.json")):
         doc = json.loads(path.read_text())
-        ds = doc["meta"]["dataset"]
-        compares[ds] = doc
-        out = directory / f"compare_{ds}.html"
+        slug = path.stem[len("compare_"):]
+        compares[slug] = doc
+        out = directory / f"compare_{slug}.html"
         out.write_text(render_compare(doc))
         written.append(out)
     if profiles:

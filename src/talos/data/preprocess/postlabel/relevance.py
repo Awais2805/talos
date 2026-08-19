@@ -323,7 +323,7 @@ def emit_declaration(report: RelevanceReport, base, name: str) -> str:
     only ever adds this stage's own block. A training pipeline reading the
     result sees both stages' marks and can apply either policy, or its own.
     """
-    from talos.data.preprocess.screen import annotate_declaration
+    from talos.data.preprocess.prelabel.screen import annotate_declaration
 
     verdicts = {f.name: {"verdict": f.verdict, "reason": f.reason,
                           "mi": f.mi_normalised, "domain_auc": f.domain_auc}

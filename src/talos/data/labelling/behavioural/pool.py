@@ -207,7 +207,7 @@ class Partition:
         Read off the table so an invariant whose column is absent is skipped
         rather than rejecting every row -- the same rule the auditor applies.
         """
-        from talos.data.preprocess.verify import valid_sql
+        from talos.data.preprocess.prelabel.verify import valid_sql
 
         columns = {row[0]: row[1]
                    for row in duck.sql(f"DESCRIBE SELECT * FROM {table}")}

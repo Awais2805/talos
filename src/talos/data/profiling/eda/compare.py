@@ -42,17 +42,54 @@ EPS = 1e-12
 
 # --------------------------------------------------------------- loading
 
-def load_profiles(directory):
-    """Every profile in the pool, keyed by dataset, with the ruler checked.
+def view_of(doc) -> str:
+    """Which population a profile describes: `prelabel`, `postlabel-<method>`.
+
+    Derived from the zone and method when a profile predates the field, so an
+    old file on disk is placed rather than silently pooled with everything else.
+    """
+    meta = doc["meta"]
+    if meta.get("view"):
+        return meta["view"]
+    zone, method = meta.get("zone"), meta.get("method")
+    if zone == "labelled":
+        return f"postlabel-{method}" if method else "postlabel"
+    return "prelabel" if zone == "parquet" else (zone or "unknown")
+
+
+def load_profiles(directory, view=None):
+    """Every profile of ONE view, keyed by dataset, with the ruler checked.
+
+    Keyed by dataset, so two profiles of the same dataset would overwrite each
+    other in this dict -- which is exactly what `prelabel_X` and
+    `postlabel-schedule_X` are. Hence the view filter rather than a merge: a
+    comparison is only meaningful within one population, and "which population"
+    is not something a directory listing can be trusted to hold just one of.
+
+    With no `view` given, the directory must hold exactly one; otherwise this
+    refuses and names what it found, instead of picking for the caller.
 
     A stale profile is a silent wrong answer -- its histograms would be on
     different bin edges -- so a spec mismatch stops the run and names the files
     that need re-profiling.
     """
-    profiles = {}
+    found = {}
     for path in sorted(Path(directory).glob("profile_*.json")):
         doc = json.loads(path.read_text())
-        profiles[doc["meta"]["dataset"]] = doc
+        found.setdefault(view_of(doc), {})[doc["meta"]["dataset"]] = doc
+    if not found:
+        return {}
+    if view is None:
+        if len(found) > 1:
+            sys.exit(
+                "this directory holds profiles of more than one view: "
+                + ", ".join(sorted(found))
+                + ".\nThey describe different populations (a labelling method's "
+                  "output is not the raw flows, and one method's labels are not "
+                  "another's), so comparing across them would measure the "
+                  "labeller rather than the domain. Name one with --view.")
+        view = next(iter(found))
+    profiles = found.get(view, {})
     if not profiles:
         return profiles
 
@@ -590,7 +627,7 @@ def compare_one(dataset, profiles, spec):
     return {
         "compare_version": COMPARE_VERSION,
         "meta": {
-            "dataset": dataset,
+            "dataset": dataset, "view": view_of(me),
             "compared_against": sorted(p["meta"]["dataset"] for p in others),
             "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "spec_sha": me["meta"]["spec_sha"], "spec_version": me["meta"]["spec_version"],
@@ -650,8 +687,8 @@ def compare_one(dataset, profiles, spec):
     }
 
 
-def regenerate(directory=EDA_DIR, only=None):
-    """Rewrite every comparison in the pool. Returns the paths written.
+def regenerate(directory=EDA_DIR, only=None, view=None):
+    """Rewrite every comparison within ONE view. Returns the paths written.
 
     Every dataset's report is rewritten, not just the new one: "the rest" has a
     different meaning for each of them now, so leaving the others in place
@@ -669,40 +706,49 @@ def regenerate(directory=EDA_DIR, only=None):
     profile is deleted would still read as current.
     """
     directory = Path(directory)
-    profiles = load_profiles(directory)
+    profiles = load_profiles(directory, view)
     if len(profiles) < 2:
-        for stale in directory.glob("compare_*.json"):
+        # Scoped to this view: a `prelabel` pool falling below two peers must
+        # not delete a `postlabel-schedule` comparison that is still current.
+        for stale in directory.glob(f"compare_{view}_*.json" if view else "compare_*.json"):
             stale.unlink()
         return []
     spec = Spec()
+    view = view or view_of(next(iter(profiles.values())))
     written = []
     for ds in sorted(profiles):
         if only and ds != only:
             continue
-        out = directory / f"compare_{ds}.json"
+        out = directory / f"compare_{view}_{ds}.json"
         out.write_text(json.dumps(compare_one(ds, profiles, spec), indent=1) + "\n")
         written.append(out)
     return written
 
 
-def compare_pair(dataset, other, directory=EDA_DIR):
+def compare_pair(dataset, other, directory=EDA_DIR, view=None):
     """`dataset` against exactly `other`, ignoring the rest of the directory.
 
     `compare_one` treats every entry in its `profiles` dict besides `dataset`
     as "the rest" -- restricting that dict to just these two before calling it
     is what makes "the rest" mean exactly the named peer. Written to its own
-    `compare_<dataset>_vs_<other>.json`, distinct from the pool-wide
-    `compare_<dataset>.json`, so the two kinds of report can never be
+    `compare_<view>_<dataset>_vs_<other>.json`, distinct from the pool-wide
+    `compare_<view>_<dataset>.json`, so the two kinds of report can never be
     mistaken for each other on disk.
+
+    Both profiles must be of the SAME view: 2017's schedule labels against
+    2018's ae labels is a comparison of two labellers wearing a comparison of
+    two domains, and no field in the output would say so.
     """
     directory = Path(directory)
-    profiles = load_profiles(directory)
+    profiles = load_profiles(directory, view)
     missing = [ds for ds in (dataset, other) if ds not in profiles]
     if missing:
-        sys.exit(f"no profile for {', '.join(missing)} in {directory} "
+        where = f" of view {view}" if view else ""
+        sys.exit(f"no profile for {', '.join(missing)}{where} in {directory} "
                  f"— run `talos eda --dataset {missing[0]}` first")
+    view = view or view_of(profiles[dataset])
     doc = compare_one(dataset, {dataset: profiles[dataset], other: profiles[other]}, Spec())
-    out = directory / f"compare_{dataset}_vs_{other}.json"
+    out = directory / f"compare_{view}_{dataset}_vs_{other}.json"
     out.write_text(json.dumps(doc, indent=1) + "\n")
     return out
 
@@ -712,14 +758,18 @@ def main():
     p.add_argument("--dir", default=str(EDA_DIR), help="directory holding profile_*.json")
     p.add_argument("--dataset", default=None,
                    help="regenerate only this dataset's comparison (default: all)")
+    p.add_argument("--view", default=None,
+                   help="which population to compare within: prelabel, "
+                        "postlabel-schedule, postlabel-ae, ... Required only "
+                        "when the directory holds more than one")
     p.add_argument("--render", action="store_true", help="also rebuild the HTML")
     a = p.parse_args()
 
-    profiles = load_profiles(a.dir)
+    profiles = load_profiles(a.dir, a.view)
     if not profiles:
         sys.exit(f"no profile_*.json in {a.dir} — run `make eda-all` first")
     print(f"pool: {', '.join(sorted(profiles))}")
-    written = regenerate(a.dir, a.dataset)
+    written = regenerate(a.dir, a.dataset, a.view)
     for w in written:
         doc = json.loads(w.read_text())
         o = doc["overview"]

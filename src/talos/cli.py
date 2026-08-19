@@ -30,6 +30,7 @@ from talos.common import zones
 from talos.common.config import Config, ConfigError
 from talos.common.provenance import ProvenanceService
 from talos.data.extraction import get_extractor
+from talos.data.flows import SourceError, globs as flow_globs
 
 
 CONFIG_TEMPLATE = """\
@@ -653,9 +654,9 @@ def cmd_screen(args, extra) -> int:
     """Screen the candidate features on everything judgeable without a label."""
     import argparse
     from talos.common.provenance import ProvenanceService
-    from talos.data.preprocess.screen import (
+    from talos.data.preprocess.prelabel.screen import (
         CORRELATION, DOMINANT_SHARE, METHODS, MAX, NULL_SHARE, FeatureScreener,
-        ScreenError, candidates, describe, resolve_globs, sources,
+        ScreenError, candidates, describe, sources,
     )
 
     p = argparse.ArgumentParser(prog="talos screen")
@@ -695,16 +696,16 @@ def cmd_screen(args, extra) -> int:
     feature_space = a.feature_space or _feature_space(cfg)
     lake = cfg.lake()
     try:
-        globs = resolve_globs(cfg, lake, a.dataset, a.zone,
-                              feature_space=feature_space,
-                              label_method=a.label_method, source=a.source,
-                              captures=a.captures)
-    except ScreenError as exc:
+        globs = flow_globs(cfg, lake, a.dataset, a.zone,
+                           feature_space=feature_space,
+                           method=a.label_method, source=a.source,
+                           captures=a.captures)
+    except SourceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     from talos.data.feature.featureset import FeatureError, FeatureSetLoader
-    from talos.data.preprocess.screen import (
+    from talos.data.preprocess.prelabel.screen import (
         declared_indicators, exclude_invalid, feature_source, preflight)
 
     duck = lake.duck
@@ -752,7 +753,7 @@ def cmd_screen(args, extra) -> int:
 
     payload = report.to_dict()
     if base is not None and getattr(base, "constraints", ()):
-        from talos.data.preprocess.screen import suggested_phi
+        from talos.data.preprocess.prelabel.screen import suggested_phi
 
         phi = suggested_phi(report, base)
         payload["suggested_phi"] = phi
@@ -770,7 +771,7 @@ def cmd_screen(args, extra) -> int:
     if a.emit is not None:
         from pathlib import Path
         from talos.data.feature.featureset import DEFAULT_FEATURES
-        from talos.data.preprocess.screen import emit_declaration
+        from talos.data.preprocess.prelabel.screen import emit_declaration
 
         if base is None:
             try:
@@ -803,10 +804,10 @@ def cmd_relevance(args, extra) -> int:
     from talos.data.feature.featureset import (
         DEFAULT_FEATURES, FeatureError, FeatureSetLoader,
     )
-    from talos.data.preprocess.relevance import (
+    from talos.data.preprocess.postlabel.relevance import (
         DOMAIN_AUC_HIGH, MI_BINS, RelevanceAnalyst,
     )
-    from talos.data.preprocess.screen import (
+    from talos.data.preprocess.prelabel.screen import (
         ScreenError, describe, feature_source, preflight, sources,
     )
 
@@ -869,7 +870,7 @@ def cmd_relevance(args, extra) -> int:
 
     if a.emit is not None:
         from pathlib import Path
-        from talos.data.preprocess.relevance import emit_declaration
+        from talos.data.preprocess.postlabel.relevance import emit_declaration
 
         # Every verdict (keep/drop/hold/unmeasured) is annotated, none removed
         # -- `screen:` marks the base already carries survive untouched.
@@ -892,8 +893,8 @@ def cmd_verify(args, extra) -> int:
     """Count rows that cannot be true of a real flow. Flags, never drops."""
     import argparse
     from talos.common.provenance import ProvenanceService
-    from talos.data.preprocess.screen import ScreenError, describe, resolve_globs, sources
-    from talos.data.preprocess.verify import INVARIANTS, RowVerifier, history_alphabet
+    from talos.data.preprocess.prelabel.screen import ScreenError, describe, sources
+    from talos.data.preprocess.prelabel.verify import INVARIANTS, RowVerifier, history_alphabet
 
     p = argparse.ArgumentParser(prog="talos verify")
     p.add_argument("--dataset", required=True, nargs="+",
@@ -912,11 +913,11 @@ def cmd_verify(args, extra) -> int:
     cfg = Config.load(args.config)
     lake = cfg.lake()
     try:
-        globs = resolve_globs(cfg, lake, a.dataset, a.zone,
-                              feature_space=a.feature_space or _feature_space(cfg),
-                              label_method=a.label_method, source=a.source,
-                              captures=a.captures)
-    except ScreenError as exc:
+        globs = flow_globs(cfg, lake, a.dataset, a.zone,
+                           feature_space=a.feature_space or _feature_space(cfg),
+                           method=a.label_method, source=a.source,
+                           captures=a.captures)
+    except SourceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

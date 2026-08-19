@@ -153,7 +153,7 @@ def exclude_invalid(duck, source: str) -> tuple[str, int, int]:
     gives ~1e18 B/s, a finite double that would otherwise set `max/p99` for its
     whole column.
     """
-    from talos.data.preprocess.verify import valid_sql
+    from talos.data.preprocess.prelabel.verify import valid_sql
 
     total = duck.one(f"SELECT count(*) FROM {source}")[0]
     predicate = valid_sql(describe(duck, source))
