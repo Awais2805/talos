@@ -1,6 +1,0 @@
-# Dependencies are declared in pyproject.toml; this file exists so that
-# `pip install -r requirements.txt` still works. Extras:
-#   .[s3]     s3fs, only needed when lake.root is an s3:// URI
-#   .[model]  xgboost + scikit-learn, needed to train
-#   .[dev]    pytest
--e .

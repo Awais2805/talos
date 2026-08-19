@@ -9,9 +9,9 @@ description = "A research platform for cross-domain network intrusion detection"
 readme = "README.md"
 requires-python = ">=3.10"
 
-# Only what the platform itself imports. Everything that is a deployment choice --
-# S3 access, the model library, the test runner -- is an extra, so a base install
-# pulls in no cloud SDK at all.
+# Core dependencies used by the Talos platform itself.
+# Keep this list small: optional deployment/model capabilities
+# belong in the extras below.
 dependencies = [
     "duckdb>=1.1",
     "numpy>=1.26",
@@ -19,17 +19,42 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-s3 = ["s3fs>=2024.6"]
-model = ["xgboost>=2.1", "scikit-learn>=1.5"]
-torch = ["torch>=2.2"]
-cl = ["cleanlab>=2.6", "scikit-learn>=1.5"]
-dev = ["pytest>=8.0"]
+
+# Required when lake.root points at an S3 URI.
+s3 = [
+    "s3fs>=2024.6",
+    "fsspec>=2024.6",
+]
+
+# Machine-learning model support.
+model = [
+    "xgboost>=2.1",
+    "scikit-learn>=1.5",
+]
+
+# PyTorch support. Kept separate because PyTorch is large
+# and may have platform/CUDA-specific installation concerns.
+torch = [
+    "torch>=2.2",
+]
+
+# Cleanlab-based labelling support.
+cl = [
+    "cleanlab>=2.6",
+    "scikit-learn>=1.5",
+]
+
+# Developer/test dependencies.
+dev = [
+    "pytest>=8.0",
+]
 
 [project.scripts]
 talos = "talos.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
 [tool.setuptools.package-data]
 "talos.data.profiling.eda" = ["spec.yaml"]
 "talos.data.feature" = ["features/*.yaml"]
