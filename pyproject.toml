@@ -35,7 +35,7 @@ model = [
 # PyTorch support. Kept separate because PyTorch is large
 # and may have platform/CUDA-specific installation concerns.
 torch = [
-    "torch>=2.2",
+    "torch>=2.2; platform_machine != 'x86_64' or sys_platform != 'darwin'",
 ]
 
 # Cleanlab-based labelling support.
