@@ -342,7 +342,7 @@ def test_the_two_pools_never_share_a_flow(lake, tmp_path):
 
     # Exhaustive over the VALID rows, not over the table: a flow no real capture
     # could produce is excluded from every pool and left in the labelled zone.
-    from talos.data.preprocess.verify import valid_sql
+    from talos.data.preprocess.prelabel.verify import valid_sql
     listed = ", ".join(f"'{uri}'" for uri in sources)
     table = f"read_parquet([{listed}], union_by_name = true)"
     columns = {r[0]: r[1] for r in duck.sql(f"DESCRIBE SELECT * FROM {table}")}
@@ -588,7 +588,7 @@ def test_an_impossible_flow_reaches_no_pool(lake, tmp_path):
     duck = cfg.lake().duck
     sources = partition.sources(cfg.lake(), "zeek_v8.2.1", cfg)
 
-    from talos.data.preprocess.verify import valid_sql
+    from talos.data.preprocess.prelabel.verify import valid_sql
     listed = ", ".join(f"'{uri}'" for uri in sources)
     table = f"read_parquet([{listed}], union_by_name = true)"
     columns = {r[0]: r[1] for r in duck.sql(f"DESCRIBE SELECT * FROM {table}")}
