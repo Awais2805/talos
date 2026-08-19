@@ -1,6 +1,6 @@
 """Bring your own.
 
-One question decides everything here: what does the user hand us?
+Accepts:
 
     a .py with a class in it   ->  CodePlugins     imported to exist
     a .yaml file               ->  ConfigPlugins   found and read
@@ -20,8 +20,6 @@ Adding a point is one line -- `X = CodePlugins("thing", error=ThingError)` -- an
 it is addressable from config.yml immediately, because a point registers itself
 under its kind.
 
-`Origin` exists because a run that used the user's extractor must not look
-identical to one that used ours.
 """
 
 from __future__ import annotations

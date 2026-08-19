@@ -1,4 +1,4 @@
-# Cross-domain generalisation study — the reference experiment.
+# Cross-domain generalisation experiment
 
 name: xdg
 description: >
@@ -19,7 +19,7 @@ extractor: zeek
 # method is re-versioned in place and a study has to say which run produced the
 # labels it drew conclusions from -- see docs/method-versions.md. Resolves to
 # sources/{source}/labelled/{feature_space}/{labels}/{dataset}.
-labels: schedule
+labels: behavioural
 
 # role  -- train: may contribute flows to a training pool
 #          holdout: evaluation only; MUST NOT enter a training pool

@@ -32,3 +32,4 @@ venv/
 
 # DuckDB temp spill
 .tmp/
+talos_duckdb

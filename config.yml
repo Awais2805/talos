@@ -13,7 +13,7 @@
 lake:
   # Local directory, s3://bucket/prefix, gs://…, abfs://… — one code path.
   # `talos init <root>` creates the layout wherever this points.
-  root: "s3://ids-datalakec48eb2cab942494ba5059fac3b3527d9"
+  root: "/lake"
 
   # zones: is an OVERRIDE for a lake whose layout Talos did not create. Omitted
   # here, so the standard source-major layout applies:

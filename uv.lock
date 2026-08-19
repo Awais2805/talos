@@ -2009,7 +2009,7 @@ s3 = [
     { name = "s3fs" },
 ]
 torch = [
-    { name = "torch" },
+    { name = "torch", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 
 [package.metadata]
@@ -2023,7 +2023,7 @@ requires-dist = [
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.6" },
     { name = "scikit-learn", marker = "extra == 'cl'", specifier = ">=1.5" },
     { name = "scikit-learn", marker = "extra == 'model'", specifier = ">=1.5" },
-    { name = "torch", marker = "extra == 'torch'", specifier = ">=2.2" },
+    { name = "torch", marker = "(platform_machine != 'x86_64' and extra == 'torch') or (sys_platform != 'darwin' and extra == 'torch')", specifier = ">=2.2" },
     { name = "xgboost", marker = "extra == 'model'", specifier = ">=2.1" },
 ]
 provides-extras = ["s3", "model", "torch", "cl", "dev"]

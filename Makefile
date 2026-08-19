@@ -11,17 +11,7 @@ DATASETS = cic-ids-2017 cic-ids-2018 cic-ddos-2019
 # Resource limits (memory, threads, spill directory and its cap) are detected
 # per machine and declared in config.yml under `resources:`. They are no longer
 # guessed at here -- `talos config` shows what this box resolved to.
-
-# ---------------------------------------------------------------------------
-# Labelling and label validation were removed on 2026-08-04 and are being
-# rebuilt from scratch. The post-mortem on what was removed and why is in
-# docs/label_pipeline_audit.md -- read it before re-adding targets here.
-#
-# The EDA targets below are the only stage downstream of `discover`. Nothing
-# downstream of EDA (map/merge/clean/encode/split/train) exists yet. The lake
-# still holds the raw, extracted and parquet zones; the labelled zone was
-# cleared when the labelling module was removed.
-# ---------------------------------------------------------------------------
+---------------------
 
 .PHONY: help install test init config ingest extract convert label label-report discover \
         screen verify relevance explain \
