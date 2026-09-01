@@ -1,6 +1,6 @@
 # Talos
 **A research project for cross-domain network intrusion detection.**
-
+**stalled pending hardware access**
 Talos exists to answer one question: _does training a model on domain diverse network flows increase and reinforce cross-domain generalisation given consistent features format across datasets?_
 
 **Premise**
